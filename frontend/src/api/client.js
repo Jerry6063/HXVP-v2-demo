@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// In dev, Vite proxies /api → localhost:8000 so baseURL = '/api' works.
+// In production, set VITE_API_BASE_URL=https://your-backend.onrender.com/api
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: BASE_URL,
 });
 
 api.interceptors.request.use((config) => {
@@ -21,7 +25,7 @@ api.interceptors.response.use(
       const refresh = localStorage.getItem('refresh_token');
       if (refresh) {
         try {
-          const { data } = await axios.post('/api/auth/refresh/', { refresh });
+          const { data } = await axios.post(`${BASE_URL}/auth/refresh/`, { refresh });
           localStorage.setItem('access_token', data.access);
           original.headers.Authorization = `Bearer ${data.access}`;
           return api(original);

@@ -1,0 +1,64 @@
+# render.yaml — defines all Render services for this project.
+# In the Render dashboard: New > Blueprint, point it at this repo.
+
+services:
+  # ── Django Backend ──────────────────────────────────────────────────────────
+  - type: web
+    name: hxvp-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: bash build.sh
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true          # Render auto-generates a secure value
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hxvp-db
+          property: connectionString
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false                  # Fill in after frontend deploys (e.g. https://hxvp.onrender.com)
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: ADMIN_NOTIFICATION_EMAIL
+        sync: false
+      - key: MEDIA_ROOT
+        value: /var/data/media       # Points to the persistent disk mount path
+    disk:
+      name: media-uploads
+      mountPath: /var/data/media
+      sizeGB: 5
+
+  # ── React / Vite Frontend ───────────────────────────────────────────────────
+  - type: web
+    name: hxvp-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html     # Required for React Router (SPA)
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false                  # Set to https://hxvp-backend.onrender.com/api
+
+# ── PostgreSQL Database ────────────────────────────────────────────────────────
+databases:
+  - name: hxvp-db
+    databaseName: studio_portal
+    user: studio
+    plan: free                       # Upgrade to starter ($7/mo) for production persistence
