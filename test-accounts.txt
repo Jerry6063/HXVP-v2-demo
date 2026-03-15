@@ -1,0 +1,27 @@
+Photography Studio Portal – Test Accounts
+==========================================
+
+All passwords: password123
+
+Portal              Email                   URL
+------              -----                   ---
+Production Admin    admin@studio.com        http://localhost:5173/production/login
+Client              client@brandco.com      http://localhost:5173/client/login
+Client #2           client2@luxe.com        http://localhost:5173/client/login
+Talent (Model)      talent1@studio.com      http://localhost:5173/talent/login
+Talent (Model)      talent2@studio.com      http://localhost:5173/talent/login
+Talent (Actor)      talent3@studio.com      http://localhost:5173/talent/login
+Talent (Model)      talent4@studio.com      http://localhost:5173/talent/login
+Talent (Dancer)     talent5@studio.com      http://localhost:5173/talent/login
+Talent (Voiceover)  talent6@studio.com      http://localhost:5173/talent/login
+Talent (Model)      talent7@studio.com      http://localhost:5173/talent/login
+Talent (Actor)      talent8@studio.com      http://localhost:5173/talent/login
+Crew (Photographer) crew1@studio.com        http://localhost:5173/crew/login
+Crew (Videographer) crew2@studio.com        http://localhost:5173/crew/login
+Crew (Lighting)     crew3@studio.com        http://localhost:5173/crew/login
+Crew (Audio)        crew4@studio.com        http://localhost:5173/crew/login
+Crew (Hair/Makeup)  crew5@studio.com        http://localhost:5173/crew/login
+Crew (Stylist)      crew6@studio.com        http://localhost:5173/crew/login
+Crew (Assistant)    crew7@studio.com        http://localhost:5173/crew/login
+
+Home page:          http://localhost:5173/

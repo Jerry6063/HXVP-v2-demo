@@ -1,0 +1,19 @@
+from django.contrib import admin
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/auth/", include("apps.accounts.urls")),
+    path("api/projects/", include("apps.projects.urls")),
+    path("api/talent/", include("apps.talent.urls")),
+    path("api/crew/", include("apps.crew.urls")),
+    path("api/deliverables/", include("apps.deliverables.urls")),
+    path("api/finance/", include("apps.finance.urls")),
+    path("api/clientportal/", include("apps.clientportal.urls")),
+    path("api/payments/", include("apps.payments.urls")),
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
