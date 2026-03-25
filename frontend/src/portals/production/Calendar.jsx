@@ -92,6 +92,15 @@ export default function ProductionCalendar() {
       invoices,
     ]);
 
+  const eventsByDate = useMemo(() => {
+    const grouped = {};
+    events.forEach((e) => {
+      if (!grouped[e.date]) grouped[e.date] = [];
+      grouped[e.date].push(e);
+    });
+    return grouped;
+  }, [events]);
+
   const monthDays = useMemo(() => {
     const firstDay = new Date(start);
     const firstWeekday = firstDay.getDay();
