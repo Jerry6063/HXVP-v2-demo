@@ -6,32 +6,27 @@ A full-stack photography studio management platform with four role-based portals
 
 - **Frontend:** React 18, Vite, Tailwind CSS, React Router v6, TanStack Query, Axios
 - **Backend:** Django 5, Django REST Framework, SimpleJWT
-- **Database:** SQLite (dev) / PostgreSQL (production)
+- **Database:** PostgreSQL (managed by Render)
 
-## Quick Start
+> **Note:** This project is configured for deployment on [Render](https://render.com) and is not intended for local hosting. The backend requires Render-managed environment variables (`DATABASE_URL`, `DJANGO_SECRET_KEY`, etc.) and the frontend requires `VITE_API_BASE_URL` to be set to the deployed backend URL.
 
-### 1. Backend
+## Deployment (Render Blueprint)
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+The entire stack — backend API, frontend static site, and PostgreSQL database — is defined in `render.yaml` and deployed as a Render Blueprint.
 
-cd backend
-python3 manage.py migrate
-python3 seed.py          # Load sample data
-python3 manage.py runserver 8000
-```
+1. Fork or push this repository to GitHub.
+2. In the Render dashboard, go to **New → Blueprint** and connect the repository.
+3. Render will automatically create:
+   - `hxvp-backend` — Django/Gunicorn web service
+   - `hxvp-frontend` — Vite static site
+   - `hxvp-db` — Managed PostgreSQL database
+4. After the initial deploy, set the following environment variables in the Render dashboard:
+   - On **hxvp-backend**: `CORS_ALLOWED_ORIGINS` → the deployed frontend URL (e.g. `https://hxvp-frontend.onrender.com`)
+   - On **hxvp-frontend**: `VITE_API_BASE_URL` → the deployed backend URL + `/api` (e.g. `https://hxvp-backend.onrender.com/api`)
+5. Optionally configure email (Gmail SMTP) on the backend service: `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL`, `ADMIN_NOTIFICATION_EMAIL`.
+6. Trigger a redeploy of both services after setting the env vars.
 
-### 2. Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open http://localhost:5173 in your browser.
+The `backend/build.sh` script runs automatically on each deploy: it installs dependencies, collects static files, and applies database migrations.
 
 ## Demo Credentials
 
@@ -79,9 +74,4 @@ All passwords: `password123`
 | `/api/deliverables/`| Deliverables/contracts |
 | `/api/finance/`     | Expenses and earnings  |
 
-## Switching to PostgreSQL
 
-1. Start PostgreSQL: `docker compose up -d db`
-2. Set env: `export DB_ENGINE=postgresql`
-3. Run migrations: `cd backend && python manage.py migrate`
-4. Seed: `python seed.py`

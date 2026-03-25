@@ -3,10 +3,6 @@ import {
   useShoots,
   useProjects,
   useInvoices,
-  useTalentAvailability,
-  useCrewAvailability,
-  useTalentProfiles,
-  useCrewProfiles,
 } from '../../api/hooks';
 
 const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -29,8 +25,6 @@ export default function ProductionCalendar() {
     shoots: true,
     deadlines: true,
     invoices: true,
-    talentAvailability: true,
-    crewAvailability: true,
   });
 
   const { start, end } = useMemo(() => monthRange(cursor), [cursor]);
@@ -40,27 +34,10 @@ export default function ProductionCalendar() {
   const { data: shootsData } = useShoots();
   const { data: projectsData } = useProjects();
   const { data: invoicesData } = useInvoices();
-  const { data: talentAvailData } = useTalentAvailability({ date_from: from, date_to: to });
-  const { data: crewAvailData } = useCrewAvailability({ date_from: from, date_to: to });
-  const { data: talentProfilesData } = useTalentProfiles();
-  const { data: crewProfilesData } = useCrewProfiles();
 
   const shoots = shootsData?.results || shootsData || [];
   const projects = projectsData?.results || projectsData || [];
   const invoices = invoicesData?.results || invoicesData || [];
-  const talentAvailability = talentAvailData?.results || talentAvailData || [];
-  const crewAvailability = crewAvailData?.results || crewAvailData || [];
-  const talentProfiles = talentProfilesData?.results || talentProfilesData || [];
-  const crewProfiles = crewProfilesData?.results || crewProfilesData || [];
-
-  const talentNameById = useMemo(
-    () => Object.fromEntries(talentProfiles.map((t) => [t.id, t.full_name])),
-    [talentProfiles]
-  );
-  const crewNameById = useMemo(
-    () => Object.fromEntries(crewProfiles.map((c) => [c.id, c.full_name])),
-    [crewProfiles]
-  );
 
   const events = useMemo(() => {
     const list = [];
@@ -107,58 +84,12 @@ export default function ProductionCalendar() {
       });
     }
 
-    if (visible.talentAvailability) {
-      talentAvailability.forEach((a) => {
-        const dateKey = toDateKey(a.date);
-        if (!dateKey) return;
-        list.push({
-          date: dateKey,
-          type: 'talent_availability',
-          color: 'bg-amber-100 text-amber-700',
-          title: `Talent ${a.status}: ${talentNameById[a.talent] || `#${a.talent}`}`,
-          subtitle: `Period: ${a.period}`,
-        });
-      });
-    }
-
-    if (visible.crewAvailability) {
-      crewAvailability.forEach((a) => {
-        const dateKey = toDateKey(a.date);
-        if (!dateKey) return;
-        list.push({
-          date: dateKey,
-          type: 'crew_availability',
-          color: 'bg-sky-100 text-sky-700',
-          title: `Crew ${a.status}: ${crewNameById[a.crew] || `#${a.crew}`}`,
-          subtitle: `Period: ${a.period}`,
-        });
-      });
-    }
-
-    return list;
-  }, [
-    visible,
-    shoots,
-    projects,
-    invoices,
-    talentAvailability,
-    crewAvailability,
-    talentNameById,
-    crewNameById,
-  ]);
-
-  const eventsByDate = useMemo(() => {
-    const grouped = {};
-    events.forEach((e) => {
-      if (!grouped[e.date]) grouped[e.date] = [];
-      grouped[e.date].push(e);
-    });
-    return grouped;
-  }, [events]);
-
-  const monthDays = useMemo(() => {
-    const firstDay = new Date(start);
-    const firstWeekday = firstDay.getDay();
+      return list;
+    }, [
+      visible,
+      shoots,
+      projects,
+      invoices,
     const days = [];
 
     for (let i = 0; i < firstWeekday; i += 1) {
@@ -180,7 +111,7 @@ export default function ProductionCalendar() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Production Calendar</h1>
-          <p className="text-sm text-gray-500">Master calendar for shoots, deadlines, invoices, and talent/crew availability.</p>
+          <p className="text-sm text-gray-500">Master calendar for shoots, deadlines, and invoice due dates.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -205,8 +136,6 @@ export default function ProductionCalendar() {
             ['shoots', 'Production Shoots'],
             ['deadlines', 'Project Deadlines'],
             ['invoices', 'Invoice Due Dates'],
-            ['talentAvailability', 'Talent Availability'],
-            ['crewAvailability', 'Crew Availability'],
           ].map(([key, label]) => (
             <label key={key} className="inline-flex items-center gap-2 text-gray-700">
               <input

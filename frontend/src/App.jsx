@@ -1,5 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
+import RegisterPage from './components/RegisterPage';
+import ForgotPasswordPage from './components/ForgotPasswordPage';
+import ResetPasswordPage from './components/ResetPasswordPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PortalLayout from './components/PortalLayout';
 import HomePage from './components/HomePage';
@@ -82,6 +85,9 @@ export default function App() {
 
       {/* Client Portal */}
       <Route path="/client/login" element={<LoginPage portal="client" />} />
+      <Route path="/client/register" element={<RegisterPage portal="client" />} />
+      <Route path="/client/forgot-password" element={<ForgotPasswordPage portal="client" />} />
+      <Route path="/client/reset-password" element={<ResetPasswordPage portal="client" />} />
       <Route
         path="/client"
         element={
@@ -102,6 +108,9 @@ export default function App() {
 
       {/* Talent Portal */}
       <Route path="/talent/login" element={<LoginPage portal="talent" />} />
+      <Route path="/talent/register" element={<RegisterPage portal="talent" />} />
+      <Route path="/talent/forgot-password" element={<ForgotPasswordPage portal="talent" />} />
+      <Route path="/talent/reset-password" element={<ResetPasswordPage portal="talent" />} />
       <Route
         path="/talent"
         element={
@@ -121,6 +130,9 @@ export default function App() {
 
       {/* Crew Portal */}
       <Route path="/crew/login" element={<LoginPage portal="crew" />} />
+      <Route path="/crew/register" element={<RegisterPage portal="crew" />} />
+      <Route path="/crew/forgot-password" element={<ForgotPasswordPage portal="crew" />} />
+      <Route path="/crew/reset-password" element={<ResetPasswordPage portal="crew" />} />
       <Route
         path="/crew"
         element={

@@ -134,6 +134,9 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "DEFAULT_THROTTLE_RATES": {
+        "auth": "10/hour",
+    },
 }
 
 # SimpleJWT
@@ -154,3 +157,6 @@ DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL", "Studio Portal <noreply@studio.com>"
 )
 ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "")
+
+# Frontend URL — used to build password-reset links in emails.
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://hxvp-frontend.onrender.com")

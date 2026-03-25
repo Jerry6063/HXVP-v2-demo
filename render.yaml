@@ -32,6 +32,10 @@ services:
         sync: false
       - key: MEDIA_ROOT
         value: /var/data/media       # Points to the persistent disk mount path
+      - key: FRONTEND_URL
+        sync: false                  # Set to the deployed frontend URL (e.g. https://hxvp-frontend.onrender.com)
+      - key: HCAPTCHA_SECRET_KEY
+        sync: false                  # hCaptcha secret key from hcaptcha.com/dashboard
     disk:
       name: media-uploads
       mountPath: /var/data/media
@@ -55,6 +59,8 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         sync: false                  # Set to https://hxvp-backend.onrender.com/api
+      - key: VITE_HCAPTCHA_SITE_KEY
+        sync: false                  # hCaptcha site key from hcaptcha.com/dashboard
 
 # ── PostgreSQL Database ────────────────────────────────────────────────────────
 databases:

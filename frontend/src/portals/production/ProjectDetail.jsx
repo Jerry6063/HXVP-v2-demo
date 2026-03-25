@@ -26,6 +26,8 @@ import {
   useRemoveCrewConsideration,
   useTalentProfiles,
   useCrewProfiles,
+  useTalentAvailability,
+  useCrewAvailability,
   useCreateExpense,
   useDeleteExpense,
   useUpdateExpense,
@@ -40,7 +42,6 @@ const tabs = [
   'Assets & Deliverables',
   'Budget & Expenses',
   'Contracts',
-  'Activity Log',
 ];
 
 const PHASE_MAIN_TITLES = {
@@ -100,7 +101,6 @@ export default function ProjectDetail() {
   const bookingsArr = bookings?.results || bookings || [];
   const assignmentsArr = assignments?.results || assignments || [];
   const shoots = project?.shoots || [];
-  const logs = project?.activity_logs || [];
 
   if (isLoading) return <div className="text-center py-10 text-gray-400">Loading...</div>;
   if (!project) return <div className="text-center py-10 text-gray-400">Project not found</div>;
@@ -180,9 +180,6 @@ export default function ProjectDetail() {
             )}
             {activeTab === 4 && (
               <ContractsTab contracts={contractsArr} />
-            )}
-            {activeTab === 5 && (
-              <ActivityTab logs={logs} />
             )}
           </div>
         </div>
@@ -661,21 +658,56 @@ function WorkflowTab({ project, milestones, createMilestone, updateMilestone, de
   );
 }
 
-function AddConsiderationModal({ title, onClose, onAdd, profiles, type }) {
+const GENDER_OPTIONS = ['male', 'female', 'non_binary', 'other', 'prefer_not_to_say'];
+const AVAILABILITY_OPTIONS = ['available', 'booked', 'unavailable'];
+const CREW_ROLE_OPTIONS = [
+  'photographer', 'dop', 'videographer', 'gaffer', 'grip', 'wardrobe',
+  'set_design', 'bts', 'pa', 'ac', 'audio', 'lighting', 'hair_makeup', 'stylist', 'other',
+];
+
+function AddTalentModal({ onClose, onAdd }) {
   const [search, setSearch] = useState('');
+  const [gender, setGender] = useState('');
+  const [availStatus, setAvailStatus] = useState('');
+  const [availDate, setAvailDate] = useState('');
+  const [maxRate, setMaxRate] = useState('');
+  const [minAge, setMinAge] = useState('');
+  const [maxAge, setMaxAge] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const profilesArr = profiles?.results || profiles || [];
+  const availParams = availDate ? { date_from: availDate, date_to: availDate } : {};
+  const { data: availData } = useTalentAvailability(availDate ? availParams : { enabled: false });
+  const { data: talentProfiles } = useTalentProfiles({ approval_status: 'approved' });
+
+  const unavailableIds = useMemo(() => {
+    if (!availDate || !availData) return new Set();
+    const entries = availData?.results || availData || [];
+    return new Set(
+      entries
+        .filter((e) => e.status === 'unavailable')
+        .map((e) => e.talent)
+    );
+  }, [availData, availDate]);
+
+  const profilesArr = talentProfiles?.results || talentProfiles || [];
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return profilesArr.filter((p) => {
-      const name = p.full_name || p.user_full_name || '';
-      const role = (p.talent_type || p.crew_role || '').toLowerCase();
-      return name.toLowerCase().includes(q) || role.includes(q);
+      if (q && !(p.full_name || p.user_full_name || '').toLowerCase().includes(q)) return false;
+      if (gender && p.gender !== gender) return false;
+      if (availStatus && p.availability !== availStatus) return false;
+      if (availDate && unavailableIds.has(p.id)) return false;
+      if (maxRate && parseFloat(p.hourly_rate) > parseFloat(maxRate)) return false;
+      if (minAge && (p.age == null || p.age < parseInt(minAge))) return false;
+      if (maxAge && (p.age == null || p.age > parseInt(maxAge))) return false;
+      return true;
     });
-  }, [profilesArr, search]);
+  }, [profilesArr, search, gender, availStatus, availDate, unavailableIds, maxRate, minAge, maxAge]);
+
+  // fix: inline q ref
+  const q = search.toLowerCase();
 
   const handleAdd = async () => {
     if (!selectedId) return;
@@ -686,21 +718,75 @@ function AddConsiderationModal({ title, onClose, onAdd, profiles, type }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-900">{title}</h3>
+          <h3 className="font-semibold text-gray-900">Add Talent to Consideration</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
         </div>
-        <input
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          placeholder={`Search ${type === 'talent' ? 'talent' : 'crew'}…`}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+
+        {/* Filters */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <input
+            className="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            placeholder="Search by name…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          >
+            <option value="">All genders</option>
+            {GENDER_OPTIONS.map((g) => (
+              <option key={g} value={g}>{g.replace(/_/g, ' ')}</option>
+            ))}
+          </select>
+          <select
+            value={availStatus}
+            onChange={(e) => setAvailStatus(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          >
+            <option value="">Any availability</option>
+            {AVAILABILITY_OPTIONS.map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={availDate}
+            onChange={(e) => setAvailDate(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            title="Available on this date"
+          />
+          <input
+            type="number"
+            min="0"
+            placeholder="Max rate ($/hr)"
+            value={maxRate}
+            onChange={(e) => setMaxRate(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          />
+          <input
+            type="number"
+            min="0"
+            placeholder="Min age"
+            value={minAge}
+            onChange={(e) => setMinAge(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          />
+          <input
+            type="number"
+            min="0"
+            placeholder="Max age"
+            value={maxAge}
+            onChange={(e) => setMaxAge(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          />
+        </div>
+
         <div className="max-h-52 overflow-y-auto divide-y divide-gray-50 border border-gray-100 rounded-lg mb-3">
-          {filtered.length === 0 && (
-            <p className="text-xs text-gray-400 p-3">No results</p>
-          )}
+          {filtered.length === 0 && <p className="text-xs text-gray-400 p-3">No results</p>}
           {filtered.map((p) => (
             <button
               key={p.id}
@@ -710,12 +796,19 @@ function AddConsiderationModal({ title, onClose, onAdd, profiles, type }) {
               }`}
             >
               <span className="font-medium">{p.full_name || p.user_full_name}</span>
-              <span className="text-xs text-gray-400 capitalize">
-                {(p.talent_type || p.crew_role || '').replace(/_/g, ' ')}
+              <span className="text-xs text-gray-400 flex gap-2">
+                <span className="capitalize">{(p.talent_type || '').replace(/_/g, ' ')}</span>
+                {p.gender && <span className="capitalize">{p.gender.replace(/_/g, ' ')}</span>}
+                {p.age && <span>{p.age}y</span>}
+                {p.hourly_rate > 0 && <span>${p.hourly_rate}/hr</span>}
+                <span className={`capitalize ${p.availability === 'available' ? 'text-green-500' : p.availability === 'booked' ? 'text-yellow-500' : 'text-red-400'}`}>
+                  {p.availability}
+                </span>
               </span>
             </button>
           ))}
         </div>
+
         <textarea
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
           rows={2}
@@ -738,6 +831,148 @@ function AddConsiderationModal({ title, onClose, onAdd, profiles, type }) {
   );
 }
 
+function AddCrewModal({ onClose, onAdd }) {
+  const [search, setSearch] = useState('');
+  const [role, setRole] = useState('');
+  const [availStatus, setAvailStatus] = useState('');
+  const [availDate, setAvailDate] = useState('');
+  const [maxRate, setMaxRate] = useState('');
+  const [selectedId, setSelectedId] = useState(null);
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const availParams = availDate ? { date_from: availDate, date_to: availDate } : {};
+  const { data: availData } = useCrewAvailability(availDate ? availParams : { enabled: false });
+  const { data: crewProfilesData } = useCrewProfiles();
+
+  const unavailableIds = useMemo(() => {
+    if (!availDate || !availData) return new Set();
+    const entries = availData?.results || availData || [];
+    return new Set(
+      entries
+        .filter((e) => e.status === 'unavailable')
+        .map((e) => e.crew)
+    );
+  }, [availData, availDate]);
+
+  const profilesArr = crewProfilesData?.results || crewProfilesData || [];
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return profilesArr.filter((p) => {
+      if (q && !(p.full_name || p.user_full_name || '').toLowerCase().includes(q)) return false;
+      if (role && p.crew_role !== role) return false;
+      if (availStatus && p.availability !== availStatus) return false;
+      if (availDate && unavailableIds.has(p.id)) return false;
+      if (maxRate && parseFloat(p.day_rate) > parseFloat(maxRate)) return false;
+      return true;
+    });
+  }, [profilesArr, search, role, availStatus, availDate, unavailableIds, maxRate]);
+
+  const handleAdd = async () => {
+    if (!selectedId) return;
+    setSaving(true);
+    try { await onAdd({ id: selectedId, notes }); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-900">Add Crew to Consideration</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+
+        {/* Filters */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <input
+            className="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
+            placeholder="Search by name…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
+          >
+            <option value="">All roles</option>
+            {CREW_ROLE_OPTIONS.map((r) => (
+              <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
+            ))}
+          </select>
+          <select
+            value={availStatus}
+            onChange={(e) => setAvailStatus(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
+          >
+            <option value="">Any availability</option>
+            {AVAILABILITY_OPTIONS.map((a) => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={availDate}
+            onChange={(e) => setAvailDate(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
+            title="Available on this date"
+          />
+          <input
+            type="number"
+            min="0"
+            placeholder="Max rate ($/day)"
+            value={maxRate}
+            onChange={(e) => setMaxRate(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
+          />
+        </div>
+
+        <div className="max-h-52 overflow-y-auto divide-y divide-gray-50 border border-gray-100 rounded-lg mb-3">
+          {filtered.length === 0 && <p className="text-xs text-gray-400 p-3">No results</p>}
+          {filtered.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setSelectedId(p.id)}
+              className={`w-full text-left px-3 py-2 text-sm flex justify-between items-center transition-colors ${
+                selectedId === p.id ? 'bg-sky-50 text-sky-700' : 'hover:bg-gray-50 text-gray-700'
+              }`}
+            >
+              <span className="font-medium">{p.full_name || p.user_full_name}</span>
+              <span className="text-xs text-gray-400 flex gap-2">
+                <span className="capitalize">{(p.crew_role || '').replace(/_/g, ' ')}</span>
+                {p.day_rate > 0 && <span>${p.day_rate}/day</span>}
+                {p.years_experience != null && <span>{p.years_experience}y exp</span>}
+                <span className={`capitalize ${p.availability === 'available' ? 'text-green-500' : p.availability === 'booked' ? 'text-yellow-500' : 'text-red-400'}`}>
+                  {p.availability}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <textarea
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-sky-300 resize-none"
+          rows={2}
+          placeholder="Notes (optional)"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
+          <button
+            onClick={handleAdd}
+            disabled={!selectedId || saving}
+            className="px-4 py-2 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 disabled:opacity-50"
+          >
+            {saving ? 'Adding…' : 'Add'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TeamTalentTab({ bookings, assignments, projectId }) {
   const [showAddTalent, setShowAddTalent] = useState(false);
   const [showAddCrew, setShowAddCrew] = useState(false);
@@ -748,8 +983,6 @@ function TeamTalentTab({ bookings, assignments, projectId }) {
   const removeTalentCon = useRemoveTalentConsideration();
   const addCrewCon = useAddCrewConsideration();
   const removeCrewCon = useRemoveCrewConsideration();
-  const { data: talentProfiles } = useTalentProfiles({ approval_status: 'approved' });
-  const { data: crewProfilesData } = useCrewProfiles();
 
   const talentCons = talentConsData?.results || talentConsData || [];
   const crewCons = crewConsData?.results || crewConsData || [];
@@ -887,19 +1120,13 @@ function TeamTalentTab({ bookings, assignments, projectId }) {
       </div>
 
       {showAddTalent && (
-        <AddConsiderationModal
-          title="Add Talent to Consideration"
-          type="talent"
-          profiles={talentProfiles}
+        <AddTalentModal
           onClose={() => setShowAddTalent(false)}
           onAdd={handleAddTalent}
         />
       )}
       {showAddCrew && (
-        <AddConsiderationModal
-          title="Add Crew to Consideration"
-          type="crew"
-          profiles={crewProfilesData}
+        <AddCrewModal
           onClose={() => setShowAddCrew(false)}
           onAdd={handleAddCrew}
         />
@@ -1120,7 +1347,6 @@ function AssetsTab({ project, deliverables, projectId, uploadDeliverable, create
             <label className="block text-xs text-gray-500 mb-1">Attach file (optional)</label>
             <input
               type="file"
-              accept="image/*,video/*"
               onChange={(e) => setNewFile(e.target.files[0] || null)}
               className="text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
             />
@@ -1163,7 +1389,6 @@ function AssetsTab({ project, deliverables, projectId, uploadDeliverable, create
                     <>
                       <input
                         type="file"
-                        accept="image/*,video/*"
                         className="hidden"
                         id={`upload-${d.id}`}
                         onChange={(e) => {
@@ -1735,32 +1960,6 @@ function ContractsTab({ contracts }) {
             ))}
           </tbody>
         </table>
-      )}
-    </div>
-  );
-}
-
-function ActivityTab({ logs }) {
-  return (
-    <div>
-      <h4 className="font-semibold text-gray-800 text-sm mb-3">Activity Log</h4>
-      {logs.length === 0 ? (
-        <p className="text-sm text-gray-400">No activity recorded</p>
-      ) : (
-        <ul className="space-y-3">
-          {logs.map((log) => (
-            <li key={log.id} className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-indigo-400 rounded-full mt-1.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm text-gray-700">{log.action}</p>
-                <p className="text-xs text-gray-400">
-                  {log.user?.first_name} {log.user?.last_name} &middot;{' '}
-                  {new Date(log.timestamp).toLocaleString()}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   );

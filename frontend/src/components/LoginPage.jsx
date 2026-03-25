@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const portalMeta = {
@@ -86,6 +86,17 @@ export default function LoginPage({ portal }) {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          {portal !== 'production' && (
+            <div className="flex justify-between text-sm pt-4">
+              <Link to={`/${portal}/forgot-password`} className="text-gray-500 hover:text-gray-700 hover:underline">
+                Forgot password?
+              </Link>
+              <Link to={`/${portal}/register`} className="font-medium text-gray-700 hover:underline">
+                Create account
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>

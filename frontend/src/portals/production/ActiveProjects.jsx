@@ -73,6 +73,7 @@ export default function ActiveProjects() {
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
     name: '', description: '', budget: '', deadline: '', client: '',
+    location: '', model_requirements: '', crew_requirements: '', other_requirements: '',
   });
 
   const projectList = (projects?.results || projects || []).filter((p) =>
@@ -98,7 +99,7 @@ export default function ActiveProjects() {
       status: 'active',
     });
     setShowForm(false);
-    setForm({ name: '', description: '', budget: '', deadline: '', client: '' });
+    setForm({ name: '', description: '', budget: '', deadline: '', client: '', location: '', model_requirements: '', crew_requirements: '', other_requirements: '' });
   };
 
   return (
@@ -152,6 +153,45 @@ export default function ActiveProjects() {
                 rows={2}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Primary Location</label>
+              <input
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+                placeholder="Venue, city, or general area"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Model / Talent Requirements</label>
+              <textarea
+                rows={3}
+                value={form.model_requirements}
+                onChange={(e) => setForm({ ...form, model_requirements: e.target.value })}
+                placeholder="e.g. 2 female models, ages 20–30, contemporary look; 1 male model with athletic build…"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Crew Requirements</label>
+              <textarea
+                rows={3}
+                value={form.crew_requirements}
+                onChange={(e) => setForm({ ...form, crew_requirements: e.target.value })}
+                placeholder="e.g. 1 photographer, 1 lighting tech, 1 stylist, 1 MUA…"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Other Requirements</label>
+              <textarea
+                rows={2}
+                value={form.other_requirements}
+                onChange={(e) => setForm({ ...form, other_requirements: e.target.value })}
+                placeholder="Props, permits, special equipment, client preferences…"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
               />
             </div>

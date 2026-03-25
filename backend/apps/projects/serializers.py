@@ -82,6 +82,8 @@ class ProjectListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "name", "client", "client_name", "status",
             "budget", "start_date", "deadline", "shoot_count",
+            "description", "location",
+            "model_requirements", "crew_requirements", "other_requirements",
             "raw_material_url", "created_at",
         ]
 

@@ -24,6 +24,22 @@ class Project(models.Model):
     start_date = models.DateField(null=True, blank=True)
     deadline = models.DateField(null=True, blank=True)
     description = models.TextField(blank=True)
+    location = models.CharField(
+        max_length=255, blank=True,
+        help_text="Primary location / venue for this production"
+    )
+    model_requirements = models.TextField(
+        blank=True,
+        help_text="Talent / model count, look, measurements, experience, etc."
+    )
+    crew_requirements = models.TextField(
+        blank=True,
+        help_text="Required crew roles, skills and headcount"
+    )
+    other_requirements = models.TextField(
+        blank=True,
+        help_text="Any other specific production requirements"
+    )
     raw_material_url = models.URLField(
         max_length=500, blank=True, help_text="Google Drive link for raw materials"
     )

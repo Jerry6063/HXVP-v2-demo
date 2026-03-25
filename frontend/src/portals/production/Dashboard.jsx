@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   useProductionStats,
   useProjects,
-  useTalentProfiles,
+  useInvoices,
   useShoots,
   useShoot,
 } from '../../api/hooks';
@@ -18,6 +18,7 @@ import {
   ChevronUpIcon,
   XMarkIcon,
   ClockIcon,
+  BellAlertIcon,
 } from '@heroicons/react/24/outline';
 
 // ─── Upcoming Shoots Panel ────────────────────────────────────────────────────
@@ -180,18 +181,137 @@ function UpcomingShootsPanel({ onClose }) {
   );
 }
 
+// ─── Notification Center ─────────────────────────────────────────────────────
+
+const EVENT_TYPES = {
+  shoot: { label: 'Shoot', color: 'bg-indigo-100 text-indigo-700' },
+  deadline: { label: 'Deadline', color: 'bg-rose-100 text-rose-700' },
+  invoice: { label: 'Invoice Due', color: 'bg-emerald-100 text-emerald-700' },
+};
+
+function NotificationCenter() {
+  const { data: shootsData } = useShoots({ upcoming: true });
+  const { data: projectsData } = useProjects({ status: 'active' });
+  const { data: invoicesData } = useInvoices();
+
+  const notifications = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const list = [];
+
+    // Production Shoots
+    const shoots = shootsData?.results || shootsData || [];
+    shoots.forEach((s) => {
+      if (!s.shoot_date) return;
+      list.push({
+        id: `shoot-${s.id}`,
+        date: s.shoot_date,
+        type: 'shoot',
+        title: s.project_name || s.location || 'Production Shoot',
+        sub: s.location || '',
+        href: `/production/projects/${s.project}`,
+      });
+    });
+
+    // Project Deadlines
+    const projects = projectsData?.results || projectsData || [];
+    projects.forEach((p) => {
+      if (!p.deadline || p.deadline < today) return;
+      list.push({
+        id: `deadline-${p.id}`,
+        date: p.deadline,
+        type: 'deadline',
+        title: p.name,
+        sub: p.client_name || '',
+        href: `/production/projects/${p.id}`,
+      });
+    });
+
+    // Invoice Due Dates
+    const invoices = invoicesData?.results || invoicesData || [];
+    invoices.forEach((inv) => {
+      if (!inv.due_date || inv.status === 'paid' || inv.due_date < today) return;
+      list.push({
+        id: `invoice-${inv.id}`,
+        date: inv.due_date,
+        type: 'invoice',
+        title: `${inv.reference_number || 'Invoice'} · $${Number(inv.total || 0).toLocaleString()}`,
+        sub: inv.client_name || '',
+        href: `/production/invoices/${inv.id}`,
+      });
+    });
+
+    list.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    return list;
+  }, [shootsData, projectsData, invoicesData]);
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col">
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <BellAlertIcon className="h-5 w-5 text-indigo-500" />
+          <h2 className="font-semibold text-gray-900">Notification Center</h2>
+          {notifications.length > 0 && (
+            <span className="text-xs text-white bg-indigo-500 rounded-full px-2 py-0.5 leading-none">
+              {notifications.length}
+            </span>
+          )}
+        </div>
+        <Link
+          to="/production/calendar"
+          className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+        >
+          Calendar →
+        </Link>
+      </div>
+      <div className="divide-y divide-gray-50 overflow-y-auto max-h-[420px]">
+        {notifications.length === 0 ? (
+          <p className="px-5 py-8 text-sm text-gray-400 text-center">No upcoming events</p>
+        ) : (
+          notifications.map((n) => {
+            const { label, color } = EVENT_TYPES[n.type];
+            const dateObj = new Date(n.date + 'T00:00:00');
+            return (
+              <Link
+                key={n.id}
+                to={n.href}
+                className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex flex-col items-center min-w-[36px] pt-0.5">
+                  <p className="text-[10px] text-gray-400 uppercase font-semibold leading-none">
+                    {dateObj.toLocaleDateString('en-US', { month: 'short' })}
+                  </p>
+                  <p className="text-xl font-bold text-gray-900 leading-tight">
+                    {dateObj.getDate()}
+                  </p>
+                </div>
+                <div className="flex-1 min-w-0 py-0.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${color}`}>
+                      {label}
+                    </span>
+                    <p className="text-sm font-medium text-gray-800 truncate">{n.title}</p>
+                  </div>
+                  {n.sub && <p className="text-xs text-gray-500 mt-0.5 truncate">{n.sub}</p>}
+                </div>
+              </Link>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function ProductionDashboard() {
   const { data: stats, isLoading: statsLoading } = useProductionStats();
   const { data: projects } = useProjects({ status: 'active' });
-  const { data: talent } = useTalentProfiles();
 
   const [showShootsPanel, setShowShootsPanel] = useState(false);
   const toggleShoots = () => setShowShootsPanel((v) => !v);
 
   const projectList = projects?.results || projects || [];
-  const talentList = talent?.results || talent || [];
 
   return (
     <div className="space-y-6">
@@ -270,32 +390,8 @@ export default function ProductionDashboard() {
           </div>
         </div>
 
-        {/* Model Roster */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">Model Roster</h2>
-            <Link
-              to="/production/talent"
-              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-            >
-              View All
-            </Link>
-          </div>
-          <div className="p-4 grid grid-cols-3 gap-3">
-            {talentList.slice(0, 6).map((t) => (
-              <div key={t.id} className="text-center">
-                <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto text-sm font-bold">
-                  {t.user?.first_name?.[0]}
-                  {t.user?.last_name?.[0]}
-                </div>
-                <p className="text-xs font-medium text-gray-700 mt-1.5 truncate">
-                  {t.full_name}
-                </p>
-                <StatusBadge status={t.availability} />
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Notification Center */}
+        <NotificationCenter />
       </div>
     </div>
   );

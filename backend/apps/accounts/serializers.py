@@ -16,6 +16,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = ["email", "password", "first_name", "last_name", "role", "phone"]
 
+    def validate_role(self, value):
+        if value == "production_admin":
+            raise serializers.ValidationError(
+                "Registration is not available for this portal."
+            )
+        return value
+
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
 
@@ -26,3 +33,14 @@ class LoginSerializer(serializers.Serializer):
     portal = serializers.ChoiceField(
         choices=["production", "client", "talent", "crew"]
     )
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    portal = serializers.ChoiceField(choices=["client", "talent", "crew"])
+    captcha_token = serializers.CharField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    new_password = serializers.CharField(min_length=8)
