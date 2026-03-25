@@ -90,6 +90,11 @@ export default function ProductionCalendar() {
       shoots,
       projects,
       invoices,
+    ]);
+
+  const monthDays = useMemo(() => {
+    const firstDay = new Date(start);
+    const firstWeekday = firstDay.getDay();
     const days = [];
 
     for (let i = 0; i < firstWeekday; i += 1) {
