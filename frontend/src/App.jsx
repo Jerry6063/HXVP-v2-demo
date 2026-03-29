@@ -24,6 +24,7 @@ import RevenueAnalysis from './portals/production/RevenueAnalysis';
 
 
 import DocumentGenerator from './portals/production/DocumentGenerator';
+import ShootPage from './portals/production/ShootPage';
 
 import ClientDashboard from './portals/client/Dashboard';
 import ClientProjectRequest from './portals/client/ProjectRequest';
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="projects" element={<ProductionsModule />} />
         <Route path="calendar" element={<ProductionCalendar />} />
         <Route path="projects/:id" element={<ProjectDetail />} />
+        <Route path="projects/:id/shoots/:shootId" element={<ShootPage />} />
         <Route path="requests" element={<Navigate to="/production/projects?tab=requests" replace />} />
         <Route path="requests/:id" element={<ProductionRequestDetail />} />
         <Route path="talent" element={<TalentsModule />} />

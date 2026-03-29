@@ -1,24 +1,13 @@
-import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useProjects, useShoots } from '../../api/hooks';
+import { useProjects } from '../../api/hooks';
 
-// Existing tabs (reused)
-import CallSheetsTab from './documents/CallSheetsTab';
-import ChecklistsTab from './documents/ChecklistsTab';
-import ProductionLogsTab from './documents/ProductionLogsTab';
-
-// New document type tabs
+// Document type tabs
 import ClientContractsTab from './documents/ClientContractsTab';
-import BudgetTemplatesTab from './documents/BudgetTemplatesTab';
 import ContractTab from './documents/ContractTab';
 
 import {
   DocumentTextIcon,
-  CalendarDaysIcon,
-  ClipboardDocumentListIcon,
-  DocumentChartBarIcon,
   UserGroupIcon,
-  CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 
 const DOC_TYPES = [
@@ -55,73 +44,20 @@ const DOC_TYPES = [
     activeBorder: 'border-sky-600',
     category: 'contracts',
   },
-  {
-    id: 'budget_templates',
-    label: 'Budget Templates',
-    description: 'Generate and send budget documents to clients with pre-filled templates.',
-    icon: DocumentChartBarIcon,
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50',
-    border: 'border-emerald-200',
-    activeBorder: 'border-emerald-600',
-    category: 'documents',
-  },
-  {
-    id: 'production_schedules',
-    label: 'Production Schedules',
-    description: 'Internal production logs, notes, decisions, and milestones.',
-    icon: CalendarDaysIcon,
-    color: 'text-amber-600',
-    bg: 'bg-amber-50',
-    border: 'border-amber-200',
-    activeBorder: 'border-amber-600',
-    category: 'documents',
-  },
-  {
-    id: 'call_sheets',
-    label: 'Call Sheets',
-    description: 'Daily call sheets for talent and crew, linked to a production shoot.',
-    icon: ClipboardDocumentListIcon,
-    color: 'text-blue-600',
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    activeBorder: 'border-blue-600',
-    category: 'documents',
-  },
-  {
-    id: 'checklists',
-    label: 'Checklists',
-    description: 'Shoot or production checklists to track pre/post-production tasks.',
-    icon: CheckCircleIcon,
-    color: 'text-teal-600',
-    bg: 'bg-teal-50',
-    border: 'border-teal-200',
-    activeBorder: 'border-teal-600',
-    category: 'documents',
-  },
 ];
 
 export default function DocumentGenerator() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeType = searchParams.get('type') || '';
 
-  const [selectedProject, setSelectedProject] = useState('');
   const { data: projectsData } = useProjects();
-  const { data: shootsData } = useShoots(selectedProject ? { project: selectedProject } : {});
-
   const projects = projectsData?.results || projectsData || [];
-  const shoots = shootsData?.results || shootsData || [];
 
   const activeDocType = DOC_TYPES.find((t) => t.id === activeType);
-  const needsProject = ['production_schedules', 'call_sheets', 'checklists'].includes(activeType);
 
   const setType = (id) => {
     setSearchParams({ type: id }, { replace: true });
-    setSelectedProject('');
   };
-
-  const contractTypes = DOC_TYPES.filter((t) => t.category === 'contracts');
-  const docTypes = DOC_TYPES.filter((t) => t.category === 'documents');
 
   return (
     <div className="space-y-6">
@@ -139,9 +75,28 @@ export default function DocumentGenerator() {
 
       {!activeType ? (
         /* ── Type selection grid ── */
-        <div className="space-y-6">
-          <DocTypeSection title="Contracts & Agreements" types={contractTypes} onSelect={setType} />
-          <DocTypeSection title="Production Documents" types={docTypes} onSelect={setType} />
+        <div>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Contracts &amp; Agreements</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {DOC_TYPES.map((t) => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setType(t.id)}
+                  className={`text-left bg-white rounded-xl shadow border-2 ${t.border} hover:shadow-md transition p-6 group`}
+                >
+                  <div className={`w-11 h-11 rounded-lg ${t.bg} flex items-center justify-center mb-4`}>
+                    <Icon className={`w-6 h-6 ${t.color}`} />
+                  </div>
+                  <p className="font-semibold text-sm text-gray-900 group-hover:text-indigo-700 transition">
+                    {t.label}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">{t.description}</p>
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : (
         /* ── Active document type view ── */
@@ -195,68 +150,9 @@ export default function DocumentGenerator() {
               color="border-sky-500"
             />
           )}
-
-          {activeType === 'budget_templates' && <BudgetTemplatesTab />}
-
-          {activeType === 'production_schedules' && (
-            selectedProject
-              ? <ProductionLogsTab projectId={selectedProject} shoots={shoots} />
-              : <EmptyProjectPrompt label="production schedules" />
-          )}
-
-          {activeType === 'call_sheets' && (
-            selectedProject
-              ? <CallSheetsTab projectId={selectedProject} shoots={shoots} />
-              : <EmptyProjectPrompt label="call sheets" />
-          )}
-
-          {activeType === 'checklists' && (
-            selectedProject
-              ? <ChecklistsTab projectId={selectedProject} />
-              : <EmptyProjectPrompt label="checklists" />
-          )}
         </div>
       )}
     </div>
   );
 }
 
-function DocTypeSection({ title, types, onSelect }) {
-  return (
-    <div>
-      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{title}</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {types.map((t) => {
-          const Icon = t.icon;
-          return (
-            <button
-              key={t.id}
-              onClick={() => onSelect(t.id)}
-              className={`text-left bg-white rounded-xl shadow border-2 ${t.border} hover:shadow-md transition p-5 group`}
-            >
-              <div className={`w-10 h-10 rounded-lg ${t.bg} flex items-center justify-center mb-3`}>
-                <Icon className={`w-5 h-5 ${t.color}`} />
-              </div>
-              <p className="font-semibold text-sm text-gray-900 group-hover:text-indigo-700 transition">
-                {t.label}
-              </p>
-              <p className="text-xs text-gray-400 mt-1 leading-relaxed">{t.description}</p>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function EmptyProjectPrompt({ label }) {
-  return (
-    <div className="bg-white rounded-xl shadow p-12 text-center">
-      <div className="text-5xl mb-4">📋</div>
-      <h2 className="text-lg font-semibold text-gray-700">Select a production above</h2>
-      <p className="text-gray-400 mt-1 text-sm">
-        Choose a production to manage {label}.
-      </p>
-    </div>
-  );
-}

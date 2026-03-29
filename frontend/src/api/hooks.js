@@ -195,6 +195,12 @@ export const useGenerateCallSheetFromShoot = () => {
   });
 };
 
+export const useSendCallSheet = () =>
+  useMutation({
+    mutationFn: ({ id, talent_profile_ids, crew_profile_ids }) =>
+      api.post(`/projects/call-sheets/${id}/send/`, { talent_profile_ids, crew_profile_ids }).then((r) => r.data),
+  });
+
 // ── Document Generator: Checklists ──
 
 export const useChecklists = (params = {}) =>

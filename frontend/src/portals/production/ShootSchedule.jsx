@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   useShoots,
   useShoot,
@@ -267,7 +267,7 @@ function ShootDetailModal({ shootId, onClose, onEdit }) {
 
 // ── Arrange Shoot Modal ────────────────────────────────────────────────────────
 
-function ArrangeShootModal({ projectId, shootToEdit, onClose }) {
+export function ArrangeShootModal({ projectId, shootToEdit, onClose }) {
   const createShoot = useCreateShoot();
   const updateShoot = useUpdateShoot();
   const createBooking = useCreateBooking();
@@ -1041,15 +1041,10 @@ function NoteBlock({ color, label, text }) {
 export default function ShootSchedule({ projectId }) {
   const { data: shootsData, isLoading } = useShoots({ project: projectId });
   const [showArrange, setShowArrange] = useState(false);
-  const [viewingShootId, setViewingShootId] = useState(null);
   const [editingShoot, setEditingShoot] = useState(null);
+  const navigate = useNavigate();
 
   const shoots = useMemo(() => shootsData?.results || shootsData || [], [shootsData]);
-
-  const handleEdit = (shoot) => {
-    setViewingShootId(null);
-    setEditingShoot(shoot);
-  };
 
   return (
     <>
@@ -1075,7 +1070,7 @@ export default function ShootSchedule({ projectId }) {
         ) : (
           <div className="space-y-2">
             {shoots.map((s) => (
-              <ShootCard key={s.id} shoot={s} onClick={() => setViewingShootId(s.id)} />
+              <ShootCard key={s.id} shoot={s} onClick={() => navigate(`/production/projects/${projectId}/shoots/${s.id}`)} />
             ))}
           </div>
         )}
@@ -1089,18 +1084,6 @@ export default function ShootSchedule({ projectId }) {
           onClose={() => {
             setShowArrange(false);
             setEditingShoot(null);
-          }}
-        />
-      )}
-
-      {viewingShootId && !editingShoot && (
-        <ShootDetailModal
-          shootId={viewingShootId}
-          onClose={() => setViewingShootId(null)}
-          onEdit={() => {
-            // Fetch the basic shoot from list to pre-fill edit form
-            const shoot = shoots.find((s) => s.id === viewingShootId);
-            if (shoot) handleEdit(shoot);
           }}
         />
       )}

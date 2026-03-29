@@ -239,6 +239,9 @@ class CallSheetViewSet(viewsets.ModelViewSet):
         project = self.request.query_params.get("project")
         if project:
             qs = qs.filter(project_id=project)
+        shoot = self.request.query_params.get("shoot")
+        if shoot:
+            qs = qs.filter(shoot_id=shoot)
         return qs
 
     def get_serializer_class(self):
@@ -266,6 +269,34 @@ class CallSheetViewSet(viewsets.ModelViewSet):
         return Response(
             CallSheetDetailSerializer(call_sheet).data
         )
+
+    @action(detail=True, methods=["post"])
+    def send(self, request, pk=None):
+        """Email this call sheet to selected talent and crew."""
+        from apps.talent.models import TalentProfile
+        from apps.crew.models import CrewProfile
+        from .emails import send_call_sheet_email
+
+        call_sheet = self.get_object()
+        talent_ids = request.data.get("talent_profile_ids", [])
+        crew_ids = request.data.get("crew_profile_ids", [])
+        sent = 0
+
+        for profile in TalentProfile.objects.select_related("user").filter(id__in=talent_ids):
+            email = profile.user.email
+            name = profile.user.get_full_name()
+            if email:
+                send_call_sheet_email(call_sheet, email, name)
+                sent += 1
+
+        for profile in CrewProfile.objects.select_related("user").filter(id__in=crew_ids):
+            email = profile.user.email
+            name = profile.user.get_full_name()
+            if email:
+                send_call_sheet_email(call_sheet, email, name)
+                sent += 1
+
+        return Response({"sent": sent})
 
     @action(detail=True, methods=["post"])
     def generate_from_shoot(self, request, pk=None):
