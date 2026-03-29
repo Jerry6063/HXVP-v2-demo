@@ -10,6 +10,7 @@ from .models import (
     Project, Shoot, ActivityLog,
     CallSheet, CallSheetEntry, Checklist, ChecklistItem, ProductionLog,
     TalentConsideration, CrewConsideration,
+    TalentRequirement, CrewRequirement,
 )
 from .serializers import (
     ProjectListSerializer,
@@ -26,6 +27,8 @@ from .serializers import (
     ProductionLogSerializer,
     TalentConsiderationSerializer,
     CrewConsiderationSerializer,
+    TalentRequirementSerializer,
+    CrewRequirementSerializer,
 )
 
 
@@ -273,30 +276,48 @@ class CallSheetViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def send(self, request, pk=None):
         """Email this call sheet to selected talent and crew."""
+        import re
         from apps.talent.models import TalentProfile
         from apps.crew.models import CrewProfile
         from .emails import send_call_sheet_email
 
+        email_re = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
         call_sheet = self.get_object()
         talent_ids = request.data.get("talent_profile_ids", [])
         crew_ids = request.data.get("crew_profile_ids", [])
         sent = 0
+        failed = 0
+        failed_recipients = []
+        skipped = 0
+        skipped_recipients = []
 
+        profiles = []
         for profile in TalentProfile.objects.select_related("user").filter(id__in=talent_ids):
-            email = profile.user.email
-            name = profile.user.get_full_name()
-            if email:
-                send_call_sheet_email(call_sheet, email, name)
-                sent += 1
-
+            profiles.append(profile)
         for profile in CrewProfile.objects.select_related("user").filter(id__in=crew_ids):
+            profiles.append(profile)
+
+        for profile in profiles:
             email = profile.user.email
             name = profile.user.get_full_name()
-            if email:
-                send_call_sheet_email(call_sheet, email, name)
+            if not email or not email_re.match(email):
+                skipped += 1
+                skipped_recipients.append(name)
+                continue
+            ok = send_call_sheet_email(call_sheet, email, name)
+            if ok:
                 sent += 1
+            else:
+                failed += 1
+                failed_recipients.append(name)
 
-        return Response({"sent": sent})
+        return Response({
+            "sent": sent,
+            "failed": failed,
+            "failed_recipients": failed_recipients,
+            "skipped": skipped,
+            "skipped_recipients": skipped_recipients,
+        })
 
     @action(detail=True, methods=["post"])
     def generate_from_shoot(self, request, pk=None):
@@ -451,3 +472,27 @@ class CrewConsiderationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(added_by=self.request.user)
+
+
+class TalentRequirementViewSet(viewsets.ModelViewSet):
+    serializer_class = TalentRequirementSerializer
+    permission_classes = [IsProductionAdmin]
+
+    def get_queryset(self):
+        qs = TalentRequirement.objects.select_related("project")
+        project = self.request.query_params.get("project")
+        if project:
+            qs = qs.filter(project_id=project)
+        return qs
+
+
+class CrewRequirementViewSet(viewsets.ModelViewSet):
+    serializer_class = CrewRequirementSerializer
+    permission_classes = [IsProductionAdmin]
+
+    def get_queryset(self):
+        qs = CrewRequirement.objects.select_related("project")
+        project = self.request.query_params.get("project")
+        if project:
+            qs = qs.filter(project_id=project)
+        return qs

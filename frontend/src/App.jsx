@@ -1,4 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
@@ -49,6 +51,8 @@ import CrewReimbursements from './portals/crew/Reimbursements';
 
 export default function App() {
   return (
+    <>
+    <ToastContainer position="top-right" autoClose={4000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover />
     <Routes>
       <Route path="/" element={<HomePage />} />
 
@@ -151,5 +155,6 @@ export default function App() {
         <Route path="reimbursements" element={<CrewReimbursements />} />
       </Route>
     </Routes>
+    </>
   );
 }

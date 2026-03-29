@@ -12,11 +12,13 @@ def _safe_send(subject, message, recipient_list, **kwargs):
             message,
             settings.DEFAULT_FROM_EMAIL,
             recipient_list,
-            fail_silently=True,
+            fail_silently=False,
             **kwargs,
         )
+        return True
     except Exception as e:
-        logger.warning("Email send failed: %s", e)
+        logger.warning("Email send failed to %s: %s", recipient_list, e)
+        return False
 
 
 TYPE_LABELS = {
@@ -51,7 +53,7 @@ def send_document_to_recipient(contract, request=None):
         abs_url = request.build_absolute_uri(contract.file_url.url)
         file_line = f"\nDocument link: {abs_url}\n"
 
-    _safe_send(
+    result = _safe_send(
         subject=f"Document Ready for Review: {title}",
         message=(
             f"Hi {recipient.first_name},\n\n"
@@ -79,3 +81,5 @@ def send_document_to_recipient(contract, request=None):
             ),
             recipient_list=admin_emails,
         )
+
+    return result

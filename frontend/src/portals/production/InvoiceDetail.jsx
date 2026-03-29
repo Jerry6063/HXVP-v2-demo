@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import {
   useInvoice,
   useAddInvoiceItem,
@@ -47,12 +48,21 @@ export default function InvoiceDetail() {
 
   const handleSend = async () => {
     if (items.length === 0) {
-      alert('Add at least one line item before sending.');
+      toast.warning('Add at least one line item before sending.');
       return;
     }
     if (!window.confirm('Send this invoice to the client? They will receive an email notification.'))
       return;
-    await sendInvoice.mutateAsync(id);
+    try {
+      const result = await sendInvoice.mutateAsync(id);
+      if (result.email_sent === false) {
+        toast.warning('Invoice status updated, but email delivery failed. Please check the recipient email.');
+      } else {
+        toast.success('Invoice sent to client.');
+      }
+    } catch (err) {
+      toast.error('Failed to send invoice: ' + (err.response?.data?.detail || err.message));
+    }
   };
 
   const handleSaveInstructions = async () => {

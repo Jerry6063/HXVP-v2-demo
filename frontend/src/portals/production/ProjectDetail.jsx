@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { PencilIcon, TrashIcon, PlusIcon, CheckIcon, XMarkIcon, PaperClipIcon } from '@heroicons/react/24/outline';
 import ShootSchedule from './ShootSchedule';
 import {
@@ -33,6 +33,13 @@ import {
   useUpdateExpense,
   useBudgetAllocations,
   useUpsertBudgetAllocation,
+  useDeliverableReviews,
+  useTalentRequirements,
+  useCrewRequirements,
+  useCreateTalentRequirement,
+  useCreateCrewRequirement,
+  useDeleteTalentRequirement,
+  useDeleteCrewRequirement,
 } from '../../api/hooks';
 import StatusBadge from '../../components/StatusBadge';
 
@@ -91,6 +98,7 @@ export default function ProjectDetail() {
   const createMilestone = useCreateMilestone();
   const updateMilestone = useUpdateMilestone();
   const deleteMilestone = useDeleteMilestone();
+  const { data: reviewsData } = useDeliverableReviews({ project: id });
 
   const deliverablesArr = deliverables?.results || deliverables || [];
   const milestonesArr = (milestonesData?.results || milestonesData || []).sort(
@@ -98,6 +106,7 @@ export default function ProjectDetail() {
   );
   const contractsArr = contracts?.results || contracts || [];
   const expensesArr = expenses?.results || expenses || [];
+  const reviewsArr = reviewsData?.results || reviewsData || [];
   const bookingsArr = bookings?.results || bookings || [];
   const assignmentsArr = assignments?.results || assignments || [];
   const shoots = project?.shoots || [];
@@ -160,10 +169,15 @@ export default function ProjectDetail() {
                 createMilestone={createMilestone}
                 updateMilestone={updateMilestone}
                 deleteMilestone={deleteMilestone}
+                bookings={bookingsArr}
+                assignments={assignmentsArr}
+                reviews={reviewsArr}
+                shoots={shoots}
+                updateProject={updateProject}
               />
             )}
             {activeTab === 1 && (
-              <TeamTalentTab bookings={bookingsArr} assignments={assignmentsArr} projectId={id} />
+              <TeamTalentTab bookings={bookingsArr} assignments={assignmentsArr} projectId={id} project={project} />
             )}
             {activeTab === 2 && (
               <AssetsTab
@@ -196,11 +210,13 @@ export default function ProjectDetail() {
                 {assignmentsArr
                   .filter((a) => a.status === 'accepted')
                   .map((a) => (
-                    <li key={a.id} className="flex items-center justify-between text-sm">
-                      <span className="text-gray-700">{a.crew_name}</span>
-                      <span className="text-xs text-gray-400 capitalize">
-                        {a.role_on_shoot?.replace(/_/g, ' ')}
-                      </span>
+                    <li key={a.id}>
+                      <Link to={`/production/crew/${a.crew}`} className="flex items-center justify-between text-sm hover:text-indigo-600 transition-colors">
+                        <span>{a.crew_name}</span>
+                        <span className="text-xs text-gray-400 capitalize">
+                          {a.role_on_shoot?.replace(/_/g, ' ')}
+                        </span>
+                      </Link>
                     </li>
                   ))}
               </ul>
@@ -217,8 +233,10 @@ export default function ProjectDetail() {
                 {bookingsArr
                   .filter((b) => b.status === 'accepted')
                   .map((b) => (
-                    <li key={b.id} className="text-sm text-gray-700">
-                      {b.talent_name}
+                    <li key={b.id}>
+                      <Link to={`/production/talent/${b.talent}`} className="text-sm text-gray-700 hover:text-indigo-600 transition-colors block">
+                        {b.talent_name}
+                      </Link>
                     </li>
                   ))}
               </ul>
@@ -257,13 +275,19 @@ export default function ProjectDetail() {
   );
 }
 
-function WorkflowTab({ project, milestones, createMilestone, updateMilestone, deleteMilestone }) {
+function WorkflowTab({ project, milestones, createMilestone, updateMilestone, deleteMilestone, bookings, assignments, reviews, shoots, updateProject }) {
   const [showAddMs, setShowAddMs] = useState(false);
   const [newMs, setNewMs] = useState({ phase: 'preparing', title: '' });
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState({ title: '', phase: 'preparing' });
   const [confirmMilestone, setConfirmMilestone] = useState(null);
   const [draggedMilestoneId, setDraggedMilestoneId] = useState(null);
+  const [locationInput, setLocationInput] = useState('');
+
+  const confirmedTalent = useMemo(() => (bookings || []).filter(b => b.status === 'accepted'), [bookings]);
+  const confirmedCrew = useMemo(() => (assignments || []).filter(a => a.status === 'accepted'), [assignments]);
+  const clientReviewCount = useMemo(() => (reviews || []).filter(r => r.action === 'revision_requested' || r.action === 'comment').length, [reviews]);
+  const msTypeMatch = (ms, keyword) => normalizeMsTitle(ms.title).includes(keyword);
 
   const phaseGroups = useMemo(() => {
     const byPhase = new Map();
@@ -335,6 +359,9 @@ function WorkflowTab({ project, milestones, createMilestone, updateMilestone, de
   };
 
   const handleToggleMilestone = async (ms) => {
+    if (normalizeMsTitle(ms.title).includes('location') && !ms.is_completed) {
+      setLocationInput(project.location || '');
+    }
     setConfirmMilestone(ms);
   };
 
@@ -346,6 +373,10 @@ function WorkflowTab({ project, milestones, createMilestone, updateMilestone, de
     }
 
     const nextCompleted = !confirmMilestone.is_completed;
+
+    if (normalizeMsTitle(confirmMilestone.title).includes('location') && nextCompleted && locationInput.trim()) {
+      await updateProject.mutateAsync({ id: project.id, location: locationInput.trim() });
+    }
 
     await updateMilestone.mutateAsync({
       id: confirmMilestone.id,
@@ -558,6 +589,49 @@ function WorkflowTab({ project, milestones, createMilestone, updateMilestone, de
                           <span className="text-xs text-gray-400 ml-2 capitalize">
                             {item.phase === 'shooting' ? 'production' : item.phase.replace(/_/g, ' ')}
                           </span>
+
+                          {/* Location: show confirmed location */}
+                          {!isMain && msTypeMatch(item, 'location') && item.is_completed && project.location && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-medium">{project.location}</span>
+                            </div>
+                          )}
+
+                          {/* Talent: show confirmed talent names */}
+                          {!isMain && msTypeMatch(item, 'talent') && confirmedTalent.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {confirmedTalent.map(b => (
+                                <Link key={b.id} to={`/production/talent/${b.talent}`} className="inline-flex items-center px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-xs font-medium hover:bg-amber-100 transition-colors">{b.talent_name}</Link>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Crew: show confirmed crew names */}
+                          {!isMain && msTypeMatch(item, 'crew') && confirmedCrew.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {confirmedCrew.map(a => (
+                                <Link key={a.id} to={`/production/crew/${a.crew}`} className="inline-flex items-center px-2 py-0.5 bg-sky-50 text-sky-700 rounded text-xs font-medium hover:bg-sky-100 transition-colors">{a.crew_name}</Link>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Call Sheet: link to shoot pages */}
+                          {!isMain && msTypeMatch(item, 'call sheet') && (shoots || []).length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {(shoots || []).map(s => (
+                                <Link key={s.id} to={`/production/projects/${project.id}/shoots/${s.id}`} className="inline-flex items-center px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-xs font-medium hover:bg-emerald-100 transition-colors">{s.location} – {s.shoot_date}</Link>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Client Review: notification */}
+                          {!isMain && item.phase === 'review' && clientReviewCount > 0 && (
+                            <div className="mt-1">
+                              <Link to="/production/messages" className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-600 rounded text-xs font-medium hover:bg-red-100 transition-colors">
+                                {clientReviewCount} client {clientReviewCount === 1 ? 'comment' : 'comments'}
+                              </Link>
+                            </div>
+                          )}
                         </>
                       )}
                     </div>
@@ -634,6 +708,18 @@ function WorkflowTab({ project, milestones, createMilestone, updateMilestone, de
                 : 'Mark this milestone as completed?'}
             </p>
             <p className="text-sm font-medium text-gray-800 mt-2">{cleanMilestoneLabel(confirmMilestone.title)}</p>
+            {normalizeMsTitle(confirmMilestone.title).includes('location') && !confirmMilestone.is_completed && (
+              <div className="mt-3">
+                <label className="block text-xs text-gray-500 mb-1 font-medium">Confirmed Location</label>
+                <input
+                  type="text"
+                  value={locationInput}
+                  onChange={(e) => setLocationInput(e.target.value)}
+                  placeholder="Enter the confirmed location…"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+            )}
             <div className="mt-4 flex justify-end gap-2">
               <button
                 onClick={() => setConfirmMilestone(null)}
@@ -973,9 +1059,13 @@ function AddCrewModal({ onClose, onAdd }) {
   );
 }
 
-function TeamTalentTab({ bookings, assignments, projectId }) {
+function TeamTalentTab({ bookings, assignments, projectId, project }) {
   const [showAddTalent, setShowAddTalent] = useState(false);
   const [showAddCrew, setShowAddCrew] = useState(false);
+  const [showAddTalentReq, setShowAddTalentReq] = useState(false);
+  const [showAddCrewReq, setShowAddCrewReq] = useState(false);
+  const [newTalentReq, setNewTalentReq] = useState({ talent_type: 'model', count: 1, notes: '' });
+  const [newCrewReq, setNewCrewReq] = useState({ crew_role: 'photographer', count: 1, notes: '' });
 
   const { data: talentConsData } = useTalentConsiderations({ project: projectId });
   const { data: crewConsData } = useCrewConsiderations({ project: projectId });
@@ -984,8 +1074,33 @@ function TeamTalentTab({ bookings, assignments, projectId }) {
   const addCrewCon = useAddCrewConsideration();
   const removeCrewCon = useRemoveCrewConsideration();
 
+  const createTalentReq = useCreateTalentRequirement();
+  const createCrewReq = useCreateCrewRequirement();
+  const deleteTalentReq = useDeleteTalentRequirement();
+  const deleteCrewReq = useDeleteCrewRequirement();
+
   const talentCons = talentConsData?.results || talentConsData || [];
   const crewCons = crewConsData?.results || crewConsData || [];
+
+  const talentRequirements = project?.talent_requirements || [];
+  const crewRequirements = project?.crew_requirements_list || [];
+
+  // Compute fulfillment: count accepted bookings per talent_type
+  const acceptedBookings = bookings.filter((b) => b.status === 'accepted' || b.status === 'confirmed');
+  const acceptedAssignments = assignments.filter((a) => a.status === 'accepted' || a.status === 'confirmed');
+
+  const talentFulfillment = talentRequirements.map((req) => {
+    const filled = acceptedBookings.filter((b) => b.talent_type === req.talent_type).length;
+    return { ...req, filled };
+  });
+
+  const crewFulfillment = crewRequirements.map((req) => {
+    const filled = acceptedAssignments.filter((a) => a.role_on_shoot === req.crew_role).length;
+    return { ...req, filled };
+  });
+
+  const TALENT_TYPE_LABELS = { model: 'Model', actor: 'Actor', voiceover: 'Voiceover', dancer: 'Dancer', livestream: 'Livestream Host', other: 'Other' };
+  const CREW_ROLE_LABELS = { director: 'Director', photographer: 'Photographer', dop: 'Director of Photography', videographer: 'Videographer', first_ac: '1st AC', second_ac: '2nd AC', gaffer: 'Gaffer', grip: 'Grip', electric: 'Electric', wardrobe: 'Wardrobe', set_design: 'Set Design', bts: 'Behind-the-Scene', pa: 'Production Assistant', ac: 'Assistant Camera', audio: 'Audio', lighting: 'Lighting', hair_makeup: 'Hair & Makeup', stylist: 'Stylist', crafty: 'Crafty', other: 'Other' };
 
   const handleAddTalent = async ({ id, notes }) => {
     await addTalentCon.mutateAsync({ project: projectId, talent: id, notes });
@@ -997,8 +1112,131 @@ function TeamTalentTab({ bookings, assignments, projectId }) {
     setShowAddCrew(false);
   };
 
+  const handleAddTalentReq = async () => {
+    await createTalentReq.mutateAsync({ project: projectId, ...newTalentReq });
+    setNewTalentReq({ talent_type: 'model', count: 1, notes: '' });
+    setShowAddTalentReq(false);
+  };
+
+  const handleAddCrewReq = async () => {
+    await createCrewReq.mutateAsync({ project: projectId, ...newCrewReq });
+    setNewCrewReq({ crew_role: 'photographer', count: 1, notes: '' });
+    setShowAddCrewReq(false);
+  };
+
+  const FulfillIcon = ({ filled, needed }) => {
+    if (filled >= needed) return <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 text-green-600 text-xs">✓</span>;
+    if (filled > 0) return <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-600 text-xs font-bold">!</span>;
+    return <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-400 text-xs">○</span>;
+  };
+
   return (
     <div className="space-y-8">
+      {/* ── Staffing Requirements ── */}
+      {(talentRequirements.length > 0 || crewRequirements.length > 0) && (
+        <div>
+          <h4 className="font-semibold text-gray-800 text-sm mb-3">Staffing Requirements</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Talent Requirements */}
+            {talentRequirements.length > 0 && (
+              <div className="bg-indigo-50/50 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">Talent Needs</p>
+                  <button onClick={() => setShowAddTalentReq(true)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">+ Add</button>
+                </div>
+                <ul className="space-y-2">
+                  {talentFulfillment.map((r) => (
+                    <li key={r.id} className="flex items-center gap-2 text-sm">
+                      <FulfillIcon filled={r.filled} needed={r.count} />
+                      <span className="font-medium text-gray-800">{r.count}× {TALENT_TYPE_LABELS[r.talent_type] || r.talent_type}</span>
+                      <span className="text-xs text-gray-500">({r.filled}/{r.count} filled)</span>
+                      {r.notes && <span className="text-xs text-gray-400 italic ml-1">{r.notes}</span>}
+                      <button onClick={() => deleteTalentReq.mutate(r.id)} className="ml-auto text-xs text-gray-300 hover:text-red-500">×</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {/* Crew Requirements */}
+            {crewRequirements.length > 0 && (
+              <div className="bg-sky-50/50 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-sky-700 uppercase tracking-wide">Crew Needs</p>
+                  <button onClick={() => setShowAddCrewReq(true)} className="text-xs font-medium text-sky-600 hover:text-sky-700">+ Add</button>
+                </div>
+                <ul className="space-y-2">
+                  {crewFulfillment.map((r) => (
+                    <li key={r.id} className="flex items-center gap-2 text-sm">
+                      <FulfillIcon filled={r.filled} needed={r.count} />
+                      <span className="font-medium text-gray-800">{r.count}× {CREW_ROLE_LABELS[r.crew_role] || r.crew_role?.replace(/_/g, ' ')}</span>
+                      <span className="text-xs text-gray-500">({r.filled}/{r.count} filled)</span>
+                      {r.notes && <span className="text-xs text-gray-400 italic ml-1">{r.notes}</span>}
+                      <button onClick={() => deleteCrewReq.mutate(r.id)} className="ml-auto text-xs text-gray-300 hover:text-red-500">×</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Add requirement inline forms */}
+      {(talentRequirements.length === 0 && crewRequirements.length === 0) && (
+        <div className="flex gap-3">
+          <button onClick={() => setShowAddTalentReq(true)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">+ Add Talent Requirement</button>
+          <button onClick={() => setShowAddCrewReq(true)} className="text-xs font-medium text-sky-600 hover:text-sky-700">+ Add Crew Requirement</button>
+        </div>
+      )}
+
+      {showAddTalentReq && (
+        <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
+          <p className="text-xs font-semibold text-indigo-700 uppercase">Add Talent Requirement</p>
+          <div className="flex gap-2 items-end">
+            <div>
+              <label className="text-xs text-gray-500">Count</label>
+              <input type="number" min="1" value={newTalentReq.count} onChange={(e) => setNewTalentReq({ ...newTalentReq, count: parseInt(e.target.value) || 1 })} className="w-16 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Type</label>
+              <select value={newTalentReq.talent_type} onChange={(e) => setNewTalentReq({ ...newTalentReq, talent_type: e.target.value })} className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm">
+                {Object.entries(TALENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-gray-500">Notes</label>
+              <input value={newTalentReq.notes} onChange={(e) => setNewTalentReq({ ...newTalentReq, notes: e.target.value })} placeholder="Optional notes" className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+            </div>
+            <button onClick={handleAddTalentReq} disabled={createTalentReq.isPending} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">Add</button>
+            <button onClick={() => setShowAddTalentReq(false)} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {showAddCrewReq && (
+        <div className="bg-sky-50 rounded-xl p-4 space-y-3">
+          <p className="text-xs font-semibold text-sky-700 uppercase">Add Crew Requirement</p>
+          <div className="flex gap-2 items-end">
+            <div>
+              <label className="text-xs text-gray-500">Count</label>
+              <input type="number" min="1" value={newCrewReq.count} onChange={(e) => setNewCrewReq({ ...newCrewReq, count: parseInt(e.target.value) || 1 })} className="w-16 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">Role</label>
+              <select value={newCrewReq.crew_role} onChange={(e) => setNewCrewReq({ ...newCrewReq, crew_role: e.target.value })} className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm">
+                {Object.entries(CREW_ROLE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-gray-500">Notes</label>
+              <input value={newCrewReq.notes} onChange={(e) => setNewCrewReq({ ...newCrewReq, notes: e.target.value })} placeholder="Optional notes" className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+            </div>
+            <button onClick={handleAddCrewReq} disabled={createCrewReq.isPending} className="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-xs font-medium hover:bg-sky-700 disabled:opacity-50">Add</button>
+            <button onClick={() => setShowAddCrewReq(false)} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200">Cancel</button>
+          </div>
+        </div>
+      )}
+
       {/* ── Talent Bookings ── */}
       <div>
         <div className="flex items-center justify-between mb-2">
@@ -1017,6 +1255,7 @@ function TeamTalentTab({ bookings, assignments, projectId }) {
             <thead>
               <tr className="text-left text-xs text-gray-500 uppercase">
                 <th className="pb-2">Talent</th>
+                <th className="pb-2">Role</th>
                 <th className="pb-2">Shoot</th>
                 <th className="pb-2">Status</th>
               </tr>
@@ -1025,6 +1264,7 @@ function TeamTalentTab({ bookings, assignments, projectId }) {
               {bookings.map((b) => (
                 <tr key={b.id}>
                   <td className="py-2 text-gray-700">{b.talent_name}</td>
+                  <td className="py-2 text-gray-500 capitalize">{(b.talent_type || '').replace(/_/g, ' ')}</td>
                   <td className="py-2 text-gray-500">{b.shoot_detail?.location} – {b.shoot_detail?.shoot_date}</td>
                   <td className="py-2"><StatusBadge status={b.status} /></td>
                 </tr>

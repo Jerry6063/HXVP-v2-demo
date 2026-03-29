@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
@@ -376,10 +377,16 @@ function ContractEditor({ contract, onClose }) {
     await doSave();
     setSendStatus('sending');
     try {
-      await sendContract.mutateAsync(contract.id);
+      const result = await sendContract.mutateAsync(contract.id);
       setSendStatus('sent');
+      if (result.email_sent === false) {
+        toast.warning('Contract status updated, but email delivery failed.');
+      } else {
+        toast.success('Contract sent to client.');
+      }
     } catch {
       setSendStatus('error');
+      toast.error('Failed to send contract to client.');
     }
   };
 
@@ -577,6 +584,9 @@ function RequestContractsPane() {
       await uploadContract.mutateAsync({ requestId: selectedRequest, file });
       setFile(null);
       setSelectedRequest('');
+      toast.success('Contract uploaded and sent to client.');
+    } catch (err) {
+      toast.error('Failed to upload contract: ' + (err.response?.data?.detail || err.message));
     } finally {
       setUploading(false);
     }
@@ -720,8 +730,15 @@ function DocumentLibraryPane() {
   const handleSend = async (id) => {
     setSendingId(id);
     try {
-      await sendContract.mutateAsync(id);
+      const result = await sendContract.mutateAsync(id);
       setSendSuccess(id);
+      if (result.email_sent === false) {
+        toast.warning('Document status updated, but email delivery failed.');
+      } else {
+        toast.success('Agreement sent to client.');
+      }
+    } catch {
+      toast.error('Failed to send agreement.');
     } finally {
       setSendingId(null);
     }

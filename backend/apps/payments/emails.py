@@ -9,10 +9,12 @@ def _safe_send(subject, message, recipient_list, **kwargs):
     try:
         send_mail(
             subject, message, settings.DEFAULT_FROM_EMAIL,
-            recipient_list, fail_silently=True, **kwargs,
+            recipient_list, fail_silently=False, **kwargs,
         )
+        return True
     except Exception as e:
-        logger.warning("Email send failed: %s", e)
+        logger.warning("Email send failed to %s: %s", recipient_list, e)
+        return False
 
 
 def get_admin_emails():
@@ -32,7 +34,7 @@ def send_invoice_email(invoice):
     for item in invoice.items.all():
         items_text += f"  - {item.description}: {item.quantity} x ${item.rate} = ${item.amount}\n"
 
-    _safe_send(
+    return _safe_send(
         subject=f"Invoice {invoice.reference_number} – {invoice.project.name}",
         message=(
             f"Hi {client.first_name},\n\n"

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import {
   useShoot,
   useDeleteShoot,
@@ -77,12 +78,23 @@ function SendCallSheetModal({ callSheetId, talent, crew, onClose }) {
   };
 
   const handleSend = async () => {
-    await sendMutation.mutateAsync({
-      id: callSheetId,
-      talent_profile_ids: selectedTalent,
-      crew_profile_ids: selectedCrew,
-    });
-    setSent(true);
+    try {
+      const result = await sendMutation.mutateAsync({
+        id: callSheetId,
+        talent_profile_ids: selectedTalent,
+        crew_profile_ids: selectedCrew,
+      });
+      setSent(true);
+      if (result.failed > 0) {
+        toast.warning(`Sent to ${result.sent}, but failed for: ${result.failed_recipients.join(', ')}`);
+      } else if (result.skipped > 0) {
+        toast.success(`Call sheet sent to ${result.sent} recipient(s). ${result.skipped} skipped (no valid email).`);
+      } else {
+        toast.success(`Call sheet sent to ${result.sent} recipient(s).`);
+      }
+    } catch (err) {
+      toast.error('Failed to send call sheet: ' + (err.response?.data?.detail || err.message));
+    }
   };
 
   return (

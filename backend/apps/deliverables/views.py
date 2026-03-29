@@ -104,7 +104,7 @@ class ContractViewSet(viewsets.ModelViewSet):
         contract.status = Contract.Status.SENT
         contract.sent_at = datetime.now()
         contract.save()
-        doc_emails.send_document_to_recipient(contract, request)
-        return Response(
-            ContractSerializer(contract, context={"request": request}).data
-        )
+        email_sent = doc_emails.send_document_to_recipient(contract, request)
+        data = ContractSerializer(contract, context={"request": request}).data
+        data["email_sent"] = bool(email_sent)
+        return Response(data)

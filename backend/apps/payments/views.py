@@ -89,10 +89,10 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         invoice.status = Invoice.Status.SENT
         invoice.sent_at = timezone.now()
         invoice.save()
-        emails.send_invoice_email(invoice)
-        return Response(
-            InvoiceDetailSerializer(invoice, context={"request": request}).data
-        )
+        email_sent = emails.send_invoice_email(invoice)
+        data = InvoiceDetailSerializer(invoice, context={"request": request}).data
+        data["email_sent"] = bool(email_sent)
+        return Response(data)
 
     @action(detail=True, methods=["post"])
     def mark_paid(self, request, pk=None):

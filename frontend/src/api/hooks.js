@@ -1288,6 +1288,70 @@ export const useUpdateMe = () => {
   });
 };
 
+// ── Talent Requirements ────────────────────────────────────────────────────────
+export const useTalentRequirements = (params = {}) =>
+  useQuery({
+    queryKey: ['talent-requirements', params],
+    queryFn: () => api.get('/projects/talent-requirements/', { params }).then((r) => r.data),
+    enabled: Object.values(params).some(Boolean),
+  });
+
+export const useCreateTalentRequirement = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => api.post('/projects/talent-requirements/', data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['talent-requirements'] });
+      qc.invalidateQueries({ queryKey: ['projects'] });
+      qc.invalidateQueries({ queryKey: ['project'] });
+    },
+  });
+};
+
+export const useDeleteTalentRequirement = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.delete(`/projects/talent-requirements/${id}/`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['talent-requirements'] });
+      qc.invalidateQueries({ queryKey: ['projects'] });
+      qc.invalidateQueries({ queryKey: ['project'] });
+    },
+  });
+};
+
+// ── Crew Requirements ──────────────────────────────────────────────────────────
+export const useCrewRequirements = (params = {}) =>
+  useQuery({
+    queryKey: ['crew-requirements', params],
+    queryFn: () => api.get('/projects/crew-requirements/', { params }).then((r) => r.data),
+    enabled: Object.values(params).some(Boolean),
+  });
+
+export const useCreateCrewRequirement = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => api.post('/projects/crew-requirements/', data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['crew-requirements'] });
+      qc.invalidateQueries({ queryKey: ['projects'] });
+      qc.invalidateQueries({ queryKey: ['project'] });
+    },
+  });
+};
+
+export const useDeleteCrewRequirement = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.delete(`/projects/crew-requirements/${id}/`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['crew-requirements'] });
+      qc.invalidateQueries({ queryKey: ['projects'] });
+      qc.invalidateQueries({ queryKey: ['project'] });
+    },
+  });
+};
+
 // ── Talent Considerations ──────────────────────────────────────────────────────
 export const useTalentConsiderations = (params = {}) =>
   useQuery({

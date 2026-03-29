@@ -271,4 +271,14 @@ class TalentRosterShareViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         share = serializer.save(shared_by=self.request.user)
-        emails.send_talent_roster_email(share)
+        email_sent = emails.send_talent_roster_email(share)
+        # Store on the instance so create() can access it
+        share._email_sent = email_sent
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        data = serializer.data
+        data["email_sent"] = bool(getattr(serializer.instance, "_email_sent", False))
+        return Response(data, status=201)

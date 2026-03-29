@@ -4,11 +4,15 @@ from django.conf import settings
 
 class CrewProfile(models.Model):
     class CrewRole(models.TextChoices):
+        DIRECTOR = "director", "Director"
         PHOTOGRAPHER = "photographer", "Photographer"
         DIRECTOR_OF_PHOTOGRAPHY = "dop", "Director of Photography"
         VIDEOGRAPHER = "videographer", "Videographer"
+        FIRST_AC = "first_ac", "1st Assistant Camera"
+        SECOND_AC = "second_ac", "2nd Assistant Camera"
         GAFFER = "gaffer", "Gaffer"
         GRIP = "grip", "Grip"
+        ELECTRIC = "electric", "Electric"
         WARDROBE = "wardrobe", "Wardrobe"
         SET_DESIGN = "set_design", "Set Design"
         BTS = "bts", "Behind-the-Scene"
@@ -18,6 +22,7 @@ class CrewProfile(models.Model):
         LIGHTING = "lighting", "Lighting"
         HAIR_MAKEUP = "hair_makeup", "Hair & Makeup"
         STYLIST = "stylist", "Stylist"
+        CRAFTY = "crafty", "Crafty"
         OTHER = "other", "Other"
 
     class Availability(models.TextChoices):

@@ -14,11 +14,13 @@ def _safe_send(subject, message, recipient_list, **kwargs):
             message,
             settings.DEFAULT_FROM_EMAIL,
             recipient_list,
-            fail_silently=True,
+            fail_silently=False,
             **kwargs,
         )
+        return True
     except Exception as e:
-        logger.warning("Email send failed: %s", e)
+        logger.warning("Email send failed to %s: %s", recipient_list, e)
+        return False
 
 
 def get_admin_emails():
@@ -130,7 +132,7 @@ def send_talent_roster_email(share):
         body += f"Message from our team:\n{share.message}\n\n"
     body += "Please log in to the Client Portal to view their full profiles.\n\n\u2013 Studio Team"
 
-    _safe_send(
+    return _safe_send(
         subject="Talent Selection Ready for Your Review",
         message=body,
         recipient_list=[client.email],

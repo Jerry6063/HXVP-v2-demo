@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import {
   useTalentProfiles,
   useTalentAvailability,
   useBookings,
   useUsers,
   useSendTalentRoster,
+  useProjects,
 } from '../../api/hooks';
 import StatusBadge from '../../components/StatusBadge';
 import {
@@ -254,6 +256,8 @@ function TalentCard({ t, onSelectTalent }) {
   );
 }
 
+const TALENT_TYPE_LABELS = { model: 'Model', actor: 'Actor', voiceover: 'Voiceover', dancer: 'Dancer', livestream: 'Livestream Host', other: 'Other' };
+
 function RosterTab({
   talentList, isLoading,
   typeFilter, setTypeFilter,
@@ -264,6 +268,7 @@ function RosterTab({
   onSelectTalent,
 }) {
   const [notApprovedOpen, setNotApprovedOpen] = useState(false);
+  const { data: projectsData } = useProjects({ status: 'active' });
 
   const approved = talentList.filter((t) => t.approval_status === 'approved');
   const notApproved = talentList.filter((t) => t.approval_status !== 'approved');
@@ -271,6 +276,10 @@ function RosterTab({
   const filterArgs = { genderFilter, raceFilter, ageRangeFilter, heightRangeFilter };
   const visibleApproved = applyFilters(approved, filterArgs);
   const visibleNotApproved = applyFilters(notApproved, filterArgs);
+
+  const activeProjects = (projectsData?.results || projectsData || []).filter(
+    (p) => (p.talent_requirements || []).length > 0
+  );
 
   return (
     <div className="space-y-6">
@@ -293,55 +302,91 @@ function RosterTab({
         </select>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-10 text-gray-400">Loading…</div>
-      ) : (
-        <>
-          {/* ── Approved talent ── */}
-          {visibleApproved.length === 0 && visibleNotApproved.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-100 p-12 text-center text-sm text-gray-400">
-              No talent match the selected filters
-            </div>
-          ) : visibleApproved.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-sm text-gray-400">
-              No approved talent match the selected filters
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main roster area */}
+        <div className="lg:col-span-3">
+          {isLoading ? (
+            <div className="text-center py-10 text-gray-400">Loading…</div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {visibleApproved.map((t) => <TalentCard key={t.id} t={t} onSelectTalent={onSelectTalent} />)}
-            </div>
-          )}
+            <div className="space-y-6">
+              {/* ── Approved talent ── */}
+              {visibleApproved.length === 0 && visibleNotApproved.length === 0 ? (
+                <div className="bg-white rounded-xl border border-gray-100 p-12 text-center text-sm text-gray-400">
+                  No talent match the selected filters
+                </div>
+              ) : visibleApproved.length === 0 ? (
+                <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-sm text-gray-400">
+                  No approved talent match the selected filters
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {visibleApproved.map((t) => <TalentCard key={t.id} t={t} onSelectTalent={onSelectTalent} />)}
+                </div>
+              )}
 
-          {/* ── Not-yet-approved talent ── */}
-          {notApproved.length > 0 && (
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
-              <button
-                onClick={() => setNotApprovedOpen((o) => !o)}
-                className="w-full flex items-center justify-between px-5 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-600"
-              >
-                <span>
-                  Pending / Draft / Rejected
-                  <span className="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-gray-700 text-xs font-semibold">
-                    {visibleNotApproved.length}
-                  </span>
-                </span>
-                <span className="text-gray-400 text-xs">{notApprovedOpen ? '▲ Hide' : '▼ Show'}</span>
-              </button>
-              {notApprovedOpen && (
-                <div className="p-4 bg-white">
-                  {visibleNotApproved.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-4">No talent match the selected filters</p>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {visibleNotApproved.map((t) => <TalentCard key={t.id} t={t} onSelectTalent={onSelectTalent} />)}
+              {/* ── Not-yet-approved talent ── */}
+              {notApproved.length > 0 && (
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setNotApprovedOpen((o) => !o)}
+                    className="w-full flex items-center justify-between px-5 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-gray-600"
+                  >
+                    <span>
+                      Pending / Draft / Rejected
+                      <span className="ml-2 inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-gray-700 text-xs font-semibold">
+                        {visibleNotApproved.length}
+                      </span>
+                    </span>
+                    <span className="text-gray-400 text-xs">{notApprovedOpen ? '▲ Hide' : '▼ Show'}</span>
+                  </button>
+                  {notApprovedOpen && (
+                    <div className="p-4 bg-white">
+                      {visibleNotApproved.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center py-4">No talent match the selected filters</p>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                          {visibleNotApproved.map((t) => <TalentCard key={t.id} t={t} onSelectTalent={onSelectTalent} />)}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               )}
             </div>
           )}
-        </>
-      )}
+        </div>
+
+        {/* Upcoming Projects sidebar */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 sticky top-6">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900">Upcoming Projects</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Talent staffing needs</p>
+            </div>
+            <div className="divide-y divide-gray-50">
+              {activeProjects.length === 0 ? (
+                <p className="p-5 text-sm text-gray-400">No active projects with talent needs</p>
+              ) : (
+                activeProjects.slice(0, 8).map((proj) => (
+                  <div key={proj.id} className="px-5 py-3">
+                    <p className="text-sm font-medium text-gray-900">{proj.name}</p>
+                    {proj.deadline && <p className="text-xs text-gray-400 mt-0.5">Deadline: {proj.deadline}</p>}
+                    <div className="mt-1.5 space-y-1">
+                      {(proj.talent_requirements || []).map((r) => (
+                        <div key={r.id} className="flex items-center gap-1.5 text-xs">
+                          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 text-[10px] font-bold">{r.count}</span>
+                          <span className="text-gray-700 capitalize">{TALENT_TYPE_LABELS[r.talent_type] || r.talent_type}</span>
+                          {r.notes && <span className="text-gray-400 italic truncate">– {r.notes}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -558,9 +603,18 @@ function SendToClientModal({ selectedTalentIds, onClose, onSent }) {
 
   const handleSend = async () => {
     if (!clientId) return;
-    await sendRoster.mutateAsync({ client: clientId, talent_ids: selectedTalentIds, message });
-    setSuccess(true);
-    setTimeout(onSent, 1500);
+    try {
+      const result = await sendRoster.mutateAsync({ client: clientId, talent_ids: selectedTalentIds, message });
+      if (result.email_sent === false) {
+        toast.warning('Talent roster shared, but email notification failed.');
+      } else {
+        toast.success('Talent roster sent to client.');
+      }
+      setSuccess(true);
+      setTimeout(onSent, 1500);
+    } catch (err) {
+      toast.error('Failed to send talent roster: ' + (err.response?.data?.detail || err.message));
+    }
   };
 
   return (

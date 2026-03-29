@@ -3,7 +3,18 @@ from .models import (
     Project, Shoot, ActivityLog,
     CallSheet, CallSheetEntry, Checklist, ChecklistItem, ProductionLog,
     TalentConsideration, CrewConsideration,
+    TalentRequirement, CrewRequirement,
 )
+
+
+class TalentRequirementInline(admin.TabularInline):
+    model = TalentRequirement
+    extra = 1
+
+
+class CrewRequirementInline(admin.TabularInline):
+    model = CrewRequirement
+    extra = 1
 
 
 @admin.register(Project)
@@ -11,6 +22,7 @@ class ProjectAdmin(admin.ModelAdmin):
     list_display = ["name", "client", "status", "budget", "deadline"]
     list_filter = ["status"]
     search_fields = ["name"]
+    inlines = [TalentRequirementInline, CrewRequirementInline]
 
 
 @admin.register(Shoot)

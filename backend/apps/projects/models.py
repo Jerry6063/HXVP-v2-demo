@@ -242,6 +242,50 @@ class ProductionLog(models.Model):
         return f"[{self.log_type}] {self.title}"
 
 
+class TalentRequirement(models.Model):
+    """Structured talent staffing requirement for a production."""
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="talent_requirements"
+    )
+    talent_type = models.CharField(
+        max_length=20,
+        choices=[
+            ("model", "Model"),
+            ("actor", "Actor"),
+            ("voiceover", "Voiceover"),
+            ("dancer", "Dancer"),
+            ("livestream", "Livestream Host"),
+            ("other", "Other"),
+        ],
+    )
+    count = models.PositiveIntegerField(default=1)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.count}x {self.talent_type} → {self.project}"
+
+
+class CrewRequirement(models.Model):
+    """Structured crew staffing requirement for a production."""
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="crew_requirements_list"
+    )
+    crew_role = models.CharField(
+        max_length=30,
+    )
+    count = models.PositiveIntegerField(default=1)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.count}x {self.crew_role} → {self.project}"
+
+
 class TalentConsideration(models.Model):
     """Talent added to a production as a potential/backup candidate (not tied to a shoot)."""
     project = models.ForeignKey(

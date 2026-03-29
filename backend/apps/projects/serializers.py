@@ -3,6 +3,7 @@ from .models import (
     Project, Shoot, ActivityLog,
     CallSheet, CallSheetEntry, Checklist, ChecklistItem, ProductionLog,
     TalentConsideration, CrewConsideration,
+    TalentRequirement, CrewRequirement,
 )
 from apps.accounts.serializers import UserSerializer
 
@@ -73,9 +74,23 @@ class ActivityLogSerializer(serializers.ModelSerializer):
         read_only_fields = ["user", "timestamp"]
 
 
+class TalentRequirementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TalentRequirement
+        fields = "__all__"
+
+
+class CrewRequirementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CrewRequirement
+        fields = "__all__"
+
+
 class ProjectListSerializer(serializers.ModelSerializer):
     client_name = serializers.SerializerMethodField()
     shoot_count = serializers.SerializerMethodField()
+    talent_requirements = TalentRequirementSerializer(many=True, read_only=True)
+    crew_requirements_list = CrewRequirementSerializer(many=True, read_only=True)
 
     class Meta:
         model = Project
@@ -85,6 +100,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
             "description", "location",
             "model_requirements", "crew_requirements", "other_requirements",
             "raw_material_url", "created_at",
+            "talent_requirements", "crew_requirements_list",
         ]
 
     def get_client_name(self, obj):
@@ -98,6 +114,8 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
     client_detail = UserSerializer(source="client", read_only=True)
     shoots = ShootSerializer(many=True, read_only=True)
     activity_logs = ActivityLogSerializer(many=True, read_only=True)
+    talent_requirements = TalentRequirementSerializer(many=True, read_only=True)
+    crew_requirements_list = CrewRequirementSerializer(many=True, read_only=True)
 
     class Meta:
         model = Project

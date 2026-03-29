@@ -9,10 +9,12 @@ def _safe_send(subject, message, recipient_list, **kwargs):
     try:
         send_mail(
             subject, message, settings.DEFAULT_FROM_EMAIL,
-            recipient_list, fail_silently=True, **kwargs,
+            recipient_list, fail_silently=False, **kwargs,
         )
+        return True
     except Exception as e:
-        logger.warning("Email send failed: %s", e)
+        logger.warning("Email send failed to %s: %s", recipient_list, e)
+        return False
 
 
 def send_call_sheet_email(call_sheet, recipient_email, recipient_name):
@@ -76,7 +78,7 @@ def send_call_sheet_email(call_sheet, recipient_email, recipient_name):
 
     sections.append(f"\n– HXVP Marketing Group")
 
-    _safe_send(
+    return _safe_send(
         subject=f"Call Sheet: {call_sheet.title} – {call_sheet.shoot_date}",
         message="\n".join(sections),
         recipient_list=[recipient_email],

@@ -20,10 +20,12 @@ def _safe_send(subject, message, recipient_list):
             message,
             settings.DEFAULT_FROM_EMAIL,
             recipient_list,
-            fail_silently=True,
+            fail_silently=False,
         )
+        return True
     except Exception as exc:
-        logger.warning("Email send failed: %s", exc)
+        logger.warning("Email send failed to %s: %s", recipient_list, exc)
+        return False
 
 
 def send_welcome_email(user):

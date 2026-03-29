@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useCrewStats, useCrewProfiles, useCrewAssignments } from '../../api/hooks';
+import { useCrewStats, useCrewProfiles, useCrewAssignments, useProjects } from '../../api/hooks';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
 import {
@@ -10,14 +10,20 @@ import {
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
+const CREW_ROLE_LABELS = { director: 'Director', photographer: 'Photographer', dop: 'Director of Photography', videographer: 'Videographer', first_ac: '1st AC', second_ac: '2nd AC', gaffer: 'Gaffer', grip: 'Grip', electric: 'Electric', wardrobe: 'Wardrobe', set_design: 'Set Design', bts: 'Behind-the-Scene', pa: 'Production Assistant', ac: 'Assistant Camera', audio: 'Audio', lighting: 'Lighting', hair_makeup: 'Hair & Makeup', stylist: 'Stylist', crafty: 'Crafty', other: 'Other' };
+
 export default function CrewPage() {
   const navigate = useNavigate();
   const { data: stats, isLoading: statsLoading } = useCrewStats();
   const { data: profiles } = useCrewProfiles();
   const { data: assignments } = useCrewAssignments({ upcoming: true });
+  const { data: projectsData } = useProjects({ status: 'active' });
 
   const crewList = profiles?.results || profiles || [];
   const upcomingList = assignments?.results || assignments || [];
+  const activeProjects = (projectsData?.results || projectsData || []).filter(
+    (p) => (p.crew_requirements_list || []).length > 0
+  );
 
   return (
     <div className="space-y-6">
@@ -114,30 +120,29 @@ export default function CrewPage() {
           </table>
         </div>
 
-        {/* Upcoming Assignments */}
+        {/* Upcoming Productions – Crew Needs */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-900">Upcoming Assignments</h2>
+            <h2 className="font-semibold text-gray-900">Upcoming Productions</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Crew staffing needs</p>
           </div>
           <div className="divide-y divide-gray-50">
-            {upcomingList.length === 0 ? (
-              <p className="p-5 text-sm text-gray-400">No upcoming assignments</p>
+            {activeProjects.length === 0 ? (
+              <p className="p-5 text-sm text-gray-400">No active productions with crew needs</p>
             ) : (
-              upcomingList.slice(0, 10).map((a) => (
-                <div key={a.id} className="px-5 py-3">
-                  <p className="text-sm font-medium text-gray-900">
-                    {a.shoot_detail?.location}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {a.shoot_detail?.shoot_date} &middot; {a.shoot_detail?.call_time}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {a.crew_name}{' '}
-                    <span className="capitalize">
-                      ({a.role_on_shoot?.replace(/_/g, ' ')})
-                    </span>
-                  </p>
-                  <StatusBadge status={a.status} />
+              activeProjects.slice(0, 8).map((proj) => (
+                <div key={proj.id} className="px-5 py-3">
+                  <p className="text-sm font-medium text-gray-900">{proj.name}</p>
+                  {proj.deadline && <p className="text-xs text-gray-400 mt-0.5">Deadline: {proj.deadline}</p>}
+                  <div className="mt-1.5 space-y-1">
+                    {(proj.crew_requirements_list || []).map((r) => (
+                      <div key={r.id} className="flex items-center gap-1.5 text-xs">
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-sky-100 text-sky-600 text-[10px] font-bold">{r.count}</span>
+                        <span className="text-gray-700 capitalize">{CREW_ROLE_LABELS[r.crew_role] || r.crew_role?.replace(/_/g, ' ')}</span>
+                        {r.notes && <span className="text-gray-400 italic truncate">– {r.notes}</span>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))
             )}

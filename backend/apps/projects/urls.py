@@ -9,6 +9,8 @@ router.register(r"checklists", views.ChecklistViewSet, basename="checklist")
 router.register(r"logs", views.ProductionLogViewSet, basename="production-log")
 router.register(r"talent-considerations", views.TalentConsiderationViewSet, basename="talent-consideration")
 router.register(r"crew-considerations", views.CrewConsiderationViewSet, basename="crew-consideration")
+router.register(r"talent-requirements", views.TalentRequirementViewSet, basename="talent-requirement")
+router.register(r"crew-requirements", views.CrewRequirementViewSet, basename="crew-requirement")
 router.register(r"", views.ProjectViewSet, basename="project")
 
 urlpatterns = [

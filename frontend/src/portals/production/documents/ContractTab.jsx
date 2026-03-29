@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 import {
   useContracts,
   useCreateContract,
@@ -80,10 +81,15 @@ export default function ContractTab({ contractType, recipientRole, recipientLabe
     setSendingId(id);
     setSendSuccess(null);
     try {
-      await sendContract.mutateAsync(id);
+      const result = await sendContract.mutateAsync(id);
       setSendSuccess(id);
+      if (result.email_sent === false) {
+        toast.warning('Document status updated, but email delivery failed.');
+      } else {
+        toast.success(`${typeLabel} sent successfully.`);
+      }
     } catch {
-      // noop
+      toast.error(`Failed to send ${typeLabel.toLowerCase()}.`);
     } finally {
       setSendingId(null);
     }
