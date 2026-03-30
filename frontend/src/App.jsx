@@ -39,6 +39,7 @@ import ClientInvoicesPayments from './portals/client/InvoicesPayments';
 import TalentDashboard from './portals/talent/Dashboard';
 import TalentProfile from './portals/talent/Profile';
 import TalentBookings from './portals/talent/Bookings';
+import BookingDetail from './portals/talent/BookingDetail';
 import TalentCalendar from './portals/talent/Calendar';
 import TalentRecords from './portals/talent/Records';
 import TalentPayments from './portals/talent/Payments';
@@ -129,6 +130,7 @@ export default function App() {
         <Route path="dashboard" element={<TalentDashboard />} />
         <Route path="profile" element={<TalentProfile />} />
         <Route path="bookings" element={<TalentBookings />} />
+        <Route path="bookings/:id" element={<BookingDetail />} />
         <Route path="calendar" element={<TalentCalendar />} />
         <Route path="records" element={<TalentRecords />} />
         <Route path="payments" element={<TalentPayments />} />

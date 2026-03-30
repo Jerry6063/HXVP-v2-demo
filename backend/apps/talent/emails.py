@@ -1,30 +1,13 @@
 import logging
-from django.conf import settings
-from django.core.mail import send_mail
+from apps.utils.email import safe_send
 
 logger = logging.getLogger(__name__)
-
-
-def _safe_send(subject, message, recipient_list, **kwargs):
-    try:
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            recipient_list,
-            fail_silently=False,
-            **kwargs,
-        )
-        return True
-    except Exception as e:
-        logger.warning("Email send failed to %s: %s", recipient_list, e)
-        return False
 
 
 def send_booking_notification(booking):
     talent = booking.talent.user
     shoot = booking.shoot
-    _safe_send(
+    safe_send(
         subject=f"New Booking: {shoot.project.name} – {shoot.shoot_date}",
         message=(
             f"Hi {talent.first_name},\n\n"
@@ -43,7 +26,7 @@ def send_booking_notification(booking):
 
 def send_time_logged_notification(time_log):
     talent = time_log.talent.user
-    _safe_send(
+    safe_send(
         subject=f"Time Logged: {time_log.hours_worked}h – ${time_log.amount}",
         message=(
             f"Hi {talent.first_name},\n\n"
@@ -62,7 +45,7 @@ def send_payment_confirmation(payment):
     talent = payment.talent.user
     import calendar
     month_name = calendar.month_name[payment.period_month]
-    _safe_send(
+    safe_send(
         subject=f"Payment Confirmed: {month_name} {payment.period_year} – ${payment.total_amount}",
         message=(
             f"Hi {talent.first_name},\n\n"
@@ -78,7 +61,7 @@ def send_payment_confirmation(payment):
 
 def send_profile_approved_notification(profile):
     user = profile.user
-    _safe_send(
+    safe_send(
         subject="Your Talent Profile Has Been Approved",
         message=(
             f"Hi {user.first_name},\n\n"

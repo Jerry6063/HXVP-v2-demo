@@ -1,26 +1,10 @@
 import logging
 from django.conf import settings
-from django.core.mail import send_mail
+from apps.utils.email import safe_send
 
 logger = logging.getLogger(__name__)
 
 ADMIN_EMAIL = getattr(settings, "ADMIN_NOTIFICATION_EMAIL", None)
-
-
-def _safe_send(subject, message, recipient_list, **kwargs):
-    try:
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            recipient_list,
-            fail_silently=False,
-            **kwargs,
-        )
-        return True
-    except Exception as e:
-        logger.warning("Email send failed to %s: %s", recipient_list, e)
-        return False
 
 
 def get_admin_emails():
@@ -33,7 +17,7 @@ def get_admin_emails():
 
 
 def send_project_submitted_email(project_request):
-    _safe_send(
+    safe_send(
         subject=f"New Project Request: {project_request.title}",
         message=(
             f"Client {project_request.client.get_full_name()} submitted a new "
@@ -49,7 +33,7 @@ def send_project_submitted_email(project_request):
 
 def send_contract_sent_email(contract):
     client = contract.request.client
-    _safe_send(
+    safe_send(
         subject=f"Contract Ready for Review: {contract.request.title}",
         message=(
             f"Hi {client.first_name},\n\n"
@@ -62,7 +46,7 @@ def send_contract_sent_email(contract):
 
 
 def send_contract_signed_email(contract):
-    _safe_send(
+    safe_send(
         subject=f"Contract Signed: {contract.request.title}",
         message=(
             f"Client {contract.request.client.get_full_name()} has signed the "
@@ -77,7 +61,7 @@ def send_deliverable_uploaded_email(deliverable):
     client = deliverable.project.client
     if not client:
         return
-    _safe_send(
+    safe_send(
         subject=f"New Deliverable: {deliverable.name}",
         message=(
             f"Hi {client.first_name},\n\n"
@@ -101,7 +85,7 @@ def send_message_notification_email(message):
         else:
             return
 
-    _safe_send(
+    safe_send(
         subject=f"New Message: {message.subject}",
         message=(
             f"From: {message.sender.get_full_name()}\n"
@@ -132,7 +116,7 @@ def send_talent_roster_email(share):
         body += f"Message from our team:\n{share.message}\n\n"
     body += "Please log in to the Client Portal to view their full profiles.\n\n\u2013 Studio Team"
 
-    return _safe_send(
+    return safe_send(
         subject="Talent Selection Ready for Your Review",
         message=body,
         recipient_list=[client.email],

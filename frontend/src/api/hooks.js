@@ -330,6 +330,13 @@ export const useDeclineBooking = () => {
   });
 };
 
+export const useBooking = (id) =>
+  useQuery({
+    queryKey: ['booking', id],
+    queryFn: () => api.get(`/talent/bookings/${id}/`).then((r) => r.data),
+    enabled: !!id,
+  });
+
 export const useTalentProfile = (id) =>
   useQuery({
     queryKey: ['talent-profile', id],
@@ -489,6 +496,31 @@ export const useCreateTalentTimeLog = () => {
       qc.invalidateQueries({ queryKey: ['talent-timelogs'] });
       qc.invalidateQueries({ queryKey: ['talent-payment-summary'] });
     },
+  });
+};
+
+export const useApproveTimeLog = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.post(`/talent/timelogs/${id}/approve/`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['talent-timelogs'] }),
+  });
+};
+
+export const useRejectTimeLog = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.post(`/talent/timelogs/${id}/reject/`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['talent-timelogs'] }),
+  });
+};
+
+export const useUpdateTalentTimeLog = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }) =>
+      api.patch(`/talent/timelogs/${id}/`, data).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['talent-timelogs'] }),
   });
 };
 

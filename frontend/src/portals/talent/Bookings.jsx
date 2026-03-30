@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
   useBookings,
   useAcceptBooking,
@@ -10,6 +12,7 @@ import {
   MapPinIcon,
   ClockIcon,
   CameraIcon,
+  ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 
 export default function TalentBookings() {
@@ -18,9 +21,30 @@ export default function TalentBookings() {
   const declineBooking = useDeclineBooking();
 
   const bookings = bookingsData?.results || bookingsData || [];
-  const pending = bookings.filter((b) => b.status === 'pending');
-  const accepted = bookings.filter((b) => b.status === 'accepted');
-  const past = bookings.filter((b) => b.status === 'declined');
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const { pending, upcoming, pastBookings, declined } = useMemo(() => {
+    const pending = [];
+    const upcoming = [];
+    const pastBookings = [];
+    const declined = [];
+    bookings.forEach((b) => {
+      if (b.status === 'pending') {
+        pending.push(b);
+      } else if (b.status === 'declined') {
+        declined.push(b);
+      } else if (b.status === 'accepted') {
+        const shootDate = b.shoot_detail?.shoot_date;
+        if (shootDate && shootDate < todayStr) {
+          pastBookings.push(b);
+        } else {
+          upcoming.push(b);
+        }
+      }
+    });
+    return { pending, upcoming, pastBookings, declined };
+  }, [bookings, todayStr]);
 
   if (isLoading) {
     return <div className="text-center py-12 text-gray-400">Loading...</div>;
@@ -50,32 +74,46 @@ export default function TalentBookings() {
         </div>
       )}
 
-      {/* Accepted / Upcoming */}
+      {/* Upcoming */}
       <div>
         <h2 className="font-semibold text-gray-800 mb-3">
-          Upcoming Bookings ({accepted.length})
+          Upcoming Bookings ({upcoming.length})
         </h2>
-        {accepted.length === 0 ? (
+        {upcoming.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-100 p-8 text-center text-sm text-gray-400">
             No upcoming bookings
           </div>
         ) : (
           <div className="space-y-3">
-            {accepted.map((b) => (
+            {upcoming.map((b) => (
               <BookingCard key={b.id} booking={b} />
             ))}
           </div>
         )}
       </div>
 
-      {/* Past / Declined */}
-      {past.length > 0 && (
+      {/* Past Bookings */}
+      {pastBookings.length > 0 && (
         <div>
           <h2 className="font-semibold text-gray-500 mb-3">
-            Declined ({past.length})
+            Past Bookings ({pastBookings.length})
           </h2>
           <div className="space-y-3">
-            {past.map((b) => (
+            {pastBookings.map((b) => (
+              <BookingCard key={b.id} booking={b} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Declined */}
+      {declined.length > 0 && (
+        <div>
+          <h2 className="font-semibold text-gray-400 mb-3">
+            Declined ({declined.length})
+          </h2>
+          <div className="space-y-3">
+            {declined.map((b) => (
               <BookingCard key={b.id} booking={b} />
             ))}
           </div>
@@ -88,8 +126,8 @@ export default function TalentBookings() {
 function BookingCard({ booking, onAccept, onDecline, showActions }) {
   const s = booking.shoot_detail;
 
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+  const card = (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:border-gray-300 transition-colors">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="font-semibold text-gray-900">{s?.location}</h3>
@@ -102,19 +140,20 @@ function BookingCard({ booking, onAccept, onDecline, showActions }) {
           {showActions && (
             <>
               <button
-                onClick={onAccept}
+                onClick={(e) => { e.preventDefault(); onAccept(); }}
                 className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700"
               >
                 <CheckIcon className="h-3.5 w-3.5" /> Accept
               </button>
               <button
-                onClick={onDecline}
+                onClick={(e) => { e.preventDefault(); onDecline(); }}
                 className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-medium hover:bg-red-200"
               >
                 <XMarkIcon className="h-3.5 w-3.5" /> Decline
               </button>
             </>
           )}
+          <ChevronRightIcon className="h-4 w-4 text-gray-300" />
         </div>
       </div>
 
@@ -143,6 +182,12 @@ function BookingCard({ booking, onAccept, onDecline, showActions }) {
         </div>
       )}
     </div>
+  );
+
+  return (
+    <Link to={`/talent/bookings/${booking.id}`} className="block">
+      {card}
+    </Link>
   );
 }
 

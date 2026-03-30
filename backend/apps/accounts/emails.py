@@ -1,6 +1,5 @@
 import logging
-from django.conf import settings
-from django.core.mail import send_mail
+from apps.utils.email import safe_send
 
 logger = logging.getLogger(__name__)
 
@@ -13,24 +12,9 @@ PORTAL_NAMES = {
 }
 
 
-def _safe_send(subject, message, recipient_list):
-    try:
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            recipient_list,
-            fail_silently=False,
-        )
-        return True
-    except Exception as exc:
-        logger.warning("Email send failed to %s: %s", recipient_list, exc)
-        return False
-
-
 def send_welcome_email(user):
     portal_name = PORTAL_NAMES.get(user.role, "Studio Portal")
-    _safe_send(
+    safe_send(
         subject=f"Welcome to HXVP — {portal_name}",
         message=(
             f"Hi {user.first_name},\n\n"
@@ -45,7 +29,7 @@ def send_welcome_email(user):
 
 def send_password_reset_email(user, reset_url, portal):
     portal_name = PORTAL_NAMES.get(portal, "Studio Portal")
-    _safe_send(
+    safe_send(
         subject="Reset your HXVP password",
         message=(
             f"Hi {user.first_name},\n\n"

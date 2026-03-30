@@ -1,20 +1,8 @@
 import logging
 from django.conf import settings
-from django.core.mail import send_mail
+from apps.utils.email import safe_send
 
 logger = logging.getLogger(__name__)
-
-
-def _safe_send(subject, message, recipient_list, **kwargs):
-    try:
-        send_mail(
-            subject, message, settings.DEFAULT_FROM_EMAIL,
-            recipient_list, fail_silently=False, **kwargs,
-        )
-        return True
-    except Exception as e:
-        logger.warning("Email send failed to %s: %s", recipient_list, e)
-        return False
 
 
 def get_admin_emails():
@@ -34,7 +22,7 @@ def send_invoice_email(invoice):
     for item in invoice.items.all():
         items_text += f"  - {item.description}: {item.quantity} x ${item.rate} = ${item.amount}\n"
 
-    return _safe_send(
+    return safe_send(
         subject=f"Invoice {invoice.reference_number} – {invoice.project.name}",
         message=(
             f"Hi {client.first_name},\n\n"
@@ -55,7 +43,7 @@ def send_invoice_email(invoice):
 
 
 def send_payment_submitted_email(payment):
-    _safe_send(
+    safe_send(
         subject=f"Payment Submitted: {payment.invoice.reference_number}",
         message=(
             f"Client {payment.client.get_full_name()} has submitted payment proof "
@@ -72,7 +60,7 @@ def send_payment_submitted_email(payment):
 
 def send_payment_verified_email(payment):
     client = payment.client
-    _safe_send(
+    safe_send(
         subject=f"Payment Confirmed: {payment.invoice.reference_number}",
         message=(
             f"Hi {client.first_name},\n\n"

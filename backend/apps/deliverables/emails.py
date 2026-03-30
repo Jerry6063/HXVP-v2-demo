@@ -1,24 +1,7 @@
 import logging
-from django.conf import settings
-from django.core.mail import send_mail
+from apps.utils.email import safe_send
 
 logger = logging.getLogger(__name__)
-
-
-def _safe_send(subject, message, recipient_list, **kwargs):
-    try:
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            recipient_list,
-            fail_silently=False,
-            **kwargs,
-        )
-        return True
-    except Exception as e:
-        logger.warning("Email send failed to %s: %s", recipient_list, e)
-        return False
 
 
 TYPE_LABELS = {
@@ -53,7 +36,7 @@ def send_document_to_recipient(contract, request=None):
         abs_url = request.build_absolute_uri(contract.file_url.url)
         file_line = f"\nDocument link: {abs_url}\n"
 
-    result = _safe_send(
+    result = safe_send(
         subject=f"Document Ready for Review: {title}",
         message=(
             f"Hi {recipient.first_name},\n\n"
@@ -73,7 +56,7 @@ def send_document_to_recipient(contract, request=None):
         .values_list("email", flat=True)[:5]
     )
     if admin_emails:
-        _safe_send(
+        safe_send(
             subject=f"Document Sent: {title} ({project_name})",
             message=(
                 f"A {type_label} was sent to {recipient.get_full_name()} "

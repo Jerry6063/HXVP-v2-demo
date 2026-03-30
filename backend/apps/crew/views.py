@@ -161,10 +161,23 @@ class CrewAvailabilityViewSet(viewsets.ModelViewSet):
         entries = request.data.get("entries", [])
         results = []
         for entry in entries:
+            period = entry.get("period", "full")
+            entry_date = entry["date"]
+
+            # Clean up conflicting period entries for the same date
+            if period == "full":
+                CrewAvailability.objects.filter(
+                    crew=profile, date=entry_date, period__in=["am", "pm"]
+                ).delete()
+            else:
+                CrewAvailability.objects.filter(
+                    crew=profile, date=entry_date, period="full"
+                ).delete()
+
             obj, _ = CrewAvailability.objects.update_or_create(
                 crew=profile,
-                date=entry["date"],
-                period=entry.get("period", "full"),
+                date=entry_date,
+                period=period,
                 defaults={
                     "status": entry.get("status", "available"),
                     "note": entry.get("note", ""),

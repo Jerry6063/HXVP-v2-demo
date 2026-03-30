@@ -146,7 +146,7 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
 }
 
-# Email (Gmail SMTP)
+# Email (Gmail SMTP via Google Workspace)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
@@ -154,9 +154,9 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get(
-    "DEFAULT_FROM_EMAIL", "Studio Portal <noreply@studio.com>"
+    "DEFAULT_FROM_EMAIL", "HXVP Studio <xinyi@hxvp.us>"
 )
-ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "")
+ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "xinyi@hxvp.us")
 
 # Frontend URL — used to build password-reset links in emails.
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://hxvp-frontend.onrender.com")

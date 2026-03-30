@@ -219,7 +219,9 @@ class TalentTimeLogViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = TalentTimeLog.objects.select_related("talent__user", "project", "shoot")
+        qs = TalentTimeLog.objects.select_related(
+            "talent__user", "project", "shoot", "booking__shoot__project"
+        )
         user = self.request.user
         if user.role == "talent":
             qs = qs.filter(talent__user=user)
@@ -229,14 +231,54 @@ class TalentTimeLogViewSet(viewsets.ModelViewSet):
         project = self.request.query_params.get("project")
         if project:
             qs = qs.filter(project_id=project)
+        booking = self.request.query_params.get("booking")
+        if booking:
+            qs = qs.filter(booking_id=booking)
         return qs
 
     def perform_create(self, serializer):
-        log = serializer.save()
+        user = self.request.user
+        extra = {}
+
+        if user.role == "talent":
+            profile = user.talent_profile
+            extra["talent"] = profile
+            extra["log_status"] = TalentTimeLog.LogStatus.PENDING
+
+            # Auto-fill from booking if provided
+            booking_id = self.request.data.get("booking")
+            if booking_id:
+                booking = Booking.objects.select_related("shoot__project").get(
+                    id=booking_id, talent=profile
+                )
+                extra["booking"] = booking
+                extra["shoot"] = booking.shoot
+                extra["project"] = booking.shoot.project
+                extra["date"] = booking.shoot.shoot_date
+                if not self.request.data.get("rate_applied"):
+                    extra["rate_applied"] = profile.hourly_rate
+        else:
+            extra["log_status"] = TalentTimeLog.LogStatus.APPROVED
+
+        log = serializer.save(**extra)
         if not log.notified:
             send_time_logged_notification(log)
             log.notified = True
             log.save()
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        log = self.get_object()
+        log.log_status = TalentTimeLog.LogStatus.APPROVED
+        log.save()
+        return Response(TalentTimeLogSerializer(log).data)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        log = self.get_object()
+        log.log_status = TalentTimeLog.LogStatus.REJECTED
+        log.save()
+        return Response(TalentTimeLogSerializer(log).data)
 
 
 class TalentPaymentViewSet(viewsets.ModelViewSet):
@@ -244,7 +286,7 @@ class TalentPaymentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = TalentPayment.objects.select_related("talent__user")
+        qs = TalentPayment.objects.select_related("talent__user", "project")
         user = self.request.user
         if user.role == "talent":
             qs = qs.filter(talent__user=user)
@@ -252,6 +294,21 @@ class TalentPaymentViewSet(viewsets.ModelViewSet):
         if talent:
             qs = qs.filter(talent_id=talent)
         return qs
+
+    def perform_create(self, serializer):
+        payment = serializer.save()
+        # Auto-create finance Expense when linked to a project
+        if payment.project:
+            from apps.finance.models import Expense
+            import calendar as cal
+            month_name = cal.month_name[payment.period_month]
+            Expense.objects.create(
+                project=payment.project,
+                category="talent",
+                amount=payment.total_amount,
+                description=f"Talent payment: {payment.talent.user.get_full_name()} \u2013 {month_name} {payment.period_year}",
+                date=timezone.now().date(),
+            )
 
     @action(detail=True, methods=["post"])
     def mark_paid(self, request, pk=None):
@@ -355,10 +412,23 @@ class TalentAvailabilityViewSet(viewsets.ModelViewSet):
         entries = request.data.get("entries", [])
         results = []
         for entry in entries:
+            period = entry.get("period", "full")
+            entry_date = entry["date"]
+
+            # Clean up conflicting period entries for the same date
+            if period == "full":
+                TalentAvailability.objects.filter(
+                    talent=profile, date=entry_date, period__in=["am", "pm"]
+                ).delete()
+            else:
+                TalentAvailability.objects.filter(
+                    talent=profile, date=entry_date, period="full"
+                ).delete()
+
             obj, _ = TalentAvailability.objects.update_or_create(
                 talent=profile,
-                date=entry["date"],
-                period=entry.get("period", "full"),
+                date=entry_date,
+                period=period,
                 defaults={
                     "status": entry.get("status", "available"),
                     "note": entry.get("note", ""),

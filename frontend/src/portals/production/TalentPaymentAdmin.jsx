@@ -6,6 +6,9 @@ import {
   useCreateTalentTimeLog,
   useCreateTalentPayment,
   useMarkTalentPaymentPaid,
+  useApproveTimeLog,
+  useRejectTimeLog,
+  useUpdateTalentTimeLog,
   useProjects,
   useShoots,
 } from '../../api/hooks';
@@ -51,6 +54,12 @@ function TimeLogTab() {
   const { data: shootsData } = useShoots();
   const { data: logsData, isLoading } = useTalentTimeLogs();
   const createLog = useCreateTalentTimeLog();
+  const approveLog = useApproveTimeLog();
+  const rejectLog = useRejectTimeLog();
+  const updateLog = useUpdateTalentTimeLog();
+
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
 
   const profiles = profilesData?.results || profilesData || [];
   const projects = projectsData?.results || projectsData || [];
@@ -239,6 +248,8 @@ function TimeLogTab() {
                 <th className="px-5 py-3">Hours</th>
                 <th className="px-5 py-3">Rate</th>
                 <th className="px-5 py-3">Amount</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -247,9 +258,38 @@ function TimeLogTab() {
                   <td className="px-5 py-3 font-medium text-gray-900">{log.talent_name}</td>
                   <td className="px-5 py-3 text-gray-600">{log.project_name}</td>
                   <td className="px-5 py-3 text-gray-500">{log.date}</td>
-                  <td className="px-5 py-3 text-gray-700">{log.hours_worked}h</td>
-                  <td className="px-5 py-3 text-gray-500">${Number(log.rate_applied).toLocaleString()}</td>
-                  <td className="px-5 py-3 font-medium text-gray-900">${Number(log.amount).toLocaleString()}</td>
+                  {editingId === log.id ? (
+                    <>
+                      <td className="px-5 py-3"><input type="number" step="0.25" value={editForm.hours_worked} onChange={(e) => setEditForm(f => ({ ...f, hours_worked: e.target.value }))} className="w-16 px-2 py-1 border border-gray-300 rounded text-xs" /></td>
+                      <td className="px-5 py-3"><input type="number" step="0.01" value={editForm.rate_applied} onChange={(e) => setEditForm(f => ({ ...f, rate_applied: e.target.value }))} className="w-20 px-2 py-1 border border-gray-300 rounded text-xs" /></td>
+                      <td className="px-5 py-3"><input type="number" step="0.01" value={editForm.amount} onChange={(e) => setEditForm(f => ({ ...f, amount: e.target.value }))} className="w-20 px-2 py-1 border border-gray-300 rounded text-xs" /></td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-5 py-3 text-gray-700">{log.hours_worked}h</td>
+                      <td className="px-5 py-3 text-gray-500">${Number(log.rate_applied).toLocaleString()}</td>
+                      <td className="px-5 py-3 font-medium text-gray-900">${Number(log.amount).toLocaleString()}</td>
+                    </>
+                  )}
+                  <td className="px-5 py-3"><StatusBadge status={log.log_status} /></td>
+                  <td className="px-5 py-3">
+                    {editingId === log.id ? (
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => { updateLog.mutate({ id: log.id, hours_worked: parseFloat(editForm.hours_worked), rate_applied: parseFloat(editForm.rate_applied), amount: parseFloat(editForm.amount), notes: editForm.notes }); setEditingId(null); }} className="px-2 py-1 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700">Save</button>
+                        <button onClick={() => setEditingId(null)} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium hover:bg-gray-200">Cancel</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        {log.log_status === 'pending' && (
+                          <>
+                            <button onClick={() => approveLog.mutate(log.id)} disabled={approveLog.isPending} className="px-2 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 disabled:opacity-50">Approve</button>
+                            <button onClick={() => rejectLog.mutate(log.id)} disabled={rejectLog.isPending} className="px-2 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 disabled:opacity-50">Reject</button>
+                          </>
+                        )}
+                        <button onClick={() => { setEditingId(log.id); setEditForm({ hours_worked: log.hours_worked, rate_applied: log.rate_applied, amount: log.amount, notes: log.notes || '' }); }} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium hover:bg-gray-200">Edit</button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -271,8 +311,12 @@ function PaymentsTab() {
 
   const [showCreate, setShowCreate] = useState(false);
   const now = new Date();
+  const { data: projectsData } = useProjects();
+  const allProjects = projectsData?.results || projectsData || [];
+
   const [form, setForm] = useState({
     talent: '',
+    project: '',
     period_month: now.getMonth() + 1,
     period_year: now.getFullYear(),
     total_hours: '',
@@ -288,6 +332,7 @@ function PaymentsTab() {
     createPayment.mutate(
       {
         talent: parseInt(form.talent, 10),
+        project: form.project ? parseInt(form.project, 10) : null,
         period_month: parseInt(form.period_month, 10),
         period_year: parseInt(form.period_year, 10),
         total_hours: parseFloat(form.total_hours) || 0,
@@ -331,6 +376,15 @@ function PaymentsTab() {
               <input type="number" value={form.period_year} onChange={set('period_year')} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
             </div>
             <div>
+              <label className="block text-xs text-gray-500 mb-1">Production</label>
+              <select value={form.project} onChange={set('project')} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                <option value="">None (no production)</option>
+                {allProjects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-xs text-gray-500 mb-1">Total Hours</label>
               <input type="number" step="0.25" value={form.total_hours} onChange={set('total_hours')} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
             </div>
@@ -358,6 +412,7 @@ function PaymentsTab() {
             <thead>
               <tr className="text-left text-xs text-gray-500 uppercase bg-gray-50">
                 <th className="px-5 py-3">Talent</th>
+                <th className="px-5 py-3">Production</th>
                 <th className="px-5 py-3">Period</th>
                 <th className="px-5 py-3">Hours</th>
                 <th className="px-5 py-3">Amount</th>
@@ -369,6 +424,7 @@ function PaymentsTab() {
               {payments.map((p) => (
                 <tr key={p.id}>
                   <td className="px-5 py-3 font-medium text-gray-900">{p.talent_name}</td>
+                  <td className="px-5 py-3 text-gray-600">{p.project_name || '—'}</td>
                   <td className="px-5 py-3 text-gray-600">{p.period_label}</td>
                   <td className="px-5 py-3 text-gray-500">{p.total_hours}h</td>
                   <td className="px-5 py-3 font-medium text-gray-900">${Number(p.total_amount).toLocaleString()}</td>

@@ -168,10 +168,19 @@ class PerformanceRecord(models.Model):
 
 
 class TalentTimeLog(models.Model):
-    """Admin logs hours worked by talent after each shoot."""
+    """Hours worked by talent — submitted by talent or logged by admin."""
+
+    class LogStatus(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
 
     talent = models.ForeignKey(
         TalentProfile, on_delete=models.CASCADE, related_name="time_logs"
+    )
+    booking = models.ForeignKey(
+        "talent.Booking", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="time_logs",
     )
     shoot = models.ForeignKey(
         "projects.Shoot", on_delete=models.SET_NULL, null=True, blank=True
@@ -183,6 +192,9 @@ class TalentTimeLog(models.Model):
     hours_worked = models.DecimalField(max_digits=6, decimal_places=2)
     rate_applied = models.DecimalField(max_digits=8, decimal_places=2)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    log_status = models.CharField(
+        max_length=20, choices=LogStatus.choices, default=LogStatus.APPROVED,
+    )
     notes = models.TextField(blank=True)
     notified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -245,6 +257,10 @@ class TalentPayment(models.Model):
 
     talent = models.ForeignKey(
         TalentProfile, on_delete=models.CASCADE, related_name="payments"
+    )
+    project = models.ForeignKey(
+        "projects.Project", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="talent_payments",
     )
     period_month = models.PositiveIntegerField()
     period_year = models.PositiveIntegerField()
