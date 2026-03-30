@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from django.db import transaction
 from django.db.models import Sum, Count, Q
 from rest_framework import viewsets, generics, permissions, parsers
 from rest_framework.decorators import action
@@ -117,6 +118,7 @@ class CrewProfileViewSet(viewsets.ModelViewSet):
 class CrewAvailabilityViewSet(viewsets.ModelViewSet):
     serializer_class = CrewAvailabilitySerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         qs = CrewAvailability.objects.select_related("crew__user")
@@ -160,30 +162,31 @@ class CrewAvailabilityViewSet(viewsets.ModelViewSet):
 
         entries = request.data.get("entries", [])
         results = []
-        for entry in entries:
-            period = entry.get("period", "full")
-            entry_date = entry["date"]
+        with transaction.atomic():
+            for entry in entries:
+                period = entry.get("period", "full")
+                entry_date = entry["date"]
 
-            # Clean up conflicting period entries for the same date
-            if period == "full":
-                CrewAvailability.objects.filter(
-                    crew=profile, date=entry_date, period__in=["am", "pm"]
-                ).delete()
-            else:
-                CrewAvailability.objects.filter(
-                    crew=profile, date=entry_date, period="full"
-                ).delete()
+                # Clean up conflicting period entries for the same date
+                if period == "full":
+                    CrewAvailability.objects.filter(
+                        crew=profile, date=entry_date, period__in=["am", "pm"]
+                    ).delete()
+                else:
+                    CrewAvailability.objects.filter(
+                        crew=profile, date=entry_date, period="full"
+                    ).delete()
 
-            obj, _ = CrewAvailability.objects.update_or_create(
-                crew=profile,
-                date=entry_date,
-                period=period,
-                defaults={
-                    "status": entry.get("status", "available"),
-                    "note": entry.get("note", ""),
-                },
-            )
-            results.append(CrewAvailabilitySerializer(obj).data)
+                obj, _ = CrewAvailability.objects.update_or_create(
+                    crew=profile,
+                    date=entry_date,
+                    period=period,
+                    defaults={
+                        "status": entry.get("status", "available"),
+                        "note": entry.get("note", ""),
+                    },
+                )
+                results.append(CrewAvailabilitySerializer(obj).data)
         return Response(results)
 
 

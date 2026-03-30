@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
+from django.db import transaction
 from django.db.models import Sum, Q
 from django.utils import timezone
 from rest_framework import viewsets, permissions, parsers, status, generics
@@ -368,6 +369,7 @@ class TalentPaymentViewSet(viewsets.ModelViewSet):
 class TalentAvailabilityViewSet(viewsets.ModelViewSet):
     serializer_class = TalentAvailabilitySerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         qs = TalentAvailability.objects.select_related("talent__user")
@@ -411,28 +413,29 @@ class TalentAvailabilityViewSet(viewsets.ModelViewSet):
 
         entries = request.data.get("entries", [])
         results = []
-        for entry in entries:
-            period = entry.get("period", "full")
-            entry_date = entry["date"]
+        with transaction.atomic():
+            for entry in entries:
+                period = entry.get("period", "full")
+                entry_date = entry["date"]
 
-            # Clean up conflicting period entries for the same date
-            if period == "full":
-                TalentAvailability.objects.filter(
-                    talent=profile, date=entry_date, period__in=["am", "pm"]
-                ).delete()
-            else:
-                TalentAvailability.objects.filter(
-                    talent=profile, date=entry_date, period="full"
-                ).delete()
+                # Clean up conflicting period entries for the same date
+                if period == "full":
+                    TalentAvailability.objects.filter(
+                        talent=profile, date=entry_date, period__in=["am", "pm"]
+                    ).delete()
+                else:
+                    TalentAvailability.objects.filter(
+                        talent=profile, date=entry_date, period="full"
+                    ).delete()
 
-            obj, _ = TalentAvailability.objects.update_or_create(
-                talent=profile,
-                date=entry_date,
-                period=period,
-                defaults={
-                    "status": entry.get("status", "available"),
-                    "note": entry.get("note", ""),
-                },
-            )
-            results.append(TalentAvailabilitySerializer(obj).data)
+                obj, _ = TalentAvailability.objects.update_or_create(
+                    talent=profile,
+                    date=entry_date,
+                    period=period,
+                    defaults={
+                        "status": entry.get("status", "available"),
+                        "note": entry.get("note", ""),
+                    },
+                )
+                results.append(TalentAvailabilitySerializer(obj).data)
         return Response(results)
