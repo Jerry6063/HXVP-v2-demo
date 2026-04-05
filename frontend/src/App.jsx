@@ -5,6 +5,7 @@ import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
+import VerifyEmailPage from './components/VerifyEmailPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import PortalLayout from './components/PortalLayout';
 import HomePage from './components/HomePage';
@@ -49,6 +50,7 @@ import CrewProfilePage from './portals/crew/Profile';
 import CrewCalendar from './portals/crew/Calendar';
 import CrewAssignmentsPage from './portals/crew/Assignments';
 import CrewReimbursements from './portals/crew/Reimbursements';
+import CrewPayments from './portals/crew/Payments';
 
 export default function App() {
   return (
@@ -56,6 +58,7 @@ export default function App() {
     <ToastContainer position="top-right" autoClose={4000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover />
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       {/* Production Portal */}
       <Route path="/production/login" element={<LoginPage portal="production" />} />
@@ -154,6 +157,7 @@ export default function App() {
         <Route path="profile" element={<CrewProfilePage />} />
         <Route path="calendar" element={<CrewCalendar />} />
         <Route path="assignments" element={<CrewAssignmentsPage />} />
+        <Route path="payments" element={<CrewPayments />} />
         <Route path="reimbursements" element={<CrewReimbursements />} />
       </Route>
     </Routes>

@@ -106,6 +106,9 @@ class TalentProfileViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def create_stripe_account(self, request, pk=None):
         profile = self.get_object()
+        user = request.user
+        if user.role == "talent" and profile.user_id != user.id:
+            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         stripe.api_key = django_settings.STRIPE_SECRET_KEY
         if not profile.stripe_account_id:
             account = stripe.Account.create(
@@ -115,8 +118,12 @@ class TalentProfileViewSet(viewsets.ModelViewSet):
             )
             profile.stripe_account_id = account["id"]
             profile.save(update_fields=["stripe_account_id"])
-        refresh_url = f"{django_settings.FRONTEND_URL}/production/talent-payments"
-        return_url = f"{django_settings.FRONTEND_URL}/production/talent-payments"
+        if user.role == "talent":
+            refresh_url = f"{django_settings.FRONTEND_URL}/talent/payments?tab=payout&refresh=1"
+            return_url = f"{django_settings.FRONTEND_URL}/talent/payments?tab=payout&success=1"
+        else:
+            refresh_url = f"{django_settings.FRONTEND_URL}/production/talent-payments"
+            return_url = f"{django_settings.FRONTEND_URL}/production/talent-payments"
         link = stripe.AccountLink.create(
             account=profile.stripe_account_id,
             refresh_url=refresh_url,
@@ -128,6 +135,9 @@ class TalentProfileViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def stripe_account_status(self, request, pk=None):
         profile = self.get_object()
+        user = request.user
+        if user.role == "talent" and profile.user_id != user.id:
+            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         if not profile.stripe_account_id:
             return Response({"stripe_account_id": None, "onboarding_complete": False})
         stripe.api_key = django_settings.STRIPE_SECRET_KEY

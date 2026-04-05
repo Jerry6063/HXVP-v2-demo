@@ -46,3 +46,21 @@ def read_reset_token(token: str, max_age: int = 3600):
         return data["uid"], data["portal"]
     except Exception:
         return None, None
+
+
+def make_email_verify_token(user_id: int) -> str:
+    """Create a URL-safe signed token for email address verification (24-hour expiry)."""
+    return signing.dumps({"uid": user_id}, salt="email-verification")
+
+
+def read_email_verify_token(token: str, max_age: int = 86400):
+    """
+    Decode an email verification token produced by make_email_verify_token.
+    Returns user_id on success, or None if invalid/expired.
+    max_age is in seconds (default 24 hours).
+    """
+    try:
+        data = signing.loads(token, salt="email-verification", max_age=max_age)
+        return data["uid"]
+    except Exception:
+        return None

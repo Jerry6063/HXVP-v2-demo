@@ -41,3 +41,18 @@ def send_password_reset_email(user, reset_url, portal):
         ),
         recipient_list=[user.email],
     )
+
+
+def send_email_verification(user, verify_url):
+    safe_send(
+        subject="Verify your email – HXVP Studio",
+        message=(
+            f"Hi {user.first_name},\n\n"
+            f"Thanks for signing up! Please verify your email address by clicking the link below.\n\n"
+            f"This link expires in 24 hours:\n\n"
+            f"{verify_url}\n\n"
+            f"If you did not create an account, you can safely ignore this email.\n\n"
+            f"— HXVP Studio"
+        ),
+        recipient_list=[user.email],
+    )

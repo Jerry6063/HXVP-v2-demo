@@ -6,7 +6,7 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .emails import send_welcome_email, send_password_reset_email
+from .emails import send_welcome_email, send_password_reset_email, send_email_verification
 from .models import User
 from .permissions import IsProductionAdmin
 from .serializers import (
@@ -16,8 +16,9 @@ from .serializers import (
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
     AdminCreateClientSerializer,
+    EmailVerifyConfirmSerializer,
 )
-from .utils import verify_hcaptcha, make_reset_token, read_reset_token
+from .utils import verify_hcaptcha, make_reset_token, read_reset_token, make_email_verify_token, read_email_verify_token
 
 PORTAL_ROLE_MAP = {
     "production": User.Role.PRODUCTION_ADMIN,
@@ -38,17 +39,89 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [AuthRateThrottle]
 
+    def _send_verification(self, user):
+        token = make_email_verify_token(user.id)
+        frontend_url = getattr(settings, "FRONTEND_URL", "").rstrip("/")
+        verify_url = f"{frontend_url}/verify-email?token={token}"
+        send_email_verification(user, verify_url)
+
     def create(self, request, *args, **kwargs):
-        captcha_token = request.data.get("captcha_token", "")
-        if not verify_hcaptcha(captcha_token):
-            return Response(
-                {"detail": "CAPTCHA verification failed. Please try again."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        email = (request.data.get("email") or "").strip()
+
+        # If an unverified account already exists for this email, resend the link
+        existing = User.objects.filter(email=email).first()
+        if existing is not None:
+            if not existing.is_active:
+                self._send_verification(existing)
+                return Response(
+                    {"detail": "Verification email sent. Please check your inbox."},
+                    status=status.HTTP_201_CREATED,
+                )
+            # Active account — let the serializer's unique-email constraint raise 400
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        self._send_verification(user)
+        return Response(
+            {"detail": "Verification email sent. Please check your inbox."},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class EmailVerifyView(APIView):
+    """Validate an email-verification token and return the user's display info."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        token = request.query_params.get("token", "")
+        user_id = read_email_verify_token(token)
+        if user_id is None:
+            return Response(
+                {"detail": "This verification link is invalid or has expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            user = User.objects.get(id=user_id, is_active=False)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "This account has already been verified. Please log in."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response({"email": user.email, "first_name": user.first_name})
+
+
+class EmailVerifyConfirmView(APIView):
+    """Accept token + password to activate the account and return JWT tokens."""
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [AuthRateThrottle]
+
+    def post(self, request):
+        serializer = EmailVerifyConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        token = serializer.validated_data["token"]
+        password = serializer.validated_data["password"]
+
+        user_id = read_email_verify_token(token)
+        if user_id is None:
+            return Response(
+                {"detail": "This verification link is invalid or has expired."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            user = User.objects.get(id=user_id, is_active=False)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "This account has already been verified. Please log in."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(password)
+        user.is_active = True
+        user.save(update_fields=["password", "is_active"])
         send_welcome_email(user)
+
         refresh = RefreshToken.for_user(user)
         return Response(
             {
@@ -57,8 +130,7 @@ class RegisterView(generics.CreateAPIView):
                     "access": str(refresh.access_token),
                     "refresh": str(refresh),
                 },
-            },
-            status=status.HTTP_201_CREATED,
+            }
         )
 
 

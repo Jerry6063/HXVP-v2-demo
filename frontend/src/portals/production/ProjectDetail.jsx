@@ -244,25 +244,24 @@ export default function ProjectDetail() {
 
         {/* Sidebar */}
         <div className="space-y-4">
-          {/* Confirmed Crew */}
+          {/* Assigned Crew */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <h3 className="font-semibold text-gray-900 text-sm mb-3">Confirmed Crew</h3>
-            {assignmentsArr.filter((a) => a.status === 'accepted').length === 0 ? (
-              <p className="text-xs text-gray-400">No confirmed crew</p>
+            <h3 className="font-semibold text-gray-900 text-sm mb-3">Assigned Crew</h3>
+            {assignmentsArr.length === 0 ? (
+              <p className="text-xs text-gray-400">No crew assigned yet</p>
             ) : (
               <ul className="space-y-2">
-                {assignmentsArr
-                  .filter((a) => a.status === 'accepted')
-                  .map((a) => (
-                    <li key={a.id}>
-                      <Link to={`/production/crew/${a.crew}`} className="flex items-center justify-between text-sm hover:text-indigo-600 transition-colors">
-                        <span>{a.crew_name}</span>
-                        <span className="text-xs text-gray-400 capitalize">
-                          {a.role_on_shoot?.replace(/_/g, ' ')}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
+                {assignmentsArr.map((a) => (
+                  <li key={a.id} className="flex items-center justify-between gap-1">
+                    <Link to={`/production/crew/${a.crew}`} className="text-sm text-gray-800 hover:text-indigo-600 transition-colors truncate">
+                      {a.crew_name}
+                    </Link>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-xs text-gray-400 capitalize hidden sm:inline">{a.role_on_shoot?.replace(/_/g, ' ')}</span>
+                      <StatusBadge status={a.status} />
+                    </div>
+                  </li>
+                ))}
               </ul>
             )}
           </div>
@@ -270,19 +269,18 @@ export default function ProjectDetail() {
           {/* Assigned Talent */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <h3 className="font-semibold text-gray-900 text-sm mb-3">Assigned Talent</h3>
-            {bookingsArr.filter((b) => b.status === 'accepted').length === 0 ? (
-              <p className="text-xs text-gray-400">No confirmed talent</p>
+            {bookingsArr.length === 0 ? (
+              <p className="text-xs text-gray-400">No talent assigned yet</p>
             ) : (
               <ul className="space-y-2">
-                {bookingsArr
-                  .filter((b) => b.status === 'accepted')
-                  .map((b) => (
-                    <li key={b.id}>
-                      <Link to={`/production/talent/${b.talent}`} className="text-sm text-gray-700 hover:text-indigo-600 transition-colors block">
-                        {b.talent_name}
-                      </Link>
-                    </li>
-                  ))}
+                {bookingsArr.map((b) => (
+                  <li key={b.id} className="flex items-center justify-between gap-1">
+                    <Link to={`/production/talent/${b.talent}`} className="text-sm text-gray-800 hover:text-indigo-600 transition-colors truncate">
+                      {b.talent_name}
+                    </Link>
+                    <StatusBadge status={b.status} />
+                  </li>
+                ))}
               </ul>
             )}
           </div>
@@ -795,7 +793,7 @@ const CREW_ROLE_OPTIONS = [
   'set_design', 'bts', 'pa', 'ac', 'audio', 'lighting', 'hair_makeup', 'stylist', 'other',
 ];
 
-function AddTalentModal({ onClose, onAdd }) {
+function AddTalentModal({ onClose, onAdd, existingTalentIds = new Set() }) {
   const [search, setSearch] = useState('');
   const [gender, setGender] = useState('');
   const [availStatus, setAvailStatus] = useState('');
@@ -825,6 +823,7 @@ function AddTalentModal({ onClose, onAdd }) {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return profilesArr.filter((p) => {
+      if (existingTalentIds.has(p.id)) return false;
       if (q && !(p.full_name || p.user_full_name || '').toLowerCase().includes(q)) return false;
       if (gender && p.gender !== gender) return false;
       if (availStatus && p.availability !== availStatus) return false;
@@ -834,7 +833,7 @@ function AddTalentModal({ onClose, onAdd }) {
       if (maxAge && (p.age == null || p.age > parseInt(maxAge))) return false;
       return true;
     });
-  }, [profilesArr, search, gender, availStatus, availDate, unavailableIds, maxRate, minAge, maxAge]);
+  }, [profilesArr, search, gender, availStatus, availDate, unavailableIds, maxRate, minAge, maxAge, existingTalentIds]);
 
   // fix: inline q ref
   const q = search.toLowerCase();
@@ -961,7 +960,7 @@ function AddTalentModal({ onClose, onAdd }) {
   );
 }
 
-function AddCrewModal({ onClose, onAdd }) {
+function AddCrewModal({ onClose, onAdd, existingCrewIds = new Set() }) {
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('');
   const [availStatus, setAvailStatus] = useState('');
@@ -989,6 +988,7 @@ function AddCrewModal({ onClose, onAdd }) {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return profilesArr.filter((p) => {
+      if (existingCrewIds.has(p.id)) return false;
       if (q && !(p.full_name || p.user_full_name || '').toLowerCase().includes(q)) return false;
       if (role && p.crew_role !== role) return false;
       if (availStatus && p.availability !== availStatus) return false;
@@ -996,7 +996,7 @@ function AddCrewModal({ onClose, onAdd }) {
       if (maxRate && parseFloat(p.day_rate) > parseFloat(maxRate)) return false;
       return true;
     });
-  }, [profilesArr, search, role, availStatus, availDate, unavailableIds, maxRate]);
+  }, [profilesArr, search, role, availStatus, availDate, unavailableIds, maxRate, existingCrewIds]);
 
   const handleAdd = async () => {
     if (!selectedId) return;
@@ -1147,13 +1147,21 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
   const CREW_ROLE_LABELS = { director: 'Director', photographer: 'Photographer', dop: 'Director of Photography', videographer: 'Videographer', first_ac: '1st AC', second_ac: '2nd AC', gaffer: 'Gaffer', grip: 'Grip', electric: 'Electric', wardrobe: 'Wardrobe', set_design: 'Set Design', bts: 'Behind-the-Scene', pa: 'Production Assistant', ac: 'Assistant Camera', audio: 'Audio', lighting: 'Lighting', hair_makeup: 'Hair & Makeup', stylist: 'Stylist', crafty: 'Crafty', other: 'Other' };
 
   const handleAddTalent = async ({ id, notes }) => {
-    await addTalentCon.mutateAsync({ project: projectId, talent: id, notes });
-    setShowAddTalent(false);
+    try {
+      await addTalentCon.mutateAsync({ project: projectId, talent: id, notes });
+      setShowAddTalent(false);
+    } catch (err) {
+      console.error('Add talent failed', err);
+    }
   };
 
   const handleAddCrew = async ({ id, notes }) => {
-    await addCrewCon.mutateAsync({ project: projectId, crew: id, notes });
-    setShowAddCrew(false);
+    try {
+      await addCrewCon.mutateAsync({ project: projectId, crew: id, notes });
+      setShowAddCrew(false);
+    } catch (err) {
+      console.error('Add crew failed', err);
+    }
   };
 
   const handleAddTalentReq = async () => {
@@ -1330,7 +1338,7 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
                     {c.notes && <p className="text-xs text-gray-500 mt-0.5">{c.notes}</p>}
                   </div>
                   <button
-                    onClick={() => removeCrewCon.isPending ? null : removeTalentCon.mutate(c.id)}
+                    onClick={() => removeTalentCon.isPending ? null : removeTalentCon.mutate(c.id)}
                     className="text-xs text-gray-400 hover:text-red-500 ml-3 shrink-0"
                   >
                     Remove
@@ -1407,12 +1415,20 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
         <AddTalentModal
           onClose={() => setShowAddTalent(false)}
           onAdd={handleAddTalent}
+          existingTalentIds={new Set([
+            ...bookings.map((b) => b.talent),
+            ...talentCons.map((c) => c.talent),
+          ])}
         />
       )}
       {showAddCrew && (
         <AddCrewModal
           onClose={() => setShowAddCrew(false)}
           onAdd={handleAddCrew}
+          existingCrewIds={new Set([
+            ...assignments.map((a) => a.crew),
+            ...crewCons.map((c) => c.crew),
+          ])}
         />
       )}
     </div>

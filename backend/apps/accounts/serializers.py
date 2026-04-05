@@ -11,11 +11,9 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=8)
-
     class Meta:
         model = User
-        fields = ["email", "password", "first_name", "last_name", "role", "phone"]
+        fields = ["email", "first_name", "last_name", "role", "phone"]
 
     def validate_role(self, value):
         if value == "production_admin":
@@ -25,7 +23,17 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        user = User(
+            email=validated_data["email"],
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", ""),
+            role=validated_data.get("role", ""),
+            phone=validated_data.get("phone", ""),
+            is_active=False,
+        )
+        user.set_unusable_password()
+        user.save()
+        return user
 
 
 class LoginSerializer(serializers.Serializer):
@@ -45,6 +53,11 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 class PasswordResetConfirmSerializer(serializers.Serializer):
     token = serializers.CharField()
     new_password = serializers.CharField(min_length=8)
+
+
+class EmailVerifyConfirmSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    password = serializers.CharField(write_only=True, min_length=8)
 
 
 class AdminCreateClientSerializer(serializers.Serializer):
