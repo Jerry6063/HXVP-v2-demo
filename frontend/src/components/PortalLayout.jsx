@@ -1,12 +1,13 @@
 import { Fragment, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useTalentProfiles } from '../api/hooks';
+import { useTalentProfiles, useProjects } from '../api/hooks';
 import {
   Bars3Icon,
   XMarkIcon,
   HomeIcon,
   FolderIcon,
+  ChevronDownIcon,
   UsersIcon,
   WrenchScrewdriverIcon,
   ArrowRightStartOnRectangleIcon,
@@ -34,7 +35,7 @@ const portalConfigs = {
     color: 'indigo',
     nav: [
       { name: 'Dashboard', to: '/production/dashboard', icon: HomeIcon },
-      { name: 'Productions', to: '/production/projects', icon: FolderIcon },
+      { name: 'Productions', to: '/production/projects', icon: FolderIcon, dropdown: true },
       { name: 'Calendar', to: '/production/calendar', icon: CalendarDaysIcon },
       { name: 'Talents', to: '/production/talent', icon: UsersIcon },
       { name: 'Talent Payments', to: '/production/talent-payments', icon: CurrencyDollarIcon },
@@ -167,15 +168,20 @@ export default function PortalLayout({ portal }) {
   );
 }
 
-function SidebarNav({ config, activeColor }) {
+function ProductionsNavItem({ item, activeColor }) {
+  const [open, setOpen] = useState(false);
+  const { data } = useProjects({ status: 'active' });
+  const projects = data?.results || data || [];
+
   return (
-    <nav className="flex-1 px-3 space-y-1">
-      {config.nav.map((item) => (
+    <div>
+      {/* Row: NavLink (left) + chevron toggle (right) */}
+      <div className="flex items-center rounded-lg overflow-hidden">
         <NavLink
-          key={item.to}
           to={item.to}
+          end
           className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+            `flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors flex-1 ${
               isActive ? activeColor : 'text-white/80 hover:bg-white/10 hover:text-white'
             }`
           }
@@ -183,7 +189,67 @@ function SidebarNav({ config, activeColor }) {
           <item.icon className="h-5 w-5 flex-shrink-0" />
           {item.name}
         </NavLink>
-      ))}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="px-2 py-2.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+          aria-label="Show active productions"
+        >
+          <ChevronDownIcon
+            className={`h-4 w-4 transition-transform duration-200 ${
+              open ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* Dropdown list */}
+      {open && (
+        <div className="ml-8 mt-0.5 space-y-0.5">
+          {projects.length === 0 ? (
+            <p className="px-3 py-1.5 text-xs text-white/40 italic">No active productions</p>
+          ) : (
+            projects.map((p) => (
+              <NavLink
+                key={p.id}
+                to={`/production/projects/${p.id}`}
+                className={({ isActive }) =>
+                  `block px-3 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${
+                    isActive ? activeColor : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  }`
+                }
+              >
+                {p.name}
+              </NavLink>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SidebarNav({ config, activeColor }) {
+  return (
+    <nav className="flex-1 px-3 space-y-1">
+      {config.nav.map((item) =>
+        item.dropdown ? (
+          <ProductionsNavItem key={item.to} item={item} activeColor={activeColor} />
+        ) : (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                isActive ? activeColor : 'text-white/80 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            <item.icon className="h-5 w-5 flex-shrink-0" />
+            {item.name}
+          </NavLink>
+        )
+      )}
     </nav>
   );
 }

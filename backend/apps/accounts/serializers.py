@@ -1,3 +1,4 @@
+import secrets
 from rest_framework import serializers
 from .models import User
 
@@ -44,3 +45,25 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 class PasswordResetConfirmSerializer(serializers.Serializer):
     token = serializers.CharField()
     new_password = serializers.CharField(min_length=8)
+
+
+class AdminCreateClientSerializer(serializers.Serializer):
+    """Production-admin only: creates a client User account with a random password."""
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150)
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def create(self, validated_data):
+        password = secrets.token_urlsafe(16)
+        return User.objects.create_user(
+            email=validated_data["email"],
+            first_name=validated_data["first_name"],
+            last_name=validated_data["last_name"],
+            password=password,
+            role=User.Role.CLIENT,
+        )

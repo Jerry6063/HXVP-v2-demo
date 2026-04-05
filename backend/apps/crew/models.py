@@ -55,6 +55,8 @@ class CrewProfile(models.Model):
     )
     years_experience = models.PositiveIntegerField(null=True, blank=True)
     profile_photo = models.ImageField(upload_to="crew_photos/", blank=True, null=True)
+    stripe_account_id = models.CharField(max_length=100, blank=True)
+    stripe_onboarding_complete = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.get_crew_role_display()})"
@@ -227,3 +229,42 @@ class Evaluation(models.Model):
             f"Eval: {self.subject_user.get_full_name()} "
             f"({self.subject_type}) – {self.rating}/5"
         )
+
+
+class CrewPayment(models.Model):
+    """Per-production payment record for a crew member."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        PAID = "paid", "Paid"
+
+    crew = models.ForeignKey(
+        CrewProfile, on_delete=models.CASCADE, related_name="payments"
+    )
+    project = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="crew_payments",
+    )
+    period_month = models.PositiveIntegerField()
+    period_year = models.PositiveIntegerField()
+    total_hours = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+    paid_at = models.DateTimeField(null=True, blank=True)
+    payment_reference = models.CharField(max_length=255, blank=True)
+    stripe_transfer_id = models.CharField(max_length=100, blank=True)
+    stripe_payout_status = models.CharField(max_length=50, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-period_year", "-period_month"]
+        unique_together = ["crew", "project", "period_month", "period_year"]
+
+    def __str__(self):
+        return f"{self.crew.user.get_full_name()} – {self.period_year}/{self.period_month}"

@@ -12,6 +12,8 @@ def health(request):
 urlpatterns = [
     path("", health),
     path("admin/", admin.site.urls),
+    # Stripe webhook — AllowAny + signature verification; must come before auth-protected paths
+    path("api/stripe/webhook/", include("apps.talent.urls_webhook")),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/projects/", include("apps.projects.urls")),
     path("api/talent/", include("apps.talent.urls")),

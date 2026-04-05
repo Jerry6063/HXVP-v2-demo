@@ -148,8 +148,8 @@ SIMPLE_JWT = {
 
 # Email (Gmail SMTP via Google Workspace)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
+EMAIL_HOST = "smtp.resend.com"
+EMAIL_PORT = 465
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
@@ -160,3 +160,7 @@ ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "xinyi@hxv
 
 # Frontend URL — used to build password-reset links in emails.
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://hxvp-frontend.onrender.com")
+
+# Stripe
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")

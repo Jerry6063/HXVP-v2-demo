@@ -36,6 +36,10 @@ services:
         sync: false                  # Set to the deployed frontend URL (e.g. https://hxvp-frontend.onrender.com)
       - key: HCAPTCHA_SECRET_KEY
         sync: false                  # hCaptcha secret key from hcaptcha.com/dashboard
+      - key: STRIPE_SECRET_KEY
+        sync: false                  # Stripe secret key from dashboard.stripe.com/apikeys
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false                  # Stripe webhook signing secret from dashboard.stripe.com/webhooks
     disk:
       name: media-uploads
       mountPath: /var/data/media

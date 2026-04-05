@@ -89,6 +89,8 @@ class TalentProfile(models.Model):
     admin_notes = models.TextField(blank=True)
     profile_submitted_at = models.DateTimeField(null=True, blank=True)
     approved_at = models.DateTimeField(null=True, blank=True)
+    stripe_account_id = models.CharField(max_length=100, blank=True)
+    stripe_onboarding_complete = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.talent_type})"
@@ -271,12 +273,14 @@ class TalentPayment(models.Model):
     )
     paid_at = models.DateTimeField(null=True, blank=True)
     payment_reference = models.CharField(max_length=255, blank=True)
+    stripe_transfer_id = models.CharField(max_length=100, blank=True)
+    stripe_payout_status = models.CharField(max_length=50, blank=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["-period_year", "-period_month"]
-        unique_together = ["talent", "period_month", "period_year"]
+        unique_together = ["talent", "project", "period_month", "period_year"]
 
     def __str__(self):
         return f"{self.talent.user.get_full_name()} – {self.period_year}/{self.period_month}"

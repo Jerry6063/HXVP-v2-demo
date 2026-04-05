@@ -1,7 +1,10 @@
 from datetime import date, timedelta
+import stripe
+from django.conf import settings as django_settings
 from django.db import transaction
 from django.db.models import Sum, Count, Q
-from rest_framework import viewsets, generics, permissions, parsers
+from django.utils import timezone
+from rest_framework import viewsets, generics, permissions, parsers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -13,6 +16,7 @@ from .models import (
     Equipment,
     EquipmentCheckout,
     Evaluation,
+    CrewPayment,
 )
 from .serializers import (
     CrewProfileSerializer,
@@ -21,6 +25,7 @@ from .serializers import (
     EquipmentSerializer,
     EquipmentCheckoutSerializer,
     EvaluationSerializer,
+    CrewPaymentSerializer,
 )
 
 
@@ -113,6 +118,49 @@ class CrewProfileViewSet(viewsets.ModelViewSet):
         return Response(
             CrewProfileSerializer(profile, context={"request": request}).data
         )
+
+    @action(detail=True, methods=["post"])
+    def create_stripe_account(self, request, pk=None):
+        profile = self.get_object()
+        stripe.api_key = django_settings.STRIPE_SECRET_KEY
+        if not profile.stripe_account_id:
+            account = stripe.Account.create(
+                type="express",
+                email=profile.user.email,
+                capabilities={"transfers": {"requested": True}},
+            )
+            profile.stripe_account_id = account["id"]
+            profile.save(update_fields=["stripe_account_id"])
+        refresh_url = f"{django_settings.FRONTEND_URL}/production/talent-payments"
+        return_url = f"{django_settings.FRONTEND_URL}/production/talent-payments"
+        link = stripe.AccountLink.create(
+            account=profile.stripe_account_id,
+            refresh_url=refresh_url,
+            return_url=return_url,
+            type="account_onboarding",
+        )
+        return Response({"url": link["url"], "stripe_account_id": profile.stripe_account_id})
+
+    @action(detail=True, methods=["get"])
+    def stripe_account_status(self, request, pk=None):
+        profile = self.get_object()
+        if not profile.stripe_account_id:
+            return Response({"stripe_account_id": None, "onboarding_complete": False})
+        stripe.api_key = django_settings.STRIPE_SECRET_KEY
+        account = stripe.Account.retrieve(profile.stripe_account_id)
+        complete = bool(
+            account.get("details_submitted")
+            and account.get("payouts_enabled")
+        )
+        if complete != profile.stripe_onboarding_complete:
+            profile.stripe_onboarding_complete = complete
+            profile.save(update_fields=["stripe_onboarding_complete"])
+        return Response({
+            "stripe_account_id": profile.stripe_account_id,
+            "onboarding_complete": complete,
+            "details_submitted": account.get("details_submitted"),
+            "payouts_enabled": account.get("payouts_enabled"),
+        })
 
 
 class CrewAvailabilityViewSet(viewsets.ModelViewSet):
@@ -268,3 +316,73 @@ class EvaluationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(evaluator=self.request.user)
+
+
+class CrewPaymentViewSet(viewsets.ModelViewSet):
+    serializer_class = CrewPaymentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = CrewPayment.objects.select_related("crew__user", "project")
+        user = self.request.user
+        if user.role == "crew":
+            qs = qs.filter(crew__user=user)
+        crew_filter = self.request.query_params.get("crew")
+        if crew_filter:
+            qs = qs.filter(crew_id=crew_filter)
+        project_filter = self.request.query_params.get("project")
+        if project_filter:
+            qs = qs.filter(project_id=project_filter)
+        return qs
+
+    def perform_create(self, serializer):
+        payment = serializer.save()
+        # Auto-create finance Expense when linked to a project
+        if payment.project:
+            from apps.finance.models import Expense
+            import calendar as cal
+            month_name = cal.month_name[payment.period_month]
+            Expense.objects.create(
+                project=payment.project,
+                category="crew",
+                amount=payment.total_amount,
+                description=f"Crew payment: {payment.crew.user.get_full_name()} \u2013 {month_name} {payment.period_year}",
+                date=timezone.now().date(),
+            )
+
+    @action(detail=True, methods=["post"])
+    def mark_paid(self, request, pk=None):
+        payment = self.get_object()
+        payment.status = CrewPayment.Status.PAID
+        payment.paid_at = timezone.now()
+        payment.payment_reference = request.data.get("payment_reference", "")
+        payment.save()
+        return Response(CrewPaymentSerializer(payment).data)
+
+    @action(detail=True, methods=["post"])
+    def initiate_stripe_payout(self, request, pk=None):
+        payment = self.get_object()
+        if payment.status == CrewPayment.Status.PAID:
+            return Response({"detail": "Payment already completed."}, status=status.HTTP_400_BAD_REQUEST)
+        profile = payment.crew
+        if not profile.stripe_account_id or not profile.stripe_onboarding_complete:
+            return Response(
+                {"detail": "Crew member's Stripe account is not set up or onboarding is incomplete."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        stripe.api_key = django_settings.STRIPE_SECRET_KEY
+        amount_cents = int(payment.total_amount * 100)
+        transfer = stripe.Transfer.create(
+            amount=amount_cents,
+            currency="usd",
+            destination=profile.stripe_account_id,
+            metadata={
+                "crew_payment_id": payment.id,
+                "crew_name": profile.user.get_full_name(),
+                "project": payment.project.name if payment.project else "",
+            },
+        )
+        payment.stripe_transfer_id = transfer["id"]
+        payment.stripe_payout_status = transfer["status"]
+        payment.save(update_fields=["stripe_transfer_id", "stripe_payout_status"])
+        return Response(CrewPaymentSerializer(payment).data)

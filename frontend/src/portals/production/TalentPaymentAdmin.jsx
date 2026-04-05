@@ -11,6 +11,16 @@ import {
   useUpdateTalentTimeLog,
   useProjects,
   useShoots,
+  useCreateTalentStripeAccount,
+  useTalentStripeAccountStatus,
+  useInitiateTalentPayout,
+  useCrewPayments,
+  useCreateCrewPayment,
+  useMarkCrewPaymentPaid,
+  useCrewProfiles,
+  useCreateCrewStripeAccount,
+  useCrewStripeAccountStatus,
+  useInitiateCrewPayout,
 } from '../../api/hooks';
 import StatusBadge from '../../components/StatusBadge';
 
@@ -25,7 +35,8 @@ export default function TalentPaymentAdmin() {
         <nav className="flex gap-6 -mb-px">
           {[
             { id: 'timelogs', label: 'Log Time' },
-            { id: 'payments', label: 'Manage Payments' },
+            { id: 'talent-payments', label: 'Talent Payments' },
+            { id: 'crew-payments', label: 'Crew Payments' },
           ].map((t) => (
             <button
               key={t.id}
@@ -43,7 +54,8 @@ export default function TalentPaymentAdmin() {
       </div>
 
       {tab === 'timelogs' && <TimeLogTab />}
-      {tab === 'payments' && <PaymentsTab />}
+      {tab === 'talent-payments' && <PaymentsTab type="talent" />}
+      {tab === 'crew-payments' && <PaymentsTab type="crew" />}
     </div>
   );
 }
@@ -300,22 +312,32 @@ function TimeLogTab() {
   );
 }
 
-function PaymentsTab() {
-  const { data: profilesData } = useTalentProfiles();
-  const { data: paymentsData, isLoading } = useTalentPayments();
-  const createPayment = useCreateTalentPayment();
-  const markPaid = useMarkTalentPaymentPaid();
+// ── Shared Payments Tab (talent or crew) ─────────────────────────────────────
 
+function PaymentsTab({ type }) {
+  const isTalent = type === 'talent';
+  const { data: talentProfilesData } = useTalentProfiles();
+  const { data: crewProfilesData } = useCrewProfiles();
+  const { data: talentPaymentsData, isLoading: talentLoading } = useTalentPayments();
+  const { data: crewPaymentsData, isLoading: crewLoading } = useCrewPayments();
+  const createTalentPay = useCreateTalentPayment();
+  const createCrewPay = useCreateCrewPayment();
+
+  const profilesData = isTalent ? talentProfilesData : crewProfilesData;
+  const paymentsData = isTalent ? talentPaymentsData : crewPaymentsData;
+  const isLoading = isTalent ? talentLoading : crewLoading;
+  const createPayment = isTalent ? createTalentPay : createCrewPay;
+
+  const { data: projectsData } = useProjects();
+  const allProjects = projectsData?.results || projectsData || [];
   const profiles = profilesData?.results || profilesData || [];
   const payments = paymentsData?.results || paymentsData || [];
 
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
   const now = new Date();
-  const { data: projectsData } = useProjects();
-  const allProjects = projectsData?.results || projectsData || [];
-
   const [form, setForm] = useState({
-    talent: '',
+    person: '',
     project: '',
     period_month: now.getMonth() + 1,
     period_year: now.getFullYear(),
@@ -323,15 +345,15 @@ function PaymentsTab() {
     total_amount: '',
     notes: '',
   });
-  const [payRef, setPayRef] = useState('');
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const handleCreate = (e) => {
     e.preventDefault();
+    const personKey = isTalent ? 'talent' : 'crew';
     createPayment.mutate(
       {
-        talent: parseInt(form.talent, 10),
+        [personKey]: parseInt(form.person, 10),
         project: form.project ? parseInt(form.project, 10) : null,
         period_month: parseInt(form.period_month, 10),
         period_year: parseInt(form.period_year, 10),
@@ -339,16 +361,24 @@ function PaymentsTab() {
         total_amount: parseFloat(form.total_amount) || 0,
         notes: form.notes,
       },
-      { onSuccess: () => setShowCreate(false) }
+      {
+        onSuccess: () => {
+          setShowCreate(false);
+          setForm({ person: '', project: '', period_month: now.getMonth() + 1, period_year: now.getFullYear(), total_hours: '', total_amount: '', notes: '' });
+        },
+      }
     );
   };
+
+  const personLabel = isTalent ? 'Talent' : 'Crew Member';
+  const nameField = isTalent ? 'full_name' : 'full_name';
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-gray-800">Payment Records</h2>
+        <h2 className="font-semibold text-gray-800">{isTalent ? 'Talent' : 'Crew'} Payment Records</h2>
         <button
-          onClick={() => setShowCreate(!showCreate)}
+          onClick={() => { setShowCreate(!showCreate); setSelectedPayment(null); }}
           className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
         >
           + Create Payment
@@ -359,11 +389,11 @@ function PaymentsTab() {
         <form onSubmit={handleCreate} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Talent</label>
-              <select value={form.talent} onChange={set('talent')} required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                <option value="">Select talent...</option>
+              <label className="block text-xs text-gray-500 mb-1">{personLabel}</label>
+              <select value={form.person} onChange={set('person')} required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                <option value="">Select {personLabel.toLowerCase()}...</option>
                 {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>{p.full_name}</option>
+                  <option key={p.id} value={p.id}>{p[nameField]}</option>
                 ))}
               </select>
             </div>
@@ -411,53 +441,195 @@ function PaymentsTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-gray-500 uppercase bg-gray-50">
-                <th className="px-5 py-3">Talent</th>
+                <th className="px-5 py-3">{personLabel}</th>
                 <th className="px-5 py-3">Production</th>
                 <th className="px-5 py-3">Period</th>
                 <th className="px-5 py-3">Hours</th>
                 <th className="px-5 py-3">Amount</th>
                 <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {payments.map((p) => (
-                <tr key={p.id}>
-                  <td className="px-5 py-3 font-medium text-gray-900">{p.talent_name}</td>
+                <tr
+                  key={p.id}
+                  onClick={() => setSelectedPayment(selectedPayment?.id === p.id ? null : p)}
+                  className={`cursor-pointer transition-colors ${selectedPayment?.id === p.id ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}
+                >
+                  <td className="px-5 py-3 font-medium text-gray-900">
+                    {isTalent ? p.talent_name : p.crew_name}
+                  </td>
                   <td className="px-5 py-3 text-gray-600">{p.project_name || '—'}</td>
                   <td className="px-5 py-3 text-gray-600">{p.period_label}</td>
                   <td className="px-5 py-3 text-gray-500">{p.total_hours}h</td>
                   <td className="px-5 py-3 font-medium text-gray-900">${Number(p.total_amount).toLocaleString()}</td>
                   <td className="px-5 py-3"><StatusBadge status={p.status} /></td>
-                  <td className="px-5 py-3">
-                    {p.status === 'pending' && (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          placeholder="Ref #"
-                          value={payRef}
-                          onChange={(e) => setPayRef(e.target.value)}
-                          className="w-24 px-2 py-1 border border-gray-300 rounded text-xs"
-                        />
-                        <button
-                          onClick={() => markPaid.mutate({ id: p.id, payment_reference: payRef })}
-                          disabled={markPaid.isPending}
-                          className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50"
-                        >
-                          Mark Paid
-                        </button>
-                      </div>
-                    )}
-                    {p.status === 'paid' && (
-                      <span className="text-xs text-green-600">{p.payment_reference}</span>
-                    )}
-                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {selectedPayment && (
+        <PaymentDetailPanel
+          payment={selectedPayment}
+          type={type}
+          onClose={() => setSelectedPayment(null)}
+        />
+      )}
     </div>
   );
 }
+
+// ── Payment Detail Panel ──────────────────────────────────────────────────────
+
+function PaymentDetailPanel({ payment, type, onClose }) {
+  const isTalent = type === 'talent';
+  const profileId = isTalent ? payment.talent : payment.crew;
+
+  const talentStripeStatus = useTalentStripeAccountStatus(isTalent ? profileId : null);
+  const crewStripeStatus = useCrewStripeAccountStatus(!isTalent ? profileId : null);
+  const stripeStatusQuery = isTalent ? talentStripeStatus : crewStripeStatus;
+
+  const createTalentStripe = useCreateTalentStripeAccount();
+  const createCrewStripe = useCreateCrewStripeAccount();
+  const createStripeAccount = isTalent ? createTalentStripe : createCrewStripe;
+
+  const talentPayout = useInitiateTalentPayout();
+  const crewPayout = useInitiateCrewPayout();
+  const initiatePayout = isTalent ? talentPayout : crewPayout;
+
+  const talentMarkPaid = useMarkTalentPaymentPaid();
+  const crewMarkPaid = useMarkCrewPaymentPaid();
+  const markPaid = isTalent ? talentMarkPaid : crewMarkPaid;
+  const [manualRef, setManualRef] = useState('');
+
+  const stripeStatus = stripeStatusQuery.data;
+  const onboardingComplete = stripeStatus?.onboarding_complete;
+  const hasAccount = !!stripeStatus?.stripe_account_id;
+
+  const handleSetupStripe = () => {
+    createStripeAccount.mutate(profileId, {
+      onSuccess: (data) => {
+        if (data?.url) window.open(data.url, '_blank');
+      },
+    });
+  };
+
+  const handlePayout = () => {
+    initiatePayout.mutate(payment.id);
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-indigo-100 shadow-sm p-6 space-y-5">
+      <div className="flex items-start justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900">
+            {isTalent ? payment.talent_name : payment.crew_name}
+          </h3>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {payment.project_name || 'No production'} · {payment.period_label} · {payment.total_hours}h · ${Number(payment.total_amount).toLocaleString()}
+          </p>
+        </div>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
+      </div>
+
+      {/* Paid state */}
+      {payment.status === 'paid' && (
+        <div className="rounded-lg bg-green-50 border border-green-100 p-4 text-sm text-green-800">
+          <div className="font-medium mb-1">Payment Completed</div>
+          {payment.paid_at && <div className="text-xs text-green-600">Paid at: {new Date(payment.paid_at).toLocaleString()}</div>}
+          {payment.payment_reference && <div className="text-xs text-green-600 mt-0.5">Ref: {payment.payment_reference}</div>}
+          {payment.stripe_transfer_id && <div className="text-xs text-green-600 mt-0.5">Stripe Transfer: {payment.stripe_transfer_id}</div>}
+        </div>
+      )}
+
+      {/* Transfer initiated (pending) state */}
+      {payment.status === 'pending' && payment.stripe_transfer_id && (
+        <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 text-sm text-blue-800">
+          <div className="font-medium mb-1">Stripe Transfer Initiated</div>
+          <div className="text-xs text-blue-600">Transfer ID: {payment.stripe_transfer_id}</div>
+          <div className="text-xs text-blue-600 mt-0.5">Status: {payment.stripe_payout_status}</div>
+          <div className="text-xs text-blue-500 mt-1">Waiting for Stripe webhook to confirm payment…</div>
+        </div>
+      )}
+
+      {/* Pending: no transfer yet — show Stripe payout options */}
+      {payment.status === 'pending' && !payment.stripe_transfer_id && (
+        <div className="space-y-4">
+          <div className="text-sm font-medium text-gray-700">Pay via Stripe ACH</div>
+
+          {stripeStatusQuery.isLoading ? (
+            <div className="text-sm text-gray-400">Checking Stripe account…</div>
+          ) : !hasAccount ? (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-500">
+                {isTalent ? 'This talent has' : 'This crew member has'} no Stripe payout account yet.
+              </p>
+              <button
+                onClick={handleSetupStripe}
+                disabled={createStripeAccount.isPending}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {createStripeAccount.isPending ? 'Creating…' : 'Set Up Stripe Payout Account'}
+              </button>
+            </div>
+          ) : !onboardingComplete ? (
+            <div className="space-y-2">
+              <div className="rounded-lg bg-yellow-50 border border-yellow-100 p-3 text-sm text-yellow-800">
+                Stripe onboarding is not complete. Ask the {isTalent ? 'talent' : 'crew member'} to finish setup, or re-send the onboarding link.
+              </div>
+              <button
+                onClick={handleSetupStripe}
+                disabled={createStripeAccount.isPending}
+                className="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 disabled:opacity-50"
+              >
+                {createStripeAccount.isPending ? 'Generating…' : 'Re-send Onboarding Link'}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="rounded-lg bg-green-50 border border-green-100 p-3 text-sm text-green-700">
+                Stripe account ready · ACH payouts enabled
+              </div>
+              <button
+                onClick={handlePayout}
+                disabled={initiatePayout.isPending}
+                className="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+              >
+                {initiatePayout.isPending ? 'Sending…' : `Pay $${Number(payment.total_amount).toLocaleString()} via ACH`}
+              </button>
+              {initiatePayout.isError && (
+                <p className="text-xs text-red-500">{initiatePayout.error?.response?.data?.detail || 'Payout failed. Check Stripe dashboard.'}</p>
+              )}
+            </div>
+          )}
+
+          {/* Manual fallback */}
+          <div className="pt-3 border-t border-gray-100">
+            <div className="text-xs text-gray-400 mb-2">Or mark as paid manually (cash / wire / check)</div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Reference #"
+                value={manualRef}
+                onChange={(e) => setManualRef(e.target.value)}
+                className="w-32 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+              <button
+                onClick={() => markPaid.mutate({ id: payment.id, payment_reference: manualRef })}
+                disabled={markPaid.isPending}
+                className="px-3 py-1.5 bg-gray-600 text-white rounded-lg text-xs font-medium hover:bg-gray-700 disabled:opacity-50"
+              >
+                {markPaid.isPending ? 'Saving…' : 'Mark Paid'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+

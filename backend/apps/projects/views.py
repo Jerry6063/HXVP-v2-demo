@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 from apps.accounts.permissions import IsProductionAdmin, IsClient
+from apps.clientportal.models import ProjectMilestone
 from .models import (
     Project, Shoot, ActivityLog,
     CallSheet, CallSheetEntry, Checklist, ChecklistItem, ProductionLog,
@@ -78,6 +79,29 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return ProjectDetailSerializer
         return ProjectListSerializer
 
+    def perform_create(self, serializer):
+        project = serializer.save()
+        default_milestones = [
+            ("pre_production", "1 - Pre-production phase"),
+            ("pre_production", "Location"),
+            ("pre_production", "Talent"),
+            ("pre_production", "Crew"),
+            ("pre_production", "Art / Props"),
+            ("shooting", "2 - Production phase"),
+            ("shooting", "Call sheet"),
+            ("shooting", "Equipment / Props Checklist"),
+            ("post_production", "3 - Post-production"),
+            ("post_production", "Rough"),
+            ("post_production", "Edit"),
+            ("post_production", "Color"),
+            ("post_production", "Revision"),
+            ("post_production", "Deliver"),
+        ]
+        for i, (phase, title) in enumerate(default_milestones):
+            ProjectMilestone.objects.create(
+                project=project, phase=phase, title=title, order=i
+            )
+
     @action(detail=True, methods=["post"])
     def archive(self, request, pk=None):
         project = self.get_object()
@@ -85,6 +109,16 @@ class ProjectViewSet(viewsets.ModelViewSet):
         project.save()
         ActivityLog.objects.create(
             project=project, user=request.user, action="Project archived"
+        )
+        return Response(ProjectListSerializer(project).data)
+
+    @action(detail=True, methods=["post"])
+    def activate(self, request, pk=None):
+        project = self.get_object()
+        project.status = Project.Status.ACTIVE
+        project.save()
+        ActivityLog.objects.create(
+            project=project, user=request.user, action="Project activated"
         )
         return Response(ProjectListSerializer(project).data)
 

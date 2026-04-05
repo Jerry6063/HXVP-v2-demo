@@ -65,6 +65,14 @@ export const useArchiveProject = () => {
   });
 };
 
+export const useActivateProject = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.post(`/projects/${id}/activate/`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  });
+};
+
 // Shoots
 export const useShoots = (params = {}) =>
   useQuery({
@@ -710,8 +718,16 @@ export const useBulkUpdateTalentAvailability = () => {
 export const useUsers = (params = {}) =>
   useQuery({
     queryKey: ['users', params],
-    queryFn: () => api.get('/accounts/users/', { params }).then((r) => r.data),
+    queryFn: () => api.get('/auth/users/', { params }).then((r) => r.data),
   });
+
+export const useCreateClient = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => api.post('/auth/users/create-client/', data).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  });
+};
 
 // Talent Roster Shares
 export const useTalentRosterShares = (params = {}) =>
@@ -1437,5 +1453,89 @@ export const useRemoveCrewConsideration = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crew-considerations'] });
     },
+  });
+};
+
+// ── Stripe: Talent ────────────────────────────────────────────────────────────
+
+export const useCreateTalentStripeAccount = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId) =>
+      api.post(`/talent/profiles/${profileId}/create_stripe_account/`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['talent-profiles'] }),
+  });
+};
+
+export const useTalentStripeAccountStatus = (profileId) =>
+  useQuery({
+    queryKey: ['talent-stripe-status', profileId],
+    queryFn: () =>
+      api.get(`/talent/profiles/${profileId}/stripe_account_status/`).then((r) => r.data),
+    enabled: !!profileId,
+  });
+
+export const useInitiateTalentPayout = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (paymentId) =>
+      api.post(`/talent/payments/${paymentId}/initiate_stripe_payout/`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['talent-payments'] });
+      qc.invalidateQueries({ queryKey: ['talent-payment-summary'] });
+    },
+  });
+};
+
+// ── Crew Payments ─────────────────────────────────────────────────────────────
+
+export const useCrewPayments = (params = {}) =>
+  useQuery({
+    queryKey: ['crew-payments', params],
+    queryFn: () => api.get('/crew/payments/', { params }).then((r) => r.data),
+  });
+
+export const useCreateCrewPayment = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => api.post('/crew/payments/', data).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crew-payments'] }),
+  });
+};
+
+export const useMarkCrewPaymentPaid = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payment_reference }) =>
+      api.post(`/crew/payments/${id}/mark_paid/`, { payment_reference }).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crew-payments'] }),
+  });
+};
+
+// ── Stripe: Crew ──────────────────────────────────────────────────────────────
+
+export const useCreateCrewStripeAccount = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId) =>
+      api.post(`/crew/profiles/${profileId}/create_stripe_account/`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crew-profiles'] }),
+  });
+};
+
+export const useCrewStripeAccountStatus = (profileId) =>
+  useQuery({
+    queryKey: ['crew-stripe-status', profileId],
+    queryFn: () =>
+      api.get(`/crew/profiles/${profileId}/stripe_account_status/`).then((r) => r.data),
+    enabled: !!profileId,
+  });
+
+export const useInitiateCrewPayout = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (paymentId) =>
+      api.post(`/crew/payments/${paymentId}/initiate_stripe_payout/`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crew-payments'] }),
   });
 };

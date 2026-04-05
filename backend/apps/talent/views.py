@@ -1,12 +1,17 @@
 from datetime import datetime
 from decimal import Decimal
 
+import stripe
+from django.conf import settings as django_settings
 from django.db import transaction
 from django.db.models import Sum, Q
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, permissions, parsers, status, generics
 from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsProductionAdmin, IsTalent
 from .models import (
@@ -97,6 +102,49 @@ class TalentProfileViewSet(viewsets.ModelViewSet):
         profile.admin_notes = request.data.get("admin_notes", "")
         profile.save()
         return Response(TalentProfileSerializer(profile, context={"request": request}).data)
+
+    @action(detail=True, methods=["post"])
+    def create_stripe_account(self, request, pk=None):
+        profile = self.get_object()
+        stripe.api_key = django_settings.STRIPE_SECRET_KEY
+        if not profile.stripe_account_id:
+            account = stripe.Account.create(
+                type="express",
+                email=profile.user.email,
+                capabilities={"transfers": {"requested": True}},
+            )
+            profile.stripe_account_id = account["id"]
+            profile.save(update_fields=["stripe_account_id"])
+        refresh_url = f"{django_settings.FRONTEND_URL}/production/talent-payments"
+        return_url = f"{django_settings.FRONTEND_URL}/production/talent-payments"
+        link = stripe.AccountLink.create(
+            account=profile.stripe_account_id,
+            refresh_url=refresh_url,
+            return_url=return_url,
+            type="account_onboarding",
+        )
+        return Response({"url": link["url"], "stripe_account_id": profile.stripe_account_id})
+
+    @action(detail=True, methods=["get"])
+    def stripe_account_status(self, request, pk=None):
+        profile = self.get_object()
+        if not profile.stripe_account_id:
+            return Response({"stripe_account_id": None, "onboarding_complete": False})
+        stripe.api_key = django_settings.STRIPE_SECRET_KEY
+        account = stripe.Account.retrieve(profile.stripe_account_id)
+        complete = bool(
+            account.get("details_submitted")
+            and account.get("payouts_enabled")
+        )
+        if complete != profile.stripe_onboarding_complete:
+            profile.stripe_onboarding_complete = complete
+            profile.save(update_fields=["stripe_onboarding_complete"])
+        return Response({
+            "stripe_account_id": profile.stripe_account_id,
+            "onboarding_complete": complete,
+            "details_submitted": account.get("details_submitted"),
+            "payouts_enabled": account.get("payouts_enabled"),
+        })
 
     def perform_update(self, serializer):
         """When a talent edits their own profile, reset approval to pending.
@@ -321,6 +369,34 @@ class TalentPaymentViewSet(viewsets.ModelViewSet):
         send_payment_confirmation(payment)
         return Response(TalentPaymentSerializer(payment).data)
 
+    @action(detail=True, methods=["post"])
+    def initiate_stripe_payout(self, request, pk=None):
+        payment = self.get_object()
+        if payment.status == TalentPayment.Status.PAID:
+            return Response({"detail": "Payment already completed."}, status=status.HTTP_400_BAD_REQUEST)
+        profile = payment.talent
+        if not profile.stripe_account_id or not profile.stripe_onboarding_complete:
+            return Response(
+                {"detail": "Talent's Stripe account is not set up or onboarding is incomplete."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        stripe.api_key = django_settings.STRIPE_SECRET_KEY
+        amount_cents = int(payment.total_amount * 100)
+        transfer = stripe.Transfer.create(
+            amount=amount_cents,
+            currency="usd",
+            destination=profile.stripe_account_id,
+            metadata={
+                "talent_payment_id": payment.id,
+                "talent_name": profile.user.get_full_name(),
+                "project": payment.project.name if payment.project else "",
+            },
+        )
+        payment.stripe_transfer_id = transfer["id"]
+        payment.stripe_payout_status = transfer["status"]
+        payment.save(update_fields=["stripe_transfer_id", "stripe_payout_status"])
+        return Response(TalentPaymentSerializer(payment).data)
+
     @action(detail=False, methods=["get"])
     def summary(self, request):
         """Payment summary for a specific talent (or the logged-in talent)."""
@@ -439,3 +515,62 @@ class TalentAvailabilityViewSet(viewsets.ModelViewSet):
                 )
                 results.append(TalentAvailabilitySerializer(obj).data)
         return Response(results)
+
+
+class StripeWebhookView(APIView):
+    permission_classes = [AllowAny]
+
+    @csrf_exempt
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def post(self, request):
+        payload = request.body
+        sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+        stripe.api_key = django_settings.STRIPE_SECRET_KEY
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, django_settings.STRIPE_WEBHOOK_SECRET
+            )
+        except (ValueError, stripe.error.SignatureVerificationError):
+            return Response({"detail": "Invalid signature."}, status=status.HTTP_400_BAD_REQUEST)
+
+        event_type = event["type"]
+        data = event["data"]["object"]
+
+        if event_type == "transfer.paid":
+            transfer_id = data["id"]
+            # Try TalentPayment first
+            try:
+                payment = TalentPayment.objects.get(stripe_transfer_id=transfer_id)
+                payment.status = TalentPayment.Status.PAID
+                payment.paid_at = timezone.now()
+                payment.stripe_payout_status = "paid"
+                payment.save(update_fields=["status", "paid_at", "stripe_payout_status"])
+                send_payment_confirmation(payment)
+            except TalentPayment.DoesNotExist:
+                pass
+            # Try CrewPayment
+            try:
+                from apps.crew.models import CrewPayment
+                crew_payment = CrewPayment.objects.get(stripe_transfer_id=transfer_id)
+                crew_payment.status = CrewPayment.Status.PAID
+                crew_payment.paid_at = timezone.now()
+                crew_payment.stripe_payout_status = "paid"
+                crew_payment.save(update_fields=["status", "paid_at", "stripe_payout_status"])
+            except CrewPayment.DoesNotExist:
+                pass
+
+        elif event_type == "account.updated":
+            account_id = data["id"]
+            complete = bool(data.get("details_submitted") and data.get("payouts_enabled"))
+            TalentProfile.objects.filter(stripe_account_id=account_id).update(
+                stripe_onboarding_complete=complete
+            )
+            from apps.crew.models import CrewProfile as CrewProfileModel
+            CrewProfileModel.objects.filter(stripe_account_id=account_id).update(
+                stripe_onboarding_complete=complete
+            )
+
+        return Response({"status": "ok"})

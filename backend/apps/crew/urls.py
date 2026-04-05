@@ -15,6 +15,7 @@ router.register(
     basename="equipment-checkout",
 )
 router.register(r"evaluations", views.EvaluationViewSet, basename="evaluation")
+router.register(r"payments", views.CrewPaymentViewSet, basename="crew-payment")
 
 urlpatterns = [
     path("stats/", views.CrewStatsView.as_view(), name="crew-stats"),

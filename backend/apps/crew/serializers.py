@@ -7,6 +7,7 @@ from .models import (
     Equipment,
     EquipmentCheckout,
     Evaluation,
+    CrewPayment,
 )
 
 
@@ -113,3 +114,23 @@ class EvaluationSerializer(serializers.ModelSerializer):
 
     def get_project_name(self, obj):
         return obj.project.name if obj.project else None
+
+
+class CrewPaymentSerializer(serializers.ModelSerializer):
+    crew_name = serializers.SerializerMethodField()
+    project_name = serializers.SerializerMethodField()
+    period_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CrewPayment
+        fields = "__all__"
+
+    def get_crew_name(self, obj):
+        return obj.crew.user.get_full_name()
+
+    def get_project_name(self, obj):
+        return obj.project.name if obj.project else None
+
+    def get_period_label(self, obj):
+        import calendar
+        return f"{calendar.month_name[obj.period_month]} {obj.period_year}"

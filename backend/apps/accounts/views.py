@@ -15,6 +15,7 @@ from .serializers import (
     LoginSerializer,
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
+    AdminCreateClientSerializer,
 )
 from .utils import verify_hcaptcha, make_reset_token, read_reset_token
 
@@ -175,6 +176,18 @@ class UserListView(generics.ListAPIView):
         if role:
             qs = qs.filter(role=role)
         return qs
+
+
+class AdminCreateClientView(generics.CreateAPIView):
+    """Production-admin only: create a new client account."""
+    serializer_class = AdminCreateClientSerializer
+    permission_classes = [IsProductionAdmin]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
 class MeView(generics.RetrieveUpdateAPIView):

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useProjects, useCreateProject, useCreateTalentRequirement, useCreateCrewRequirement } from '../../api/hooks';
+import { useProjects, useCreateProject, useCreateTalentRequirement, useCreateCrewRequirement, useUsers, useCreateClient } from '../../api/hooks';
 import StatusBadge from '../../components/StatusBadge';
 import { PlusIcon, MagnifyingGlassIcon, ChevronDownIcon, ChevronRightIcon, UserCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
 
@@ -103,8 +103,14 @@ export default function ActiveProjects() {
   const createProject = useCreateProject();
   const createTalentReq = useCreateTalentRequirement();
   const createCrewReq = useCreateCrewRequirement();
+  const createClient = useCreateClient();
+  const { data: usersData } = useUsers({ role: 'client' });
+  const clientList = usersData?.results || usersData || [];
+
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
+  const [clientMode, setClientMode] = useState('existing'); // 'existing' | 'new'
+  const [newClientForm, setNewClientForm] = useState({ first_name: '', last_name: '', email: '' });
   const [form, setForm] = useState({
     name: '', description: '', budget: '', deadline: '', client: '',
     location: '', other_requirements: '',
@@ -112,25 +118,16 @@ export default function ActiveProjects() {
   const [talentReqs, setTalentReqs] = useState([]);
   const [crewReqs, setCrewReqs] = useState([]);
 
-  const projectList = (projects?.results || projects || []).filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  // Group by client
-  const grouped = useMemo(() => {
-    const map = new Map();
-    projectList.forEach((p) => {
-      const key = p.client_name || 'No Client';
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(p);
-    });
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [projectList]);
-
   const handleCreate = async (e) => {
     e.preventDefault();
+    let clientId = form.client || null;
+    if (clientMode === 'new' && (newClientForm.first_name || newClientForm.email)) {
+      const newUser = await createClient.mutateAsync(newClientForm);
+      clientId = newUser.id;
+    }
     const project = await createProject.mutateAsync({
       ...form,
+      client: clientId,
       budget: form.budget || 0,
       status: 'active',
     });
@@ -141,9 +138,25 @@ export default function ActiveProjects() {
     ]);
     setShowForm(false);
     setForm({ name: '', description: '', budget: '', deadline: '', client: '', location: '', other_requirements: '' });
+    setClientMode('existing');
+    setNewClientForm({ first_name: '', last_name: '', email: '' });
     setTalentReqs([]);
     setCrewReqs([]);
   };
+
+  const projectList = (projects?.results || projects || []).filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const grouped = useMemo(() => {
+    const map = new Map();
+    projectList.forEach((p) => {
+      const key = p.client_name || 'No Client';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(p);
+    });
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [projectList]);
 
   return (
     <div className="space-y-6">
@@ -172,6 +185,74 @@ export default function ActiveProjects() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
               />
             </div>
+
+            {/* ── Client ── */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Client</label>
+
+              {/* Toggle */}
+              <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setClientMode('existing')}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                    clientMode === 'existing' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Existing Client
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setClientMode('new')}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                    clientMode === 'new' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  New Client
+                </button>
+              </div>
+
+              {clientMode === 'existing' ? (
+                <select
+                  value={form.client}
+                  onChange={(e) => setForm({ ...form, client: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                >
+                  <option value="">— No client —</option>
+                  {clientList.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.first_name} {u.last_name} ({u.email})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <input
+                    value={newClientForm.first_name}
+                    onChange={(e) => setNewClientForm({ ...newClientForm, first_name: e.target.value })}
+                    placeholder="First name"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  />
+                  <input
+                    value={newClientForm.last_name}
+                    onChange={(e) => setNewClientForm({ ...newClientForm, last_name: e.target.value })}
+                    placeholder="Last name"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  />
+                  <input
+                    type="email"
+                    value={newClientForm.email}
+                    onChange={(e) => setNewClientForm({ ...newClientForm, email: e.target.value })}
+                    placeholder="Email address"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  />
+                  <p className="md:col-span-3 text-xs text-gray-400">
+                    A client account will be created. They can set their password via "Forgot Password" on the client portal.
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Budget ($)</label>
               <input
@@ -311,10 +392,10 @@ export default function ActiveProjects() {
             <div className="md:col-span-2 flex gap-3">
               <button
                 type="submit"
-                disabled={createProject.isPending}
+                disabled={createProject.isPending || createClient.isPending}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
               >
-                {createProject.isPending ? 'Creating...' : 'Create Production'}
+                {createClient.isPending ? 'Creating client…' : createProject.isPending ? 'Creating...' : 'Create Production'}
               </button>
               <button
                 type="button"

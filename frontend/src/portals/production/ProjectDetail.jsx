@@ -9,6 +9,7 @@ import {
   useExpenses,
   useProjectFinancials,
   useArchiveProject,
+  useActivateProject,
   useUpdateProject,
   useBookings,
   useCrewAssignments,
@@ -83,6 +84,7 @@ export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(0);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
   const { data: project, isLoading } = useProject(id);
   const { data: deliverables } = useDeliverables({ project: id });
   const { data: contracts } = useContracts({ project: id });
@@ -91,6 +93,7 @@ export default function ProjectDetail() {
   const { data: bookings } = useBookings({ project: id });
   const { data: assignments } = useCrewAssignments({ project: id });
   const archiveProject = useArchiveProject();
+  const activateProject = useActivateProject();
   const updateProject = useUpdateProject();
   const uploadDeliverable = useUploadDeliverable();
   const createDeliverable = useCreateDeliverable();
@@ -116,6 +119,38 @@ export default function ProjectDetail() {
 
   return (
     <div className="space-y-6">
+      {/* Archive Confirmation Modal */}
+      {showArchiveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <h2 className="text-base font-semibold text-gray-900 mb-2">Archive this project?</h2>
+            <p className="text-sm text-gray-500 mb-5">
+              <span className="font-medium text-gray-700">{project.name}</span> will be moved to the
+              Archived section. You can reactivate it at any time.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowArchiveModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={archiveProject.isPending}
+                onClick={async () => {
+                  await archiveProject.mutateAsync(id);
+                  setShowArchiveModal(false);
+                  navigate('/production/projects');
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-60"
+              >
+                {archiveProject.isPending ? 'Archiving…' : 'Archive'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -126,13 +161,22 @@ export default function ProjectDetail() {
           <StatusBadge status={project.status} />
           {project.status === 'active' && (
             <button
-              onClick={async () => {
-                await archiveProject.mutateAsync(id);
-                navigate('/production/projects');
-              }}
+              onClick={() => setShowArchiveModal(true)}
               className="px-3 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
             >
               Archive
+            </button>
+          )}
+          {project.status === 'archived' && (
+            <button
+              disabled={activateProject.isPending}
+              onClick={async () => {
+                await activateProject.mutateAsync(id);
+                navigate('/production/projects');
+              }}
+              className="px-3 py-1 text-xs font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60"
+            >
+              {activateProject.isPending ? 'Activating…' : 'Activate this project'}
             </button>
           )}
         </div>
