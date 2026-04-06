@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "django_filters",
+    "anymail",
     # Local apps
     "apps.accounts",
     "apps.projects",
@@ -146,15 +147,11 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
 }
 
-# Email (Resend SMTP)
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.resend.com"
-EMAIL_PORT = 587
-EMAIL_USE_SSL = False
-EMAIL_USE_TLS = True
-EMAIL_TIMEOUT = 10
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "resend")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+# Email (Resend via django-anymail HTTP API)
+EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
+ANYMAIL = {
+    "RESEND_API_KEY": os.environ.get("RESEND_API_KEY", "re_HyGuLN45_5nh8QvKbuCAZvP6cJoZgtivG"),
+}
 DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL", "HXVP Studio <xinyi@hxvp.us>"
 )
