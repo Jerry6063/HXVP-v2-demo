@@ -110,26 +110,29 @@ class TalentProfileViewSet(viewsets.ModelViewSet):
         if user.role == "talent" and profile.user_id != user.id:
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         stripe.api_key = django_settings.STRIPE_SECRET_KEY
-        if not profile.stripe_account_id:
-            account = stripe.Account.create(
-                type="express",
-                email=profile.user.email,
-                capabilities={"transfers": {"requested": True}},
+        try:
+            if not profile.stripe_account_id:
+                account = stripe.Account.create(
+                    type="express",
+                    email=profile.user.email,
+                    capabilities={"transfers": {"requested": True}},
+                )
+                profile.stripe_account_id = account["id"]
+                profile.save(update_fields=["stripe_account_id"])
+            if user.role == "talent":
+                refresh_url = f"{django_settings.FRONTEND_URL}/talent/payments?tab=payout&refresh=1"
+                return_url = f"{django_settings.FRONTEND_URL}/talent/payments?tab=payout&success=1"
+            else:
+                refresh_url = f"{django_settings.FRONTEND_URL}/production/talent-payments"
+                return_url = f"{django_settings.FRONTEND_URL}/production/talent-payments"
+            link = stripe.AccountLink.create(
+                account=profile.stripe_account_id,
+                refresh_url=refresh_url,
+                return_url=return_url,
+                type="account_onboarding",
             )
-            profile.stripe_account_id = account["id"]
-            profile.save(update_fields=["stripe_account_id"])
-        if user.role == "talent":
-            refresh_url = f"{django_settings.FRONTEND_URL}/talent/payments?tab=payout&refresh=1"
-            return_url = f"{django_settings.FRONTEND_URL}/talent/payments?tab=payout&success=1"
-        else:
-            refresh_url = f"{django_settings.FRONTEND_URL}/production/talent-payments"
-            return_url = f"{django_settings.FRONTEND_URL}/production/talent-payments"
-        link = stripe.AccountLink.create(
-            account=profile.stripe_account_id,
-            refresh_url=refresh_url,
-            return_url=return_url,
-            type="account_onboarding",
-        )
+        except stripe.error.StripeError as e:
+            return Response({"detail": str(e.user_message or e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"url": link["url"], "stripe_account_id": profile.stripe_account_id})
 
     @action(detail=True, methods=["get"])

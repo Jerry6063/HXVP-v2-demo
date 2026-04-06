@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
 import {
   useCrewPayments,
-  useCrewProfiles,
+  useMyCrewProfile,
   useCreateCrewStripeAccount,
   useCrewStripeAccountStatus,
 } from '../../api/hooks';
@@ -10,14 +9,11 @@ import StatusBadge from '../../components/StatusBadge';
 import { CheckCircleIcon } from '@heroicons/react/24/outline';
 
 export default function CrewPayments() {
-  const { user } = useAuth();
   const { data: paymentsData, isLoading: loadingPayments } = useCrewPayments();
-  const { data: profilesData } = useCrewProfiles();
+  const { data: profile } = useMyCrewProfile();
   const [tab, setTab] = useState('history');
 
   const payments = paymentsData?.results || paymentsData || [];
-  const profiles = profilesData?.results || profilesData || [];
-  const profile = profiles.find((p) => p.user?.id === user?.id);
 
   return (
     <div className="space-y-6">

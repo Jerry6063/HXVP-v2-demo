@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
 import {
   useTalentPaymentSummary,
   useTalentPayments,
   useTalentTimeLogs,
-  useTalentProfiles,
+  useMyTalentProfile,
   useCreateTalentStripeAccount,
   useTalentStripeAccountStatus,
 } from '../../api/hooks';
@@ -18,17 +17,14 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function TalentPayments() {
-  const { user } = useAuth();
   const { data: summary, isLoading: loadingSummary } = useTalentPaymentSummary();
   const { data: paymentsData, isLoading: loadingPayments } = useTalentPayments();
   const { data: timeLogsData, isLoading: loadingLogs } = useTalentTimeLogs();
-  const { data: profilesData } = useTalentProfiles();
+  const { data: profile } = useMyTalentProfile();
   const [tab, setTab] = useState('summary');
 
   const payments = paymentsData?.results || paymentsData || [];
   const timeLogs = timeLogsData?.results || timeLogsData || [];
-  const profiles = profilesData?.results || profilesData || [];
-  const profile = profiles.find((p) => p.user?.id === user?.id);
 
   if (loadingSummary) {
     return <div className="text-center py-12 text-gray-400">Loading...</div>;
