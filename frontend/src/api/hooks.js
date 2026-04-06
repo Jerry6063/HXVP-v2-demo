@@ -378,6 +378,7 @@ export const useSubmitProfileForReview = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['talent-profiles'] });
       qc.invalidateQueries({ queryKey: ['talent-profile'] });
+      qc.invalidateQueries({ queryKey: ['my-talent-profile'] });
     },
   });
 };
@@ -423,6 +424,7 @@ export const useUploadTalentPhoto = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['talent-profiles'] });
       qc.invalidateQueries({ queryKey: ['talent-profile'] });
+      qc.invalidateQueries({ queryKey: ['my-talent-profile'] });
     },
   });
 };
@@ -437,6 +439,7 @@ export const useSetPrimaryTalentPhoto = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['talent-profiles'] });
       qc.invalidateQueries({ queryKey: ['talent-profile'] });
+      qc.invalidateQueries({ queryKey: ['my-talent-profile'] });
     },
   });
 };
@@ -449,6 +452,7 @@ export const useDeleteTalentPhoto = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['talent-profiles'] });
       qc.invalidateQueries({ queryKey: ['talent-profile'] });
+      qc.invalidateQueries({ queryKey: ['my-talent-profile'] });
     },
   });
 };
