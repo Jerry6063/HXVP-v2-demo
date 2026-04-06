@@ -316,6 +316,12 @@ export const useTalentProfiles = (params = {}) =>
     queryFn: () => api.get('/talent/profiles/', { params }).then((r) => r.data),
   });
 
+export const useMyTalentProfile = () =>
+  useQuery({
+    queryKey: ['my-talent-profile'],
+    queryFn: () => api.get('/talent/profiles/mine/').then((r) => r.data),
+  });
+
 export const useBookings = (params = {}) =>
   useQuery({
     queryKey: ['bookings', params],
@@ -360,6 +366,7 @@ export const useUpdateTalentProfile = () => {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['talent-profile', String(vars.id)] });
       qc.invalidateQueries({ queryKey: ['talent-profiles'] });
+      qc.invalidateQueries({ queryKey: ['my-talent-profile'] });
     },
   });
 };
@@ -581,6 +588,12 @@ export const useCrewProfiles = (params = {}) =>
     queryFn: () => api.get('/crew/profiles/', { params }).then((r) => r.data),
   });
 
+export const useMyCrewProfile = () =>
+  useQuery({
+    queryKey: ['my-crew-profile'],
+    queryFn: () => api.get('/crew/profiles/mine/').then((r) => r.data),
+  });
+
 export const useCrewAssignments = (params = {}) =>
   useQuery({
     queryKey: ['crew-assignments', params],
@@ -634,6 +647,7 @@ export const useUpdateCrewProfile = () => {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['crew-profile', String(vars.id)] });
       qc.invalidateQueries({ queryKey: ['crew-profiles'] });
+      qc.invalidateQueries({ queryKey: ['my-crew-profile'] });
     },
   });
 };

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  useTalentProfiles,
+  useMyTalentProfile,
   useUpdateTalentProfile,
   useUploadTalentPhoto,
   useDeleteTalentPhoto,
@@ -21,7 +21,7 @@ import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 
 export default function TalentProfile() {
   const { user, refreshUser } = useAuth();
-  const { data: profilesData, isLoading } = useTalentProfiles();
+  const { data: profile, isLoading } = useMyTalentProfile();
   const updateProfile = useUpdateTalentProfile();
   const updateMe = useUpdateMe();
   const uploadPhoto = useUploadTalentPhoto();
@@ -31,9 +31,6 @@ export default function TalentProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [contact, setContact] = useState({ phone: '', email: '' });
-
-  const profiles = profilesData?.results || profilesData || [];
-  const profile = profiles.find((p) => p.user?.id === user?.id);
 
   const [form, setForm] = useState({
     talent_type: 'model',

@@ -135,6 +135,15 @@ class EmailVerifyConfirmView(APIView):
         user.set_password(password)
         user.is_active = True
         user.save(update_fields=["password", "is_active"])
+
+        # Auto-provision the role-specific profile so the portal isn't blank
+        if user.role == User.Role.TALENT:
+            from apps.talent.models import TalentProfile
+            TalentProfile.objects.get_or_create(user=user)
+        elif user.role == User.Role.CREW:
+            from apps.crew.models import CrewProfile
+            CrewProfile.objects.get_or_create(user=user)
+
         send_welcome_email(user)
 
         refresh = RefreshToken.for_user(user)

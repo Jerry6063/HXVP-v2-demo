@@ -156,6 +156,20 @@ class TalentProfileViewSet(viewsets.ModelViewSet):
             "payouts_enabled": account.get("payouts_enabled"),
         })
 
+    @action(detail=False, methods=["get"], url_path="mine")
+    def mine(self, request):
+        """Return (or auto-create) the calling talent user's profile."""
+        if request.user.role != "talent":
+            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+        TalentProfile.objects.get_or_create(user=request.user)
+        profile = (
+            TalentProfile.objects
+            .select_related("user")
+            .prefetch_related("photos")
+            .get(user=request.user)
+        )
+        return Response(TalentProfileSerializer(profile, context={"request": request}).data)
+
     def perform_update(self, serializer):
         """When a talent edits their own profile, reset approval to pending.
         Block save if no headshot has been uploaded."""

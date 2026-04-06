@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  useCrewProfiles,
+  useMyCrewProfile,
   useUpdateCrewProfile,
   useUploadCrewPhoto,
   useUpdateMe,
@@ -28,14 +28,11 @@ const ROLE_OPTIONS = [
 
 export default function CrewProfilePage() {
   const { user, refreshUser } = useAuth();
-  const { data: profilesData, isLoading } = useCrewProfiles();
+  const { data: myProfile, isLoading } = useMyCrewProfile();
   const updateProfile = useUpdateCrewProfile();
   const updateMe = useUpdateMe();
   const uploadPhoto = useUploadCrewPhoto();
   const fileRef = useRef(null);
-
-  const profiles = profilesData?.results || profilesData || [];
-  const myProfile = profiles.find((p) => p.user?.id === user?.id);
 
   const [form, setForm] = useState({
     crew_role: '',

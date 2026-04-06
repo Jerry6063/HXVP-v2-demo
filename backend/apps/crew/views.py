@@ -172,6 +172,15 @@ class CrewProfileViewSet(viewsets.ModelViewSet):
             "payouts_enabled": account.get("payouts_enabled"),
         })
 
+    @action(detail=False, methods=["get"], url_path="mine")
+    def mine(self, request):
+        """Return (or auto-create) the calling crew user's profile."""
+        if request.user.role != "crew":
+            return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
+        CrewProfile.objects.get_or_create(user=request.user)
+        profile = CrewProfile.objects.select_related("user").get(user=request.user)
+        return Response(CrewProfileSerializer(profile, context={"request": request}).data)
+
 
 class CrewAvailabilityViewSet(viewsets.ModelViewSet):
     serializer_class = CrewAvailabilitySerializer
