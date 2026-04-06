@@ -150,15 +150,15 @@ SIMPLE_JWT = {
 # Email (Resend via django-anymail HTTP API)
 EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
 ANYMAIL = {
-    "RESEND_API_KEY": os.environ.get("RESEND_API_KEY", "re_HyGuLN45_5nh8QvKbuCAZvP6cJoZgtivG"),
+    "RESEND_API_KEY": os.environ.get("RESEND_API_KEY", ""),
 }
 DEFAULT_FROM_EMAIL = os.environ.get(
-    "DEFAULT_FROM_EMAIL", "HXVP Studio <xinyi@hxvp.us>"
+    "DEFAULT_FROM_EMAIL", "HXVP Studio <no-reply@hxvp.us>"
 )
 ADMIN_NOTIFICATION_EMAIL = os.environ.get("ADMIN_NOTIFICATION_EMAIL", "xinyi@hxvp.us")
 
 # Frontend URL — used to build password-reset links in emails.
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://hxvp-frontend.onrender.com")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 
 # Stripe
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")

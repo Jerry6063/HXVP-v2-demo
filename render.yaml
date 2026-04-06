@@ -22,6 +22,8 @@ services:
           property: connectionString
       - key: CORS_ALLOWED_ORIGINS
         sync: false                  # Fill in after frontend deploys (e.g. https://hxvp.onrender.com)
+      - key: RESEND_API_KEY
+        sync: false                  # Resend API key for django-anymail email backend
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD

@@ -62,7 +62,11 @@ class RegisterView(generics.CreateAPIView):
                     {"detail": "Verification email sent. Please check your inbox."},
                     status=status.HTTP_201_CREATED,
                 )
-            # Active account — let the serializer's unique-email constraint raise 400
+            # Active account — return a friendly 400
+            return Response(
+                {"detail": "An account with this email already exists. Please sign in."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
