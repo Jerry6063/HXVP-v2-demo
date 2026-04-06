@@ -130,8 +130,12 @@ class CrewProfileViewSet(viewsets.ModelViewSet):
             if not profile.stripe_account_id:
                 account = stripe.Account.create(
                     type="express",
+                    country="US",
                     email=profile.user.email,
-                    capabilities={"transfers": {"requested": True}},
+                    capabilities={
+                        "card_payments": {"requested": True},
+                        "transfers": {"requested": True},
+                    },
                 )
                 profile.stripe_account_id = account["id"]
                 profile.save(update_fields=["stripe_account_id"])
