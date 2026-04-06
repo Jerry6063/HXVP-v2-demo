@@ -255,7 +255,7 @@ export default function TalentProfile() {
                   <button
                     title="Set as primary photo"
                     onClick={(e) => { e.stopPropagation(); setPrimary.mutate({ profileId: profile.id, photoId: photo.id }); }}
-                    className="absolute top-1 left-1 bg-white/80 hover:bg-amber-500 hover:text-white text-amber-500 p-1 rounded opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute top-1 left-1 z-10 bg-white/80 hover:bg-amber-500 hover:text-white text-amber-500 p-1 rounded opacity-0 group-hover:opacity-100 transition-all"
                   >
                     <StarIcon className="w-3 h-3" />
                   </button>
@@ -263,7 +263,7 @@ export default function TalentProfile() {
                 {isEditing && (
                   <button
                     onClick={(e) => { e.stopPropagation(); deletePhoto.mutate({ profileId: profile.id, photoId: photo.id }); }}
-                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-1 right-1 z-10 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <TrashIcon className="w-3 h-3" />
                   </button>

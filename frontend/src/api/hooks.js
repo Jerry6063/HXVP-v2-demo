@@ -421,7 +421,23 @@ export const useUploadTalentPhoto = () => {
         })
         .then((r) => r.data);
     },
-    onSuccess: () => {
+    onSuccess: (newPhoto) => {
+      // Immediately update the profile cache with the new photo
+      qc.setQueryData(['my-talent-profile'], (old) => {
+        if (!old) return old;
+        const photos = [...(old.photos || [])];
+        if (newPhoto.is_primary) {
+          photos.forEach((p) => (p.is_primary = false));
+        }
+        photos.push(newPhoto);
+        return {
+          ...old,
+          photos,
+          primary_photo: newPhoto.is_primary
+            ? newPhoto.image_url
+            : old.primary_photo || newPhoto.image_url,
+        };
+      });
       qc.invalidateQueries({ queryKey: ['talent-profiles'] });
       qc.invalidateQueries({ queryKey: ['talent-profile'] });
       qc.invalidateQueries({ queryKey: ['my-talent-profile'] });
