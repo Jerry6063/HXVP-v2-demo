@@ -44,7 +44,7 @@ def send_password_reset_email(user, reset_url, portal):
 
 
 def send_email_verification(user, verify_url):
-    safe_send(
+    return safe_send(
         subject="Verify your email – HXVP Studio",
         message=(
             f"Hi {user.first_name},\n\n"

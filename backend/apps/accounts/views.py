@@ -43,7 +43,7 @@ class RegisterView(generics.CreateAPIView):
         token = make_email_verify_token(user.id)
         frontend_url = getattr(settings, "FRONTEND_URL", "").rstrip("/")
         verify_url = f"{frontend_url}/verify-email?token={token}"
-        send_email_verification(user, verify_url)
+        return send_email_verification(user, verify_url)
 
     def create(self, request, *args, **kwargs):
         email = (request.data.get("email") or "").strip()
@@ -52,7 +52,12 @@ class RegisterView(generics.CreateAPIView):
         existing = User.objects.filter(email=email).first()
         if existing is not None:
             if not existing.is_active:
-                self._send_verification(existing)
+                sent = self._send_verification(existing)
+                if not sent:
+                    return Response(
+                        {"detail": "Failed to send verification email. Please try again later."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    )
                 return Response(
                     {"detail": "Verification email sent. Please check your inbox."},
                     status=status.HTTP_201_CREATED,
@@ -62,7 +67,13 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        self._send_verification(user)
+        sent = self._send_verification(user)
+        if not sent:
+            user.delete()
+            return Response(
+                {"detail": "Failed to send verification email. Please try again later."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response(
             {"detail": "Verification email sent. Please check your inbox."},
             status=status.HTTP_201_CREATED,
