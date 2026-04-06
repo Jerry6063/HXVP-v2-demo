@@ -1497,7 +1497,11 @@ export const useCreateTalentStripeAccount = () => {
   return useMutation({
     mutationFn: (profileId) =>
       api.post(`/talent/profiles/${profileId}/create_stripe_account/`).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['talent-profiles'] }),
+    onSuccess: (_data, profileId) => {
+      qc.invalidateQueries({ queryKey: ['talent-profiles'] });
+      qc.invalidateQueries({ queryKey: ['my-talent-profile'] });
+      qc.invalidateQueries({ queryKey: ['talent-stripe-status', profileId] });
+    },
   });
 };
 
@@ -1553,7 +1557,11 @@ export const useCreateCrewStripeAccount = () => {
   return useMutation({
     mutationFn: (profileId) =>
       api.post(`/crew/profiles/${profileId}/create_stripe_account/`).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['crew-profiles'] }),
+    onSuccess: (_data, profileId) => {
+      qc.invalidateQueries({ queryKey: ['crew-profiles'] });
+      qc.invalidateQueries({ queryKey: ['my-crew-profile'] });
+      qc.invalidateQueries({ queryKey: ['crew-stripe-status', profileId] });
+    },
   });
 };
 

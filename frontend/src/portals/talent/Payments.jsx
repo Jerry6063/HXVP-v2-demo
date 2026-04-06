@@ -202,8 +202,8 @@ function PayoutSetupPanel({ profile }) {
     return <div className="text-gray-400 py-8 text-center text-sm">Loading profile…</div>;
   }
 
-  const onboarded = profile.stripe_onboarding_complete;
-  const hasAccount = !!profile.stripe_account_id;
+  const onboarded = statusQuery.data?.onboarding_complete ?? profile.stripe_onboarding_complete;
+  const hasAccount = !!(statusQuery.data?.stripe_account_id || profile.stripe_account_id);
 
   const handleSetup = () => {
     createAccount.mutate(profile.id, {
@@ -280,8 +280,8 @@ function PayoutSetupPanel({ profile }) {
           </div>
         )}
 
-        {statusQuery.isLoading && hasAccount && (
-          <div className="text-xs text-gray-400">Refreshing account status…</div>
+        {statusQuery.isLoading && hasAccount && !onboarded && (
+          <div className="text-xs text-gray-400">Checking account status…</div>
         )}
       </div>
     </div>
