@@ -24,6 +24,14 @@ services:
         sync: false                  # Fill in after frontend deploys (e.g. https://hxvp.onrender.com)
       - key: RESEND_API_KEY
         sync: false                  # Resend API key for django-anymail email backend
+      - key: ADMIN_EMAIL
+        sync: false                  # Production portal admin login email
+      - key: ADMIN_PASSWORD
+        sync: false                  # Production portal admin password (keep secret)
+      - key: ADMIN_FIRST_NAME
+        sync: false                  # Optional: admin display name (default: Admin)
+      - key: ADMIN_LAST_NAME
+        sync: false                  # Optional: admin display name
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD
