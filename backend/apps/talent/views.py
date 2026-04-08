@@ -413,16 +413,38 @@ class TalentPaymentViewSet(viewsets.ModelViewSet):
             )
         stripe.api_key = django_settings.STRIPE_SECRET_KEY
         amount_cents = int(payment.total_amount * 100)
-        transfer = stripe.Transfer.create(
-            amount=amount_cents,
-            currency="usd",
-            destination=profile.stripe_account_id,
-            metadata={
-                "talent_payment_id": payment.id,
-                "talent_name": profile.user.get_full_name(),
-                "project": payment.project.name if payment.project else "",
-            },
-        )
+        try:
+            balance = stripe.Balance.retrieve()
+            available_usd = next(
+                (b["amount"] for b in balance["available"] if b["currency"] == "usd"), 0
+            )
+            if available_usd < amount_cents:
+                return Response(
+                    {
+                        "detail": (
+                            f"Insufficient Stripe platform balance "
+                            f"(${available_usd / 100:.2f} available, "
+                            f"${amount_cents / 100:.2f} needed). "
+                            f"Please top up via Stripe Dashboard → Balance → Add to balance."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            transfer = stripe.Transfer.create(
+                amount=amount_cents,
+                currency="usd",
+                destination=profile.stripe_account_id,
+                metadata={
+                    "talent_payment_id": payment.id,
+                    "talent_name": profile.user.get_full_name(),
+                    "project": payment.project.name if payment.project else "",
+                },
+            )
+        except stripe.error.StripeError as e:
+            return Response(
+                {"detail": str(e.user_message or e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         payment.stripe_transfer_id = transfer["id"]
         payment.stripe_payout_status = transfer["status"]
         payment.save(update_fields=["stripe_transfer_id", "stripe_payout_status"])

@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useTalentProfiles, useProjects } from '../api/hooks';
+import { useMyTalentProfile, useProjects } from '../api/hooks';
 import {
   Bars3Icon,
   XMarkIcon,
@@ -255,9 +255,7 @@ function SidebarNav({ config, activeColor }) {
   );
 }
 function TalentUserInfo({ user }) {
-  const { data: profilesData } = useTalentProfiles();
-  const profiles = profilesData?.results || profilesData || [];
-  const profile = profiles.find((p) => p.user?.id === user?.id);
+  const { data: profile } = useMyTalentProfile();
   const photo = profile?.primary_photo;
 
   return (
