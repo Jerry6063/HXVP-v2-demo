@@ -924,6 +924,20 @@ export const useSendContract = () => {
   });
 };
 
+export const useSignContractDirect = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, signatureFile }) => {
+      const fd = new FormData();
+      fd.append('signature_image', signatureFile);
+      return api.post(`/deliverables/contracts/${id}/sign/`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }).then((r) => r.data);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['contracts'] }),
+  });
+};
+
 // Finance
 export const useExpenses = (params = {}) =>
   useQuery({

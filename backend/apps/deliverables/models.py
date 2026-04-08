@@ -78,6 +78,8 @@ class Contract(models.Model):
     title = models.CharField(max_length=255, blank=True)
     notes = models.TextField(blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)
+    signed_at = models.DateTimeField(null=True, blank=True)
+    signature_image = models.ImageField(upload_to="contract_signatures/", blank=True, null=True)
     draft_html = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 

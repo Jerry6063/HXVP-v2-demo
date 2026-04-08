@@ -108,3 +108,24 @@ class ContractViewSet(viewsets.ModelViewSet):
         data = ContractSerializer(contract, context={"request": request}).data
         data["email_sent"] = bool(email_sent)
         return Response(data)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        parser_classes=[parsers.MultiPartParser, parsers.FormParser],
+    )
+    def sign(self, request, pk=None):
+        """Allow the assigned recipient to sign the contract via signature image."""
+        from django.utils import timezone
+
+        contract = self.get_object()
+        if contract.user != request.user:
+            return Response({"detail": "Not authorized to sign this contract."}, status=403)
+        signature_file = request.FILES.get("signature_image")
+        if not signature_file:
+            return Response({"detail": "signature_image is required."}, status=400)
+        contract.signature_image = signature_file
+        contract.signed_at = timezone.now()
+        contract.status = Contract.Status.SIGNED
+        contract.save()
+        return Response(ContractSerializer(contract, context={"request": request}).data)

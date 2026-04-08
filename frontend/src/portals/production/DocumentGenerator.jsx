@@ -1,5 +1,4 @@
 import { useSearchParams } from 'react-router-dom';
-import { useProjects } from '../../api/hooks';
 
 // Document type tabs
 import ClientContractsTab from './documents/ClientContractsTab';
@@ -49,9 +48,6 @@ const DOC_TYPES = [
 export default function DocumentGenerator() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeType = searchParams.get('type') || '';
-
-  const { data: projectsData } = useProjects();
-  const projects = projectsData?.results || projectsData || [];
 
   const activeDocType = DOC_TYPES.find((t) => t.id === activeType);
 
@@ -109,25 +105,6 @@ export default function DocumentGenerator() {
             <span className="text-gray-300">/</span>
             <span className="text-gray-700 font-medium">{activeDocType?.label}</span>
           </div>
-
-          {/* Project selector for project-scoped tabs */}
-          {needsProject && (
-            <div className="bg-white rounded-xl shadow p-5">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Select Production</label>
-              <select
-                value={selectedProject}
-                onChange={(e) => setSelectedProject(e.target.value)}
-                className="w-full max-w-md border rounded-lg p-2.5 text-sm"
-              >
-                <option value="">Choose a production…</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} {p.client_name ? `(${p.client_name})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
 
           {activeType === 'client_contracts' && <ClientContractsTab />}
 

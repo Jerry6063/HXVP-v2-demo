@@ -44,6 +44,7 @@ import BookingDetail from './portals/talent/BookingDetail';
 import TalentCalendar from './portals/talent/Calendar';
 import TalentRecords from './portals/talent/Records';
 import TalentPayments from './portals/talent/Payments';
+import TalentDocuments from './portals/talent/Documents';
 
 import CrewDashboard from './portals/crew/Dashboard';
 import CrewProfilePage from './portals/crew/Profile';
@@ -51,6 +52,7 @@ import CrewCalendar from './portals/crew/Calendar';
 import CrewAssignmentsPage from './portals/crew/Assignments';
 import CrewReimbursements from './portals/crew/Reimbursements';
 import CrewPayments from './portals/crew/Payments';
+import CrewDocuments from './portals/crew/Documents';
 
 export default function App() {
   return (
@@ -137,6 +139,7 @@ export default function App() {
         <Route path="calendar" element={<TalentCalendar />} />
         <Route path="records" element={<TalentRecords />} />
         <Route path="payments" element={<TalentPayments />} />
+        <Route path="documents" element={<TalentDocuments />} />
       </Route>
 
       {/* Crew Portal */}
@@ -159,6 +162,7 @@ export default function App() {
         <Route path="assignments" element={<CrewAssignmentsPage />} />
         <Route path="payments" element={<CrewPayments />} />
         <Route path="reimbursements" element={<CrewReimbursements />} />
+        <Route path="documents" element={<CrewDocuments />} />
       </Route>
     </Routes>
     </>

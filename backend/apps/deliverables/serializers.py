@@ -33,6 +33,7 @@ class ContractSerializer(serializers.ModelSerializer):
     user_name = serializers.SerializerMethodField()
     user_email = serializers.SerializerMethodField()
     file_abs_url = serializers.SerializerMethodField()
+    signature_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Contract
@@ -50,4 +51,12 @@ class ContractSerializer(serializers.ModelSerializer):
             if req:
                 return req.build_absolute_uri(obj.file_url.url)
             return obj.file_url.url
+        return None
+
+    def get_signature_image_url(self, obj):
+        if obj.signature_image:
+            req = self.context.get("request")
+            if req:
+                return req.build_absolute_uri(obj.signature_image.url)
+            return obj.signature_image.url
         return None

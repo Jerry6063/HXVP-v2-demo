@@ -68,6 +68,7 @@ const portalConfigs = {
       { name: 'Calendar', to: '/talent/calendar', icon: CalendarIcon },
       { name: 'Records', to: '/talent/records', icon: FilmIcon },
       { name: 'Payments', to: '/talent/payments', icon: BanknotesIcon },
+      { name: 'Documents', to: '/talent/documents', icon: DocumentTextIcon },
     ],
   },
   crew: {
@@ -80,6 +81,7 @@ const portalConfigs = {
       { name: 'Assignments', to: '/crew/assignments', icon: ClipboardDocumentListIcon },
       { name: 'Payments', to: '/crew/payments', icon: BanknotesIcon },
       { name: 'Reimbursements', to: '/crew/reimbursements', icon: CreditCardIcon },
+      { name: 'Documents', to: '/crew/documents', icon: DocumentTextIcon },
     ],
   },
 };

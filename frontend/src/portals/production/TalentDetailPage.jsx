@@ -22,6 +22,7 @@ import {
   GlobeAltIcon,
   CalendarDaysIcon,
 } from '@heroicons/react/24/outline';
+import { LockClosedIcon } from '@heroicons/react/20/solid';
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -29,11 +30,33 @@ const MONTH_NAMES = [
 ];
 const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-const STATUS_COLORS = {
-  available: 'bg-green-100 text-green-800',
-  unavailable: 'bg-red-100 text-red-800',
-  tentative: 'bg-yellow-100 text-yellow-800',
+const STATUS_BG = {
+  available: 'bg-green-100 border-green-300',
+  unavailable: 'bg-red-100 border-red-300',
+  tentative: 'bg-yellow-100 border-yellow-300',
 };
+const STATUS_TEXT = {
+  available: 'text-green-700',
+  unavailable: 'text-red-700',
+  tentative: 'text-yellow-700',
+};
+const STATUS_DOT = {
+  available: 'bg-green-400',
+  unavailable: 'bg-red-400',
+  tentative: 'bg-yellow-400',
+};
+
+function getDayStatus(dateStr, availMap) {
+  const am = availMap[`${dateStr}:am`];
+  const pm = availMap[`${dateStr}:pm`];
+  if (!am && !pm) return null;
+  if (am && pm) {
+    if (am === pm) return { status: am, mixed: false };
+    return { status: am, mixed: true, amStatus: am, pmStatus: pm };
+  }
+  if (am) return { status: am, mixed: true, amStatus: am, pmStatus: null };
+  return { status: pm, mixed: true, amStatus: null, pmStatus: pm };
+}
 
 function getDaysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
@@ -274,16 +297,16 @@ export default function TalentDetailPage() {
             </div>
 
             {/* Legend */}
-            <div className="flex flex-wrap gap-3 text-xs mb-4">
+            <div className="flex flex-wrap gap-4 text-xs mb-4">
               {[
-                { color: 'bg-green-100', label: 'Available' },
-                { color: 'bg-red-100', label: 'Unavailable' },
-                { color: 'bg-yellow-100', label: 'Tentative' },
-                { color: 'bg-blue-100', label: 'Booked' },
+                { color: 'bg-green-100 border-green-300', label: 'Available' },
+                { color: 'bg-red-100 border-red-300', label: 'Unavailable' },
+                { color: 'bg-yellow-100 border-yellow-300', label: 'Tentative' },
+                { color: 'bg-blue-100 border-blue-300', label: 'Booked' },
               ].map((l) => (
-                <div key={l.label} className="flex items-center gap-1">
-                  <div className={`w-3 h-3 rounded ${l.color}`} />
-                  <span className="text-gray-500">{l.label}</span>
+                <div key={l.label} className="flex items-center gap-1.5">
+                  <div className={`w-4 h-4 rounded border ${l.color}`} />
+                  <span className="text-gray-600">{l.label}</span>
                 </div>
               ))}
             </div>
@@ -291,7 +314,7 @@ export default function TalentDetailPage() {
             {/* Day headers */}
             <div className="grid grid-cols-7 gap-1 mb-1">
               {DAY_NAMES.map((d) => (
-                <div key={d} className="text-center text-[10px] font-medium text-gray-400 py-1">{d}</div>
+                <div key={d} className="text-center text-xs font-medium text-gray-400 py-2">{d}</div>
               ))}
             </div>
 
@@ -302,36 +325,63 @@ export default function TalentDetailPage() {
                 const day = i + 1;
                 const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const isToday = dateStr === todayStr;
+                const isBooked = bookingSlots.has(`${dateStr}:am`) || bookingSlots.has(`${dateStr}:pm`);
+                const info = getDayStatus(dateStr, availMap);
+
+                let bg = 'bg-gray-50 border-gray-200';
+                let textColor = 'text-gray-400';
+                if (isBooked) {
+                  bg = 'bg-blue-50 border-blue-200';
+                  textColor = 'text-blue-600';
+                } else if (info && !info.mixed) {
+                  bg = `${STATUS_BG[info.status]} border`;
+                  textColor = STATUS_TEXT[info.status];
+                } else if (info?.mixed) {
+                  bg = 'border-gray-300 border';
+                }
 
                 return (
                   <div
                     key={day}
-                    className={`relative rounded-lg border overflow-hidden ${isToday ? 'ring-2 ring-indigo-400 border-indigo-300' : 'border-gray-200'}`}
-                    style={{ minHeight: '62px' }}
+                    className={`relative rounded-lg overflow-hidden ${bg} ${
+                      isToday ? 'ring-2 ring-indigo-400' : ''
+                    }`}
+                    style={{ minHeight: '64px' }}
                   >
-                    <div className="absolute top-0.5 left-1.5 z-10">
-                      <span className={`text-[10px] font-bold ${isToday ? 'text-indigo-700' : 'text-gray-400'}`}>{day}</span>
-                    </div>
-                    <div className="flex flex-col h-full pt-4">
-                      {['am', 'pm'].map((period) => {
-                        const slotKey = `${dateStr}:${period}`;
-                        const isBooked = bookingSlots.has(slotKey);
-                        const status = availMap[slotKey];
-                        let bg = 'bg-gray-50';
-                        if (isBooked) bg = 'bg-blue-100';
-                        else if (status) bg = STATUS_COLORS[status] || bg;
-                        return (
-                          <div
-                            key={period}
-                            className={`flex-1 flex items-center justify-center ${period === 'am' ? 'border-b border-white/40' : ''} ${bg}`}
-                          >
-                            <span className={`text-[8px] font-semibold uppercase ${period === 'am' ? 'text-sky-600' : 'text-orange-500'}`}>
-                              {period}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <span className={`absolute top-1.5 left-2 text-xs font-bold ${
+                      isToday ? 'text-indigo-700' : textColor
+                    }`}>
+                      {day}
+                    </span>
+
+                    {isBooked && (
+                      <LockClosedIcon className="absolute top-1.5 right-1.5 w-3.5 h-3.5 text-blue-400" />
+                    )}
+
+                    {/* Mixed AM/PM dots */}
+                    {info?.mixed && !isBooked && (
+                      <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1">
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            info.amStatus ? (STATUS_DOT[info.amStatus] || 'bg-gray-300') : 'bg-gray-200'
+                          }`}
+                          title={info.amStatus ? `AM: ${info.amStatus}` : 'AM: unset'}
+                        />
+                        <div
+                          className={`w-2 h-2 rounded-full ${
+                            info.pmStatus ? (STATUS_DOT[info.pmStatus] || 'bg-gray-300') : 'bg-gray-200'
+                          }`}
+                          title={info.pmStatus ? `PM: ${info.pmStatus}` : 'PM: unset'}
+                        />
+                      </div>
+                    )}
+
+                    {/* Uniform status label */}
+                    {info && !info.mixed && !isBooked && (
+                      <span className={`absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[9px] font-medium capitalize ${textColor}`}>
+                        {info.status}
+                      </span>
+                    )}
                   </div>
                 );
               })}
