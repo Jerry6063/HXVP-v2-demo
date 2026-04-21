@@ -1,6 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import HCaptcha from '@hcaptcha/react-hcaptcha';
 import api from '../api/client';
 
 const portalMeta = {
@@ -15,13 +14,8 @@ const bgMap = {
   sky: 'bg-sky-600 hover:bg-sky-700 focus:ring-sky-500',
 };
 
-const HCAPTCHA_SITE_KEY =
-  import.meta.env.VITE_HCAPTCHA_SITE_KEY || '10000000-ffff-ffff-ffff-000000000001';
-
 export default function ForgotPasswordPage({ portal }) {
-  const captchaRef = useRef(null);
   const [email, setEmail] = useState('');
-  const [captchaToken, setCaptchaToken] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,17 +24,12 @@ export default function ForgotPasswordPage({ portal }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!captchaToken) {
-      setError('Please complete the CAPTCHA verification.');
-      return;
-    }
     setError('');
     setLoading(true);
     try {
       await api.post('/auth/password-reset/', {
         email,
         portal,
-        captcha_token: captchaToken,
       });
     } catch {
       // Silently swallow errors to prevent user enumeration
@@ -91,19 +80,9 @@ export default function ForgotPasswordPage({ portal }) {
                     placeholder="you@example.com"
                   />
                 </div>
-
-                <div className="flex justify-center pt-1">
-                  <HCaptcha
-                    ref={captchaRef}
-                    sitekey={HCAPTCHA_SITE_KEY}
-                    onVerify={(token) => setCaptchaToken(token)}
-                    onExpire={() => setCaptchaToken('')}
-                  />
-                </div>
-
                 <button
                   type="submit"
-                  disabled={loading || !captchaToken}
+                  disabled={loading}
                   className={`w-full py-2.5 px-4 rounded-lg text-white font-medium text-sm focus:ring-2 focus:ring-offset-2 transition-colors disabled:opacity-50 ${bgMap[meta.color]}`}
                 >
                   {loading ? 'Sending…' : 'Send Reset Link'}

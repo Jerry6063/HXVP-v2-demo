@@ -18,7 +18,7 @@ from .serializers import (
     AdminCreateClientSerializer,
     EmailVerifyConfirmSerializer,
 )
-from .utils import verify_hcaptcha, make_reset_token, read_reset_token, make_email_verify_token, read_email_verify_token
+from .utils import make_reset_token, read_reset_token, make_email_verify_token, read_email_verify_token
 
 PORTAL_ROLE_MAP = {
     "production": User.Role.PRODUCTION_ADMIN,
@@ -206,13 +206,6 @@ class PasswordResetRequestView(APIView):
 
         email = serializer.validated_data["email"]
         portal = serializer.validated_data["portal"]
-        captcha_token = serializer.validated_data["captcha_token"]
-
-        if not verify_hcaptcha(captcha_token):
-            return Response(
-                {"detail": "CAPTCHA verification failed. Please try again."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         # Always return 200 — prevents email enumeration
         try:
@@ -291,3 +284,28 @@ class MeView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class VerifyPaymentPasswordView(APIView):
+    """Lightweight re-authentication for unlocking Stripe payouts in the portal.
+
+    Returns 200 when the supplied password matches the authenticated user's
+    password, 400 otherwise.  No tokens are issued — the frontend simply sets
+    an in-memory flag to indicate the current session is payment-unlocked.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        password = request.data.get("password", "")
+        if not password:
+            return Response(
+                {"detail": "Password is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if request.user.check_password(password):
+            return Response({"verified": True})
+        return Response(
+            {"detail": "Incorrect password."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )

@@ -1536,8 +1536,18 @@ export const useInitiateTalentPayout = () => {
       qc.invalidateQueries({ queryKey: ['talent-payments'] });
       qc.invalidateQueries({ queryKey: ['talent-payment-summary'] });
     },
+    // Refresh list even on error — the transfer may have succeeded server-side
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ['talent-payments'] });
+    },
   });
 };
+
+export const useVerifyPaymentPassword = () =>
+  useMutation({
+    mutationFn: ({ password }) =>
+      api.post('/auth/verify-payment/', { password }).then((r) => r.data),
+  });
 
 // ── Crew Payments ─────────────────────────────────────────────────────────────
 
@@ -1593,5 +1603,9 @@ export const useInitiateCrewPayout = () => {
     mutationFn: (paymentId) =>
       api.post(`/crew/payments/${paymentId}/initiate_stripe_payout/`).then((r) => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['crew-payments'] }),
+    // Refresh list even on error — the transfer may have succeeded server-side
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ['crew-payments'] });
+    },
   });
 };

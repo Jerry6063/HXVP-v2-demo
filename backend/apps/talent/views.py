@@ -405,6 +405,11 @@ class TalentPaymentViewSet(viewsets.ModelViewSet):
         payment = self.get_object()
         if payment.status == TalentPayment.Status.PAID:
             return Response({"detail": "Payment already completed."}, status=status.HTTP_400_BAD_REQUEST)
+        if payment.stripe_transfer_id:
+            return Response(
+                {"detail": f"A Stripe transfer has already been initiated (ID: {payment.stripe_transfer_id}). Check the Stripe dashboard for its status."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         profile = payment.talent
         if not profile.stripe_account_id or not profile.stripe_onboarding_complete:
             return Response(
@@ -445,10 +450,27 @@ class TalentPaymentViewSet(viewsets.ModelViewSet):
                 {"detail": str(e.user_message or e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        payment.stripe_transfer_id = transfer["id"]
-        payment.stripe_payout_status = transfer["status"]
-        payment.save(update_fields=["stripe_transfer_id", "stripe_payout_status"])
-        return Response(TalentPaymentSerializer(payment).data)
+        # Transfer created — save to DB. Wrap separately so a DB failure doesn't
+        # hide the fact that money was already sent.
+        try:
+            payment.stripe_transfer_id = transfer["id"]
+            payment.stripe_payout_status = transfer["status"]
+            payment.save(update_fields=["stripe_transfer_id", "stripe_payout_status"])
+            return Response(TalentPaymentSerializer(payment).data)
+        except Exception as exc:
+            # Transfer went through but we could not persist it — return the
+            # transfer ID so the operator can reconcile manually.
+            return Response(
+                {
+                    "detail": (
+                        f"Transfer was sent successfully (ID: {transfer['id']}) but the "
+                        f"portal record could not be updated: {exc}. "
+                        f"Please mark this payment as paid manually."
+                    ),
+                    "stripe_transfer_id": transfer["id"],
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=False, methods=["get"])
     def summary(self, request):

@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useMyTalentProfile, useProjects } from '../api/hooks';
+import { useTalentProfiles, useProjects } from '../api/hooks';
 import {
   Bars3Icon,
   XMarkIcon,
@@ -68,7 +68,6 @@ const portalConfigs = {
       { name: 'Calendar', to: '/talent/calendar', icon: CalendarIcon },
       { name: 'Records', to: '/talent/records', icon: FilmIcon },
       { name: 'Payments', to: '/talent/payments', icon: BanknotesIcon },
-      { name: 'Documents', to: '/talent/documents', icon: DocumentTextIcon },
     ],
   },
   crew: {
@@ -79,9 +78,7 @@ const portalConfigs = {
       { name: 'My Profile', to: '/crew/profile', icon: UserCircleIcon },
       { name: 'Calendar', to: '/crew/calendar', icon: CalendarIcon },
       { name: 'Assignments', to: '/crew/assignments', icon: ClipboardDocumentListIcon },
-      { name: 'Payments', to: '/crew/payments', icon: BanknotesIcon },
       { name: 'Reimbursements', to: '/crew/reimbursements', icon: CreditCardIcon },
-      { name: 'Documents', to: '/crew/documents', icon: DocumentTextIcon },
     ],
   },
 };
@@ -257,7 +254,9 @@ function SidebarNav({ config, activeColor }) {
   );
 }
 function TalentUserInfo({ user }) {
-  const { data: profile } = useMyTalentProfile();
+  const { data: profilesData } = useTalentProfiles();
+  const profiles = profilesData?.results || profilesData || [];
+  const profile = profiles.find((p) => p.user?.id === user?.id);
   const photo = profile?.primary_photo;
 
   return (

@@ -47,7 +47,6 @@ class LoginSerializer(serializers.Serializer):
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
     portal = serializers.ChoiceField(choices=["client", "talent", "crew"])
-    captcha_token = serializers.CharField()
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):

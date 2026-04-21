@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   useTalentProfiles,
   useTalentTimeLogs,
@@ -21,7 +21,9 @@ import {
   useCreateCrewStripeAccount,
   useCrewStripeAccountStatus,
   useInitiateCrewPayout,
+  useVerifyPaymentPassword,
 } from '../../api/hooks';
+import { useAuth } from '../../contexts/AuthContext';
 import StatusBadge from '../../components/StatusBadge';
 
 export default function TalentPaymentAdmin() {
@@ -335,6 +337,15 @@ function PaymentsTab({ type }) {
 
   const [showCreate, setShowCreate] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
+
+  // Keep selectedPayment in sync with fresh list data so the detail panel
+  // reflects any server-side changes (e.g. after a payout mutation).
+  useEffect(() => {
+    if (selectedPayment) {
+      const fresh = payments.find((p) => p.id === selectedPayment.id);
+      if (fresh && fresh !== selectedPayment) setSelectedPayment(fresh);
+    }
+  }, [payments]); // eslint-disable-line react-hooks/exhaustive-deps
   const now = new Date();
   const [form, setForm] = useState({
     person: '',
@@ -488,6 +499,9 @@ function PaymentDetailPanel({ payment, type, onClose }) {
   const isTalent = type === 'talent';
   const profileId = isTalent ? payment.talent : payment.crew;
 
+  const { paymentUnlocked, setPaymentUnlocked } = useAuth();
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+
   const talentStripeStatus = useTalentStripeAccountStatus(isTalent ? profileId : null);
   const crewStripeStatus = useCrewStripeAccountStatus(!isTalent ? profileId : null);
   const stripeStatusQuery = isTalent ? talentStripeStatus : crewStripeStatus;
@@ -593,17 +607,43 @@ function PaymentDetailPanel({ payment, type, onClose }) {
               <div className="rounded-lg bg-green-50 border border-green-100 p-3 text-sm text-green-700">
                 Stripe account ready · ACH payouts enabled
               </div>
-              <button
-                onClick={handlePayout}
-                disabled={initiatePayout.isPending}
-                className="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
-              >
-                {initiatePayout.isPending ? 'Sending…' : `Pay $${Number(payment.total_amount).toLocaleString()} via ACH`}
-              </button>
+              {!paymentUnlocked ? (
+                <button
+                  onClick={() => setShowUnlockModal(true)}
+                  className="px-5 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 flex items-center gap-2"
+                >
+                  🔒 Unlock Payments for This Session
+                </button>
+              ) : (
+                <button
+                  onClick={handlePayout}
+                  disabled={initiatePayout.isPending}
+                  className="px-5 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+                >
+                  {initiatePayout.isPending ? 'Sending…' : `Pay $${Number(payment.total_amount).toLocaleString()} via ACH`}
+                </button>
+              )}
               {initiatePayout.isError && (
-                <p className="text-xs text-red-500">{initiatePayout.error?.response?.data?.detail || 'Payout failed. Check Stripe dashboard.'}</p>
+                <div className="text-xs bg-red-50 border border-red-100 rounded-lg p-3 space-y-1">
+                  {initiatePayout.error?.response?.data?.stripe_transfer_id ? (
+                    <>
+                      <p className="font-semibold text-red-700">Transfer sent — portal update failed.</p>
+                      <p className="text-red-600">Transfer ID: <span className="font-mono">{initiatePayout.error.response.data.stripe_transfer_id}</span></p>
+                      <p className="text-red-500">The payout was sent to Stripe. Please verify in the Stripe dashboard and use "Mark Paid" below to update this record.</p>
+                    </>
+                  ) : (
+                    <p className="text-red-600">{initiatePayout.error?.response?.data?.detail || 'Payout request failed. Please check the Stripe dashboard before retrying.'}</p>
+                  )}
+                </div>
               )}
             </div>
+          )}
+
+          {showUnlockModal && (
+            <PaymentUnlockModal
+              onSuccess={() => { setPaymentUnlocked(true); setShowUnlockModal(false); }}
+              onClose={() => setShowUnlockModal(false)}
+            />
           )}
 
           {/* Manual fallback */}
@@ -632,4 +672,59 @@ function PaymentDetailPanel({ payment, type, onClose }) {
   );
 }
 
+// ── Payment Unlock Modal ──────────────────────────────────────────────────────
+
+function PaymentUnlockModal({ onSuccess, onClose }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const verify = useVerifyPaymentPassword();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      await verify.mutateAsync({ password });
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Verification failed. Please try again.');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm space-y-4 p-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Unlock Payments</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Re-enter your password to enable Stripe payouts for this session. You will not be prompted again until you log out.
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Your password"
+            autoFocus
+            required
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+          />
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <div className="flex justify-end gap-3 pt-1">
+            <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-700 px-4 py-2 text-sm">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={verify.isPending}
+              className="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {verify.isPending ? 'Verifying…' : 'Unlock'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 

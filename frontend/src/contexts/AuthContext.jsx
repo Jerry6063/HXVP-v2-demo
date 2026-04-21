@@ -6,6 +6,9 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(!!localStorage.getItem('access_token'));
+  // Tracks whether the user has re-verified their password this session to
+  // unlock Stripe payouts.  Resets on logout or page refresh.
+  const [paymentUnlocked, setPaymentUnlocked] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -25,6 +28,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('access_token', data.tokens.access);
     localStorage.setItem('refresh_token', data.tokens.refresh);
     setUser(data.user);
+    setPaymentUnlocked(false);
     setLoading(false);
     return data.user;
   }, []);
@@ -33,6 +37,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     setUser(null);
+    setPaymentUnlocked(false);
   }, []);
 
   const refreshUser = useCallback(() => {
@@ -40,7 +45,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser, paymentUnlocked, setPaymentUnlocked }}>
       {children}
     </AuthContext.Provider>
   );
