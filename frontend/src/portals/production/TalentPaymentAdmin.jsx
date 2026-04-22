@@ -705,6 +705,7 @@ function PaymentUnlockModal({ onSuccess, onClose }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Your password"
+            autoComplete="current-password"
             autoFocus
             required
             className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"

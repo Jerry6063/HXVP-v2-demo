@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework import status, generics, permissions
@@ -26,6 +28,8 @@ PORTAL_ROLE_MAP = {
     "talent": User.Role.TALENT,
     "crew": User.Role.CREW,
 }
+
+logger = logging.getLogger(__name__)
 
 
 class AuthRateThrottle(AnonRateThrottle):
@@ -204,19 +208,38 @@ class PasswordResetRequestView(APIView):
         serializer = PasswordResetRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        email = serializer.validated_data["email"]
+        email = serializer.validated_data["email"].strip()
         portal = serializer.validated_data["portal"]
 
         # Always return 200 — prevents email enumeration
-        try:
-            expected_role = PORTAL_ROLE_MAP[portal]
-            user = User.objects.get(email=email, role=expected_role, is_active=True)
+        expected_role = PORTAL_ROLE_MAP[portal]
+        user = (
+            User.objects.filter(email__iexact=email, role=expected_role, is_active=True)
+            .order_by("id")
+            .first()
+        )
+
+        if user is not None:
             token = make_reset_token(user.id, portal)
             frontend_url = getattr(settings, "FRONTEND_URL", "").rstrip("/")
             reset_url = f"{frontend_url}/{portal}/reset-password?token={token}"
-            send_password_reset_email(user, reset_url, portal)
-        except User.DoesNotExist:
-            pass
+            email_sent = send_password_reset_email(user, reset_url, portal)
+            if not email_sent:
+                logger.error(
+                    "Password reset email failed for user_id=%s role=%s email=%s",
+                    user.id,
+                    portal,
+                    user.email,
+                )
+                return Response(
+                    {
+                        "detail": (
+                            "We couldn't send the reset email right now. "
+                            "Please try again shortly."
+                        )
+                    },
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
 
         return Response(
             {"detail": "If that email is registered, a reset link has been sent."}
@@ -303,7 +326,14 @@ class VerifyPaymentPasswordView(APIView):
                 {"detail": "Password is required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if request.user.check_password(password):
+        # Use the same authentication path as the login endpoint so re-verification
+        # matches the credentials that were accepted at sign-in.
+        verified_user = authenticate(
+            request,
+            username=request.user.email,
+            password=password,
+        )
+        if verified_user is not None and verified_user.id == request.user.id:
             return Response({"verified": True})
         return Response(
             {"detail": "Incorrect password."},

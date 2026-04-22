@@ -31,11 +31,18 @@ export default function ForgotPasswordPage({ portal }) {
         email,
         portal,
       });
-    } catch {
-      // Silently swallow errors to prevent user enumeration
+      setSubmitted(true);
+    } catch (err) {
+      if (err.response?.status === 429) {
+        setError('Too many reset attempts. Please wait a bit and try again.');
+      } else {
+        setError(
+          err.response?.data?.detail ||
+            'We could not send the reset email right now. Please try again shortly.'
+        );
+      }
     } finally {
       setLoading(false);
-      setSubmitted(true);
     }
   };
 
