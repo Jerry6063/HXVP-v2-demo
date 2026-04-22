@@ -14,7 +14,7 @@ PORTAL_NAMES = {
 
 def send_welcome_email(user):
     portal_name = PORTAL_NAMES.get(user.role, "Studio Portal")
-    safe_send(
+    return safe_send(
         subject=f"Welcome to HXVP — {portal_name}",
         message=(
             f"Hi {user.first_name},\n\n"
@@ -29,7 +29,7 @@ def send_welcome_email(user):
 
 def send_password_reset_email(user, reset_url, portal):
     portal_name = PORTAL_NAMES.get(portal, "Studio Portal")
-    safe_send(
+    return safe_send(
         subject="Reset your HXVP password",
         message=(
             f"Hi {user.first_name},\n\n"
