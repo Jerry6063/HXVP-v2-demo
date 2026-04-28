@@ -55,6 +55,32 @@ services:
       mountPath: /var/data/media
       sizeGB: 5
 
+  # ── Monthly Availability Reminder Cron ─────────────────────────────────────
+  - type: cron
+    name: hxvp-monthly-availability-reminders
+    runtime: python
+    rootDir: backend
+    schedule: "0 9 1 * *"
+    buildCommand: bash build.sh
+    startCommand: python manage.py send_availability_calendar_reminders
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hxvp-db
+          property: connectionString
+      - key: RESEND_API_KEY
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+
   # ── React / Vite Frontend ───────────────────────────────────────────────────
   - type: web
     name: hxvp-frontend

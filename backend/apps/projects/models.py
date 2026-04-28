@@ -286,6 +286,13 @@ class CrewRequirement(models.Model):
         return f"{self.count}x {self.crew_role} → {self.project}"
 
 
+class AvailabilityInquiryStatus(models.TextChoices):
+    UNSENT = "unsent", "Unsent"
+    PENDING = "pending", "Pending"
+    ACCEPTED = "accepted", "Accepted"
+    DECLINED = "declined", "Declined"
+
+
 class TalentConsideration(models.Model):
     """Talent added to a production as a potential/backup candidate (not tied to a shoot)."""
     project = models.ForeignKey(
@@ -295,6 +302,25 @@ class TalentConsideration(models.Model):
         "talent.TalentProfile", on_delete=models.CASCADE, related_name="project_considerations"
     )
     notes = models.TextField(blank=True)
+    inquiry_position = models.CharField(max_length=255, blank=True)
+    inquiry_pay_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    inquiry_production_start_date = models.DateField(null=True, blank=True)
+    inquiry_production_end_date = models.DateField(null=True, blank=True)
+    inquiry_status = models.CharField(
+        max_length=20,
+        choices=AvailabilityInquiryStatus.choices,
+        default=AvailabilityInquiryStatus.UNSENT,
+    )
+    inquiry_sent_at = models.DateTimeField(null=True, blank=True)
+    inquiry_responded_at = models.DateTimeField(null=True, blank=True)
+    inquiry_sent_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_talent_availability_inquiries",
+    )
+    inquiry_token_version = models.PositiveIntegerField(default=0)
     added_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -317,6 +343,25 @@ class CrewConsideration(models.Model):
         "crew.CrewProfile", on_delete=models.CASCADE, related_name="project_considerations"
     )
     notes = models.TextField(blank=True)
+    inquiry_position = models.CharField(max_length=255, blank=True)
+    inquiry_pay_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    inquiry_production_start_date = models.DateField(null=True, blank=True)
+    inquiry_production_end_date = models.DateField(null=True, blank=True)
+    inquiry_status = models.CharField(
+        max_length=20,
+        choices=AvailabilityInquiryStatus.choices,
+        default=AvailabilityInquiryStatus.UNSENT,
+    )
+    inquiry_sent_at = models.DateTimeField(null=True, blank=True)
+    inquiry_responded_at = models.DateTimeField(null=True, blank=True)
+    inquiry_sent_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_crew_availability_inquiries",
+    )
+    inquiry_token_version = models.PositiveIntegerField(default=0)
     added_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
     )

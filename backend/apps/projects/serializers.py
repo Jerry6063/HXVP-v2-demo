@@ -80,6 +80,24 @@ class TalentRequirementSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class AvailabilityInquirySendSerializer(serializers.Serializer):
+    position = serializers.CharField(max_length=255)
+    pay_rate = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
+    production_start_date = serializers.DateField()
+    production_end_date = serializers.DateField()
+
+    def validate(self, attrs):
+        if attrs["production_end_date"] < attrs["production_start_date"]:
+            raise serializers.ValidationError(
+                {"production_end_date": "Production end date cannot be earlier than start date."}
+            )
+        return attrs
+
+
+class AvailabilityInquiryResponseSerializer(serializers.Serializer):
+    token = serializers.CharField(required=False)
+
+
 class CrewRequirementSerializer(serializers.ModelSerializer):
     class Meta:
         model = CrewRequirement
@@ -233,11 +251,24 @@ class TalentConsiderationSerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source="project.name", read_only=True)
     added_by_name = serializers.SerializerMethodField()
     photo_url = serializers.SerializerMethodField()
+    inquiry_sent_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = TalentConsideration
         fields = "__all__"
-        read_only_fields = ["added_by", "added_at"]
+        read_only_fields = [
+            "added_by",
+            "added_at",
+            "inquiry_position",
+            "inquiry_pay_rate",
+            "inquiry_production_start_date",
+            "inquiry_production_end_date",
+            "inquiry_status",
+            "inquiry_sent_at",
+            "inquiry_responded_at",
+            "inquiry_sent_by",
+            "inquiry_token_version",
+        ]
 
     def get_talent_name(self, obj):
         return obj.talent.user.get_full_name()
@@ -252,20 +283,39 @@ class TalentConsiderationSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         return request.build_absolute_uri(photo.image.url) if request else None
 
+    def get_inquiry_sent_by_name(self, obj):
+        return obj.inquiry_sent_by.get_full_name() if obj.inquiry_sent_by else None
+
 
 class CrewConsiderationSerializer(serializers.ModelSerializer):
     crew_name = serializers.SerializerMethodField()
     crew_role = serializers.CharField(source="crew.crew_role", read_only=True)
     project_name = serializers.CharField(source="project.name", read_only=True)
     added_by_name = serializers.SerializerMethodField()
+    inquiry_sent_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = CrewConsideration
         fields = "__all__"
-        read_only_fields = ["added_by", "added_at"]
+        read_only_fields = [
+            "added_by",
+            "added_at",
+            "inquiry_position",
+            "inquiry_pay_rate",
+            "inquiry_production_start_date",
+            "inquiry_production_end_date",
+            "inquiry_status",
+            "inquiry_sent_at",
+            "inquiry_responded_at",
+            "inquiry_sent_by",
+            "inquiry_token_version",
+        ]
 
     def get_crew_name(self, obj):
         return obj.crew.user.get_full_name()
 
     def get_added_by_name(self, obj):
         return obj.added_by.get_full_name() if obj.added_by else None
+
+    def get_inquiry_sent_by_name(self, obj):
+        return obj.inquiry_sent_by.get_full_name() if obj.inquiry_sent_by else None

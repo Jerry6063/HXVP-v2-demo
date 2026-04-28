@@ -56,3 +56,20 @@ def send_email_verification(user, verify_url):
         ),
         recipient_list=[user.email],
     )
+
+
+def send_calendar_update_reminder(user, portal, calendar_url, month_label):
+    portal_name = PORTAL_NAMES.get(portal, "Studio Portal")
+    return safe_send(
+        subject=f"Monthly Reminder: Update Your Availability Calendar for {month_label}",
+        message=(
+            f"Hi {user.first_name},\n\n"
+            f"This is your monthly reminder from HXVP Studio to review and update your availability in the {portal_name}.\n\n"
+            f"Keeping your calendar current helps production plan projects and reach out to you faster for new opportunities.\n\n"
+            f"Update your availability here:\n"
+            f"{calendar_url}\n\n"
+            f"If your availability has not changed, no further action is needed.\n\n"
+            f"— HXVP Studio"
+        ),
+        recipient_list=[user.email],
+    )

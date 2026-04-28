@@ -1,6 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from './client';
 
+const invalidateAvailabilityInquiryQueries = (qc) => {
+  qc.invalidateQueries({ queryKey: ['talent-considerations'] });
+  qc.invalidateQueries({ queryKey: ['crew-considerations'] });
+  qc.invalidateQueries({ queryKey: ['talent-availability-inquiries'] });
+  qc.invalidateQueries({ queryKey: ['crew-availability-inquiries'] });
+  qc.invalidateQueries({ queryKey: ['bookings'] });
+  qc.invalidateQueries({ queryKey: ['crew-assignments'] });
+  qc.invalidateQueries({ queryKey: ['project'] });
+  qc.invalidateQueries({ queryKey: ['projects'] });
+};
+
 // Auth
 export const useLogin = () => {
   return useMutation({
@@ -328,6 +339,21 @@ export const useBookings = (params = {}) =>
     queryFn: () => api.get('/talent/bookings/', { params }).then((r) => r.data),
   });
 
+export const useTalentAvailabilityInquiries = (params = {}) =>
+  useQuery({
+    queryKey: ['talent-availability-inquiries', params],
+    queryFn: () => api.get('/talent/availability-inquiries/', { params }).then((r) => r.data),
+  });
+
+export const useRespondTalentAvailabilityInquiry = (action) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, token }) =>
+      api.post(`/talent/availability-inquiries/${id}/${action}/`, token ? { token } : {}).then((r) => r.data),
+    onSuccess: () => invalidateAvailabilityInquiryQueries(qc),
+  });
+};
+
 export const useAcceptBooking = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -619,6 +645,21 @@ export const useCrewAssignments = (params = {}) =>
     queryKey: ['crew-assignments', params],
     queryFn: () => api.get('/crew/assignments/', { params }).then((r) => r.data),
   });
+
+export const useCrewAvailabilityInquiries = (params = {}) =>
+  useQuery({
+    queryKey: ['crew-availability-inquiries', params],
+    queryFn: () => api.get('/crew/availability-inquiries/', { params }).then((r) => r.data),
+  });
+
+export const useRespondCrewAvailabilityInquiry = (action) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, token }) =>
+      api.post(`/crew/availability-inquiries/${id}/${action}/`, token ? { token } : {}).then((r) => r.data),
+    onSuccess: () => invalidateAvailabilityInquiryQueries(qc),
+  });
+};
 
 export const useCreateCrewAssignment = () => {
   const qc = useQueryClient();
@@ -1476,6 +1517,15 @@ export const useRemoveTalentConsideration = () => {
   });
 };
 
+export const useSendTalentAvailabilityInquiry = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }) =>
+      api.post(`/projects/talent-considerations/${id}/send_inquiry/`, data).then((r) => r.data),
+    onSuccess: () => invalidateAvailabilityInquiryQueries(qc),
+  });
+};
+
 // ── Crew Considerations ────────────────────────────────────────────────────────
 export const useCrewConsiderations = (params = {}) =>
   useQuery({
@@ -1501,6 +1551,15 @@ export const useRemoveCrewConsideration = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['crew-considerations'] });
     },
+  });
+};
+
+export const useSendCrewAvailabilityInquiry = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }) =>
+      api.post(`/projects/crew-considerations/${id}/send_inquiry/`, data).then((r) => r.data),
+    onSuccess: () => invalidateAvailabilityInquiryQueries(qc),
   });
 };
 

@@ -1,12 +1,18 @@
 from datetime import date, timedelta
+from urllib.parse import urlencode
+
+from django.conf import settings as django_settings
+from django.db import transaction
 from django.db.models import Sum, Q
 from django.utils import timezone
-from rest_framework import viewsets, generics, permissions
+from rest_framework import viewsets, generics, permissions, serializers
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
+from apps.accounts.utils import make_availability_inquiry_token
 from apps.accounts.permissions import IsProductionAdmin, IsClient
 from apps.clientportal.models import ProjectMilestone
+from .emails import send_availability_inquiry_email
 from .models import (
     Project, Shoot, ActivityLog,
     CallSheet, CallSheetEntry, Checklist, ChecklistItem, ProductionLog,
@@ -26,11 +32,92 @@ from .serializers import (
     ChecklistDetailSerializer,
     ChecklistItemSerializer,
     ProductionLogSerializer,
+    AvailabilityInquirySendSerializer,
     TalentConsiderationSerializer,
     CrewConsiderationSerializer,
     TalentRequirementSerializer,
     CrewRequirementSerializer,
 )
+
+
+def _build_availability_inquiry_url(*, portal, consideration_id, token, action):
+    base_url = f"{django_settings.FRONTEND_URL.rstrip('/')}/{portal}"
+    path = "bookings" if portal == "talent" else "assignments"
+    query = urlencode({"inquiry": consideration_id, "token": token, "action": action})
+    return f"{base_url}/{path}?{query}"
+
+
+def _send_consideration_availability_inquiry(*, consideration, request, portal, subject_type):
+    payload = AvailabilityInquirySendSerializer(data=request.data)
+    payload.is_valid(raise_exception=True)
+
+    contact = consideration.talent.user if subject_type == "talent" else consideration.crew.user
+    if not contact.email:
+        raise serializers.ValidationError({"detail": "The selected contact does not have an email address."})
+
+    with transaction.atomic():
+        consideration.inquiry_position = payload.validated_data["position"]
+        consideration.inquiry_pay_rate = payload.validated_data["pay_rate"]
+        consideration.inquiry_production_start_date = payload.validated_data["production_start_date"]
+        consideration.inquiry_production_end_date = payload.validated_data["production_end_date"]
+        consideration.inquiry_status = "pending"
+        consideration.inquiry_sent_at = timezone.now()
+        consideration.inquiry_responded_at = None
+        consideration.inquiry_sent_by = request.user
+        consideration.inquiry_token_version += 1
+        consideration.save(
+            update_fields=[
+                "inquiry_position",
+                "inquiry_pay_rate",
+                "inquiry_production_start_date",
+                "inquiry_production_end_date",
+                "inquiry_status",
+                "inquiry_sent_at",
+                "inquiry_responded_at",
+                "inquiry_sent_by",
+                "inquiry_token_version",
+            ]
+        )
+
+        accept_token = make_availability_inquiry_token(
+            subject_type,
+            consideration.id,
+            portal,
+            "accept",
+            consideration.inquiry_token_version,
+        )
+        decline_token = make_availability_inquiry_token(
+            subject_type,
+            consideration.id,
+            portal,
+            "decline",
+            consideration.inquiry_token_version,
+        )
+        sent = send_availability_inquiry_email(
+            recipient_email=contact.email,
+            recipient_name=contact.get_full_name() or contact.first_name or contact.email,
+            project_name=consideration.project.name,
+            position=consideration.inquiry_position,
+            pay_rate=consideration.inquiry_pay_rate,
+            production_start_date=consideration.inquiry_production_start_date,
+            production_end_date=consideration.inquiry_production_end_date,
+            accept_url=_build_availability_inquiry_url(
+                portal=portal,
+                consideration_id=consideration.id,
+                token=accept_token,
+                action="accept",
+            ),
+            decline_url=_build_availability_inquiry_url(
+                portal=portal,
+                consideration_id=consideration.id,
+                token=decline_token,
+                action="decline",
+            ),
+        )
+        if not sent:
+            raise serializers.ValidationError(
+                {"detail": "We couldn't send the availability inquiry email right now."}
+            )
 
 
 class ProductionStatsView(generics.GenericAPIView):
@@ -487,6 +574,18 @@ class TalentConsiderationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(added_by=self.request.user)
 
+    @action(detail=True, methods=["post"])
+    def send_inquiry(self, request, pk=None):
+        consideration = self.get_object()
+        _send_consideration_availability_inquiry(
+            consideration=consideration,
+            request=request,
+            portal="talent",
+            subject_type="talent",
+        )
+        serializer = self.get_serializer(consideration)
+        return Response(serializer.data)
+
 
 class CrewConsiderationViewSet(viewsets.ModelViewSet):
     serializer_class = CrewConsiderationSerializer
@@ -506,6 +605,18 @@ class CrewConsiderationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(added_by=self.request.user)
+
+    @action(detail=True, methods=["post"])
+    def send_inquiry(self, request, pk=None):
+        consideration = self.get_object()
+        _send_consideration_availability_inquiry(
+            consideration=consideration,
+            request=request,
+            portal="crew",
+            subject_type="crew",
+        )
+        serializer = self.get_serializer(consideration)
+        return Response(serializer.data)
 
 
 class TalentRequirementViewSet(viewsets.ModelViewSet):

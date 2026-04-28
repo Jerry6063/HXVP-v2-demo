@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const rolePortalMap = {
@@ -10,6 +10,7 @@ const rolePortalMap = {
 
 export default function ProtectedRoute({ portal, children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -20,11 +21,11 @@ export default function ProtectedRoute({ portal, children }) {
   }
 
   if (!user) {
-    return <Navigate to={`/${portal}/login`} replace />;
+    return <Navigate to={`/${portal}/login`} replace state={{ from: location }} />;
   }
 
   if (rolePortalMap[user.role] !== portal) {
-    return <Navigate to={`/${portal}/login`} replace />;
+    return <Navigate to={`/${portal}/login`} replace state={{ from: location }} />;
   }
 
   return children;

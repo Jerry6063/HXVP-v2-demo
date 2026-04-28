@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const portalMeta = {
@@ -12,6 +12,7 @@ const portalMeta = {
 export default function LoginPage({ portal }) {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -26,13 +27,17 @@ export default function LoginPage({ portal }) {
     sky: 'bg-sky-600 hover:bg-sky-700 focus:ring-sky-500',
   };
 
+  const redirectTo = location.state?.from
+    ? `${location.state.from.pathname || ''}${location.state.from.search || ''}${location.state.from.hash || ''}`
+    : meta.redirect;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
       await login(email, password, portal);
-      navigate(meta.redirect);
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || 'Login failed. Please try again.');
     } finally {

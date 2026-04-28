@@ -4,11 +4,17 @@ from django.conf import settings as django_settings
 from django.db import transaction
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
-from rest_framework import viewsets, generics, permissions, parsers, status
+from rest_framework import viewsets, generics, permissions, parsers, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.accounts.permissions import IsProductionAdmin, IsCrew
+from apps.accounts.utils import read_availability_inquiry_token
+from apps.projects.models import CrewConsideration, AvailabilityInquiryStatus
+from apps.projects.serializers import (
+    CrewConsiderationSerializer,
+    AvailabilityInquiryResponseSerializer,
+)
 from .models import (
     CrewProfile,
     CrewAvailability,
@@ -27,6 +33,26 @@ from .serializers import (
     EvaluationSerializer,
     CrewPaymentSerializer,
 )
+
+
+def _validate_crew_inquiry_token(consideration, token, expected_action):
+    if not token:
+        return
+    payload = read_availability_inquiry_token(token)
+    if not payload:
+        raise serializers.ValidationError(
+            {"detail": "This availability inquiry link is invalid or has expired."}
+        )
+    if (
+        payload.get("type") != "crew"
+        or payload.get("id") != consideration.id
+        or payload.get("portal") != "crew"
+        or payload.get("action") != expected_action
+        or payload.get("version") != consideration.inquiry_token_version
+    ):
+        raise serializers.ValidationError(
+            {"detail": "This availability inquiry link is no longer valid. Ask production to resend it."}
+        )
 
 
 class CrewStatsView(generics.GenericAPIView):
@@ -303,6 +329,66 @@ class CrewAssignmentViewSet(viewsets.ModelViewSet):
         assignment.status = CrewAssignment.Status.DECLINED
         assignment.save()
         return Response(CrewAssignmentSerializer(assignment).data)
+
+
+class CrewAvailabilityInquiryViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CrewConsiderationSerializer
+    permission_classes = [IsCrew]
+
+    def get_queryset(self):
+        qs = CrewConsideration.objects.select_related(
+            "project", "crew__user", "added_by", "inquiry_sent_by"
+        ).filter(crew__user=self.request.user)
+        status_filter = self.request.query_params.get("status")
+        if status_filter:
+            qs = qs.filter(inquiry_status=status_filter)
+        return qs.exclude(inquiry_status=AvailabilityInquiryStatus.UNSENT)
+
+    def _respond(self, request, consideration, target_status, expected_action):
+        payload = AvailabilityInquiryResponseSerializer(data=request.data or {})
+        payload.is_valid(raise_exception=True)
+
+        if consideration.inquiry_status == AvailabilityInquiryStatus.UNSENT:
+            raise serializers.ValidationError(
+                {"detail": "No availability inquiry has been sent for this project yet."}
+            )
+
+        _validate_crew_inquiry_token(
+            consideration,
+            payload.validated_data.get("token"),
+            expected_action,
+        )
+
+        if consideration.inquiry_status == target_status:
+            return Response(self.get_serializer(consideration).data)
+
+        if consideration.inquiry_status != AvailabilityInquiryStatus.PENDING:
+            raise serializers.ValidationError(
+                {"detail": "This inquiry has already been responded to. Ask production to resend it to change the response."}
+            )
+
+        consideration.inquiry_status = target_status
+        consideration.inquiry_responded_at = timezone.now()
+        consideration.save(update_fields=["inquiry_status", "inquiry_responded_at"])
+        return Response(self.get_serializer(consideration).data)
+
+    @action(detail=True, methods=["post"])
+    def accept(self, request, pk=None):
+        return self._respond(
+            request,
+            self.get_object(),
+            AvailabilityInquiryStatus.ACCEPTED,
+            "accept",
+        )
+
+    @action(detail=True, methods=["post"])
+    def decline(self, request, pk=None):
+        return self._respond(
+            request,
+            self.get_object(),
+            AvailabilityInquiryStatus.DECLINED,
+            "decline",
+        )
 
 
 class EquipmentViewSet(viewsets.ModelViewSet):

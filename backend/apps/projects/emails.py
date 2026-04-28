@@ -4,6 +4,36 @@ from apps.utils.email import safe_send
 logger = logging.getLogger(__name__)
 
 
+def send_availability_inquiry_email(
+    *,
+    recipient_email,
+    recipient_name,
+    project_name,
+    position,
+    pay_rate,
+    production_start_date,
+    production_end_date,
+    accept_url,
+    decline_url,
+):
+    return safe_send(
+        subject=f"Availability Inquiry: {project_name}",
+        message=(
+            f"Hi {recipient_name},\n\n"
+            f"HXVP Studio would like to check your availability for {project_name}.\n\n"
+            f"Position: {position}\n"
+            f"Pay Rate: ${pay_rate}\n"
+            f"Production Dates: {production_start_date} to {production_end_date}\n\n"
+            f"Accept: {accept_url}\n"
+            f"Decline: {decline_url}\n\n"
+            f"You will be asked to log in before confirming your response.\n\n"
+            f"This confirms project-level availability only. Shoot schedule bookings are managed separately.\n\n"
+            f"– Studio Portal"
+        ),
+        recipient_list=[recipient_email],
+    )
+
+
 def send_call_sheet_email(call_sheet, recipient_email, recipient_name):
     """Send a plain-text call sheet email to a single recipient."""
 

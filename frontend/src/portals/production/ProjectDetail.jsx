@@ -22,9 +22,11 @@ import {
   useTalentConsiderations,
   useAddTalentConsideration,
   useRemoveTalentConsideration,
+  useSendTalentAvailabilityInquiry,
   useCrewConsiderations,
   useAddCrewConsideration,
   useRemoveCrewConsideration,
+  useSendCrewAvailabilityInquiry,
   useTalentProfiles,
   useCrewProfiles,
   useTalentAvailability,
@@ -35,8 +37,6 @@ import {
   useBudgetAllocations,
   useUpsertBudgetAllocation,
   useDeliverableReviews,
-  useTalentRequirements,
-  useCrewRequirements,
   useCreateTalentRequirement,
   useCreateCrewRequirement,
   useDeleteTalentRequirement,
@@ -819,7 +819,7 @@ function AddTalentModal({ onClose, onAdd, existingTalentIds = new Set() }) {
     );
   }, [availData, availDate]);
 
-  const profilesArr = talentProfiles?.results || talentProfiles || [];
+  const profilesArr = useMemo(() => talentProfiles?.results || talentProfiles || [], [talentProfiles]);
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return profilesArr.filter((p) => {
@@ -834,9 +834,6 @@ function AddTalentModal({ onClose, onAdd, existingTalentIds = new Set() }) {
       return true;
     });
   }, [profilesArr, search, gender, availStatus, availDate, unavailableIds, maxRate, minAge, maxAge, existingTalentIds]);
-
-  // fix: inline q ref
-  const q = search.toLowerCase();
 
   const handleAdd = async () => {
     if (!selectedId) return;
@@ -984,7 +981,7 @@ function AddCrewModal({ onClose, onAdd, existingCrewIds = new Set() }) {
     );
   }, [availData, availDate]);
 
-  const profilesArr = crewProfilesData?.results || crewProfilesData || [];
+  const profilesArr = useMemo(() => crewProfilesData?.results || crewProfilesData || [], [crewProfilesData]);
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return profilesArr.filter((p) => {
@@ -1103,11 +1100,150 @@ function AddCrewModal({ onClose, onAdd, existingCrewIds = new Set() }) {
   );
 }
 
+function formatInquiryRate(value) {
+  if (value == null || value === '') return 'Rate TBD';
+  const numericValue = Number(value);
+  if (Number.isNaN(numericValue)) return `$${value}`;
+  return `$${numericValue.toFixed(2)}`;
+}
+
+function formatInquiryWindow(startDate, endDate) {
+  if (!startDate && !endDate) return 'Dates TBD';
+  if (startDate && endDate) return `${startDate} to ${endDate}`;
+  return startDate || endDate;
+}
+
+function AvailabilityInquiryModal({ consideration, project, type, onClose, onSend, isPending }) {
+  const [position, setPosition] = useState(
+    consideration?.inquiry_position || (type === 'crew' ? consideration?.crew_role : consideration?.talent_type) || ''
+  );
+  const [payRate, setPayRate] = useState(consideration?.inquiry_pay_rate ?? '');
+  const [productionStartDate, setProductionStartDate] = useState(
+    consideration?.inquiry_production_start_date || project?.start_date || ''
+  );
+  const [productionEndDate, setProductionEndDate] = useState(
+    consideration?.inquiry_production_end_date || project?.deadline || project?.start_date || ''
+  );
+  const [error, setError] = useState('');
+
+  const personName = type === 'crew' ? consideration?.crew_name : consideration?.talent_name;
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    try {
+      await onSend({
+        id: consideration.id,
+        position,
+        pay_rate: payRate,
+        production_start_date: productionStartDate,
+        production_end_date: productionEndDate,
+      });
+      onClose();
+    } catch (err) {
+      const detail = err.response?.data;
+      const fallbackMessage = 'Failed to send the availability inquiry.';
+      const firstFieldError = detail && typeof detail === 'object'
+        ? Object.values(detail).flat().find(Boolean)
+        : null;
+      setError(firstFieldError || detail?.detail || fallbackMessage);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold text-gray-900">Availability Check</h3>
+            <p className="text-sm text-gray-500 mt-1">{personName}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+            <input
+              required
+              value={position}
+              onChange={(event) => setPosition(event.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="Role for this project"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pay Rate</label>
+            <input
+              required
+              type="number"
+              min="0"
+              step="0.01"
+              value={payRate}
+              onChange={(event) => setPayRate(event.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="0.00"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Production Start Date</label>
+              <input
+                required
+                type="date"
+                value={productionStartDate}
+                onChange={(event) => setProductionStartDate(event.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Production End Date</label>
+              <input
+                required
+                type="date"
+                value={productionEndDate}
+                onChange={(event) => setProductionEndDate(event.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-gray-50 px-4 py-3 text-xs text-gray-600">
+            Accepting this inquiry confirms project-level availability only. Actual shoot bookings and assignments are still created separately in Workflow - Shoot Schedule.
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {isPending ? 'Sending…' : 'Send'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function TeamTalentTab({ bookings, assignments, projectId, project }) {
   const [showAddTalent, setShowAddTalent] = useState(false);
   const [showAddCrew, setShowAddCrew] = useState(false);
   const [showAddTalentReq, setShowAddTalentReq] = useState(false);
   const [showAddCrewReq, setShowAddCrewReq] = useState(false);
+  const [availabilityModal, setAvailabilityModal] = useState(null);
   const [newTalentReq, setNewTalentReq] = useState({ talent_type: 'model', count: 1, notes: '' });
   const [newCrewReq, setNewCrewReq] = useState({ crew_role: 'photographer', count: 1, notes: '' });
 
@@ -1115,8 +1251,10 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
   const { data: crewConsData } = useCrewConsiderations({ project: projectId });
   const addTalentCon = useAddTalentConsideration();
   const removeTalentCon = useRemoveTalentConsideration();
+  const sendTalentInquiry = useSendTalentAvailabilityInquiry();
   const addCrewCon = useAddCrewConsideration();
   const removeCrewCon = useRemoveCrewConsideration();
+  const sendCrewInquiry = useSendCrewAvailabilityInquiry();
 
   const createTalentReq = useCreateTalentRequirement();
   const createCrewReq = useCreateCrewRequirement();
@@ -1174,6 +1312,14 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
     await createCrewReq.mutateAsync({ project: projectId, ...newCrewReq });
     setNewCrewReq({ crew_role: 'photographer', count: 1, notes: '' });
     setShowAddCrewReq(false);
+  };
+
+  const handleSendInquiry = async (payload) => {
+    if (availabilityModal?.type === 'crew') {
+      await sendCrewInquiry.mutateAsync(payload);
+      return;
+    }
+    await sendTalentInquiry.mutateAsync(payload);
   };
 
   const FulfillIcon = ({ filled, needed }) => {
@@ -1333,16 +1479,35 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
               {talentCons.map((c) => (
                 <li key={c.id} className="flex items-center justify-between">
                   <div>
-                    <span className="text-sm font-medium text-gray-800">{c.talent_name}</span>
-                    <span className="ml-2 text-xs text-indigo-500 capitalize">{(c.talent_type || '').replace(/_/g, ' ')}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-gray-800">{c.talent_name}</span>
+                      <span className="text-xs text-indigo-500 capitalize">{(c.talent_type || '').replace(/_/g, ' ')}</span>
+                      {c.inquiry_status !== 'unsent' && <StatusBadge status={c.inquiry_status} />}
+                    </div>
                     {c.notes && <p className="text-xs text-gray-500 mt-0.5">{c.notes}</p>}
+                    {c.inquiry_status !== 'unsent' && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {c.inquiry_position || 'Position TBD'} • {formatInquiryRate(c.inquiry_pay_rate)} • {formatInquiryWindow(c.inquiry_production_start_date, c.inquiry_production_end_date)}
+                      </p>
+                    )}
+                    {c.inquiry_status === 'accepted' && (
+                      <p className="text-xs text-green-700 mt-1">Confirmed for this project. Shoot-level booking still needs to be created separately.</p>
+                    )}
                   </div>
-                  <button
-                    onClick={() => removeTalentCon.isPending ? null : removeTalentCon.mutate(c.id)}
-                    className="text-xs text-gray-400 hover:text-red-500 ml-3 shrink-0"
-                  >
-                    Remove
-                  </button>
+                  <div className="flex items-center gap-3 ml-3 shrink-0">
+                    <button
+                      onClick={() => setAvailabilityModal({ type: 'talent', consideration: c })}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700"
+                    >
+                      {c.inquiry_status === 'unsent' ? 'Availability Check' : 'Resend Inquiry'}
+                    </button>
+                    <button
+                      onClick={() => removeTalentCon.isPending ? null : removeTalentCon.mutate(c.id)}
+                      className="text-xs text-gray-400 hover:text-red-500"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -1394,16 +1559,35 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
               {crewCons.map((c) => (
                 <li key={c.id} className="flex items-center justify-between">
                   <div>
-                    <span className="text-sm font-medium text-gray-800">{c.crew_name}</span>
-                    <span className="ml-2 text-xs text-sky-500 capitalize">{(c.crew_role || '').replace(/_/g, ' ')}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-gray-800">{c.crew_name}</span>
+                      <span className="text-xs text-sky-500 capitalize">{(c.crew_role || '').replace(/_/g, ' ')}</span>
+                      {c.inquiry_status !== 'unsent' && <StatusBadge status={c.inquiry_status} />}
+                    </div>
                     {c.notes && <p className="text-xs text-gray-500 mt-0.5">{c.notes}</p>}
+                    {c.inquiry_status !== 'unsent' && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {c.inquiry_position || 'Position TBD'} • {formatInquiryRate(c.inquiry_pay_rate)} • {formatInquiryWindow(c.inquiry_production_start_date, c.inquiry_production_end_date)}
+                      </p>
+                    )}
+                    {c.inquiry_status === 'accepted' && (
+                      <p className="text-xs text-green-700 mt-1">Confirmed for this project. Shoot-level assignment still needs to be created separately.</p>
+                    )}
                   </div>
-                  <button
-                    onClick={() => removeCrewCon.mutate(c.id)}
-                    className="text-xs text-gray-400 hover:text-red-500 ml-3 shrink-0"
-                  >
-                    Remove
-                  </button>
+                  <div className="flex items-center gap-3 ml-3 shrink-0">
+                    <button
+                      onClick={() => setAvailabilityModal({ type: 'crew', consideration: c })}
+                      className="px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-medium hover:bg-sky-700"
+                    >
+                      {c.inquiry_status === 'unsent' ? 'Availability Check' : 'Resend Inquiry'}
+                    </button>
+                    <button
+                      onClick={() => removeCrewCon.mutate(c.id)}
+                      className="text-xs text-gray-400 hover:text-red-500"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -1431,6 +1615,17 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
           ])}
         />
       )}
+      {availabilityModal && (
+        <AvailabilityInquiryModal
+          key={`${availabilityModal.type}-${availabilityModal.consideration.id}`}
+          consideration={availabilityModal.consideration}
+          project={project}
+          type={availabilityModal.type}
+          onClose={() => setAvailabilityModal(null)}
+          onSend={handleSendInquiry}
+          isPending={availabilityModal.type === 'crew' ? sendCrewInquiry.isPending : sendTalentInquiry.isPending}
+        />
+      )}
     </div>
   );
 }
@@ -1448,7 +1643,6 @@ function AssetsTab({ project, deliverables, projectId, uploadDeliverable, create
     description: '',
     file: null,
   });
-  const fileInputRefs = {};
 
   const assets = useMemo(
     () => deliverables.filter((d) => d.deliverable_type === 'other' || d.source_url),
@@ -1494,8 +1688,6 @@ function AssetsTab({ project, deliverables, projectId, uploadDeliverable, create
     });
     setAssetForm({ name: '', source_url: '', description: '', file: null });
   };
-
-  const isMedia = (type) => ['photo', 'video'].includes(type);
 
   return (
     <div className="space-y-4">

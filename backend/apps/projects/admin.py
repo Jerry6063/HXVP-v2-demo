@@ -68,9 +68,9 @@ class ProductionLogAdmin(admin.ModelAdmin):
 
 @admin.register(TalentConsideration)
 class TalentConsiderationAdmin(admin.ModelAdmin):
-    list_display = ["talent", "project", "added_by", "added_at"]
+    list_display = ["talent", "project", "inquiry_status", "inquiry_sent_at", "added_by", "added_at"]
 
 
 @admin.register(CrewConsideration)
 class CrewConsiderationAdmin(admin.ModelAdmin):
-    list_display = ["crew", "project", "added_by", "added_at"]
+    list_display = ["crew", "project", "inquiry_status", "inquiry_sent_at", "added_by", "added_at"]

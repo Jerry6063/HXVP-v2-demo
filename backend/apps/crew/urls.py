@@ -4,6 +4,7 @@ from . import views
 
 router = DefaultRouter()
 router.register(r"profiles", views.CrewProfileViewSet, basename="crew-profile")
+router.register(r"availability-inquiries", views.CrewAvailabilityInquiryViewSet, basename="crew-availability-inquiry")
 router.register(
     r"availability", views.CrewAvailabilityViewSet, basename="crew-availability"
 )

@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import {
   useCrewAssignments,
+  useCrewAvailabilityInquiries,
   useAcceptAssignment,
   useDeclineAssignment,
+  useRespondCrewAvailabilityInquiry,
 } from '../../api/hooks';
 import StatusBadge from '../../components/StatusBadge';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -16,11 +20,19 @@ import {
 
 export default function CrewAssignments() {
   const [tab, setTab] = useState('pending');
-  const { data: allData, isLoading } = useCrewAssignments();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { data: allData, isLoading: isAssignmentsLoading } = useCrewAssignments();
+  const { data: inquiriesData, isLoading: isInquiriesLoading } = useCrewAvailabilityInquiries();
   const acceptAssignment = useAcceptAssignment();
   const declineAssignment = useDeclineAssignment();
+  const acceptInquiry = useRespondCrewAvailabilityInquiry('accept');
+  const declineInquiry = useRespondCrewAvailabilityInquiry('decline');
 
-  const allAssignments = allData?.results || allData || [];
+  const allAssignments = useMemo(() => allData?.results || allData || [], [allData]);
+  const inquiries = useMemo(() => inquiriesData?.results || inquiriesData || [], [inquiriesData]);
+  const inquiryId = Number(searchParams.get('inquiry')) || null;
+  const inquiryToken = searchParams.get('token') || '';
+  const inquiryAction = searchParams.get('action') || '';
 
   const today = new Date().toISOString().split('T')[0];
   const pending = allAssignments.filter((a) => a.status === 'pending');
@@ -31,6 +43,14 @@ export default function CrewAssignments() {
     (a) => a.status === 'accepted' && a.shoot_detail?.shoot_date < today
   );
   const declined = allAssignments.filter((a) => a.status === 'declined');
+  const pendingInquiries = useMemo(
+    () => inquiries.filter((inquiry) => inquiry.inquiry_status === 'pending'),
+    [inquiries]
+  );
+  const respondedInquiries = useMemo(
+    () => inquiries.filter((inquiry) => inquiry.inquiry_status !== 'pending'),
+    [inquiries]
+  );
 
   const tabs = [
     { id: 'pending', label: 'Pending', count: pending.length },
@@ -42,11 +62,133 @@ export default function CrewAssignments() {
   const activeList =
     tab === 'pending' ? pending : tab === 'upcoming' ? upcoming : tab === 'past' ? past : declined;
 
+  const isLoading = isAssignmentsLoading || isInquiriesLoading;
+
+  const clearInquiryParams = () => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('inquiry');
+    nextParams.delete('token');
+    nextParams.delete('action');
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const handleInquiryResponse = async (inquiry, action) => {
+    try {
+      const token = inquiry.id === inquiryId && inquiryAction === action ? inquiryToken : undefined;
+      const payload = { id: inquiry.id, token };
+      if (action === 'accept') {
+        await acceptInquiry.mutateAsync(payload);
+      } else {
+        await declineInquiry.mutateAsync(payload);
+      }
+      if (token) clearInquiryParams();
+      toast.success(`Availability inquiry ${action === 'accept' ? 'accepted' : 'declined'}.`);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || `Failed to ${action} inquiry.`);
+    }
+  };
+
   if (isLoading) return <LoadingSpinner />;
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Project Assignments</h1>
+
+      {(pendingInquiries.length > 0 || respondedInquiries.length > 0) && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="font-semibold text-sky-800 mb-3">
+              Availability Inquiries ({pendingInquiries.length + respondedInquiries.length})
+            </h2>
+            <p className="text-sm text-gray-500 mb-3">
+              These confirm project-level availability only. Actual shoot assignments are still scheduled separately.
+            </p>
+          </div>
+
+          {pendingInquiries.length > 0 && (
+            <div className="space-y-3">
+              {pendingInquiries.map((inquiry) => {
+                const isHighlighted = inquiry.id === inquiryId;
+                const isAcceptLink = isHighlighted && inquiryAction === 'accept';
+                const isDeclineLink = isHighlighted && inquiryAction === 'decline';
+
+                return (
+                  <div
+                    key={inquiry.id}
+                    className={`rounded-xl border bg-white p-5 ${isHighlighted ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-100 shadow-sm'}`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{inquiry.project_name}</h3>
+                        <p className="text-sm text-gray-500 mt-1">{inquiry.inquiry_position || 'Position TBD'}</p>
+                      </div>
+                      <StatusBadge status={inquiry.inquiry_status} />
+                    </div>
+
+                    {isHighlighted && (
+                      <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        Review this inquiry and confirm your {inquiryAction || 'response'} below.
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 text-sm">
+                      <InquiryField label="Pay Rate" value={formatInquiryRate(inquiry.inquiry_pay_rate)} />
+                      <InquiryField label="Production Dates" value={formatInquiryWindow(inquiry.inquiry_production_start_date, inquiry.inquiry_production_end_date)} />
+                      <InquiryField label="Sent" value={inquiry.inquiry_sent_at ? inquiry.inquiry_sent_at.split('T')[0] : 'Just now'} />
+                    </div>
+
+                    {inquiry.notes && (
+                      <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                        <span className="font-medium">Production Notes:</span> {inquiry.notes}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={() => handleInquiryResponse(inquiry, 'accept')}
+                        disabled={acceptInquiry.isPending || declineInquiry.isPending}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-50"
+                      >
+                        <CheckIcon className="h-3.5 w-3.5" /> {isAcceptLink ? 'Confirm Accept' : 'Accept'}
+                      </button>
+                      <button
+                        onClick={() => handleInquiryResponse(inquiry, 'decline')}
+                        disabled={acceptInquiry.isPending || declineInquiry.isPending}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-medium hover:bg-red-200 disabled:opacity-50"
+                      >
+                        <XMarkIcon className="h-3.5 w-3.5" /> {isDeclineLink ? 'Confirm Decline' : 'Decline'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {respondedInquiries.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-gray-600 mb-3">Inquiry History</h3>
+              <div className="space-y-3">
+                {respondedInquiries.map((inquiry) => (
+                  <div key={inquiry.id} className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{inquiry.project_name}</h4>
+                        <p className="text-sm text-gray-500 mt-1">{inquiry.inquiry_position || 'Position TBD'}</p>
+                      </div>
+                      <StatusBadge status={inquiry.inquiry_status} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 text-sm">
+                      <InquiryField label="Pay Rate" value={formatInquiryRate(inquiry.inquiry_pay_rate)} />
+                      <InquiryField label="Production Dates" value={formatInquiryWindow(inquiry.inquiry_production_start_date, inquiry.inquiry_production_end_date)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -155,7 +297,32 @@ export default function CrewAssignments() {
   );
 }
 
-function DetailItem({ icon: Icon, label, value }) {
+function formatInquiryRate(value) {
+  if (value == null || value === '') return 'Rate TBD';
+  const numericValue = Number(value);
+  if (Number.isNaN(numericValue)) return `$${value}`;
+  return `$${numericValue.toFixed(2)}`;
+}
+
+function formatInquiryWindow(startDate, endDate) {
+  if (!startDate && !endDate) return 'Dates TBD';
+  if (startDate && endDate) return `${startDate} to ${endDate}`;
+  return startDate || endDate;
+}
+
+function InquiryField({ label, value }) {
+  return (
+    <div className="flex items-start gap-2">
+      <div>
+        <p className="text-xs text-gray-400">{label}</p>
+        <p className="text-sm text-gray-700">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function DetailItem({ icon, label, value }) {
+  const Icon = icon;
   return (
     <div className="flex items-start gap-2">
       <Icon className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />

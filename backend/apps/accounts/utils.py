@@ -64,3 +64,35 @@ def read_email_verify_token(token: str, max_age: int = 86400):
         return data["uid"]
     except Exception:
         return None
+
+
+def make_availability_inquiry_token(
+    consideration_type: str,
+    consideration_id: int,
+    portal: str,
+    action: str,
+    version: int,
+) -> str:
+    """Create a signed token for an availability inquiry email link."""
+    return signing.dumps(
+        {
+            "type": consideration_type,
+            "id": consideration_id,
+            "portal": portal,
+            "action": action,
+            "version": version,
+        },
+        salt="availability-inquiry",
+    )
+
+
+def read_availability_inquiry_token(token: str, max_age: int = 2592000):
+    """
+    Decode an availability inquiry token.
+    Returns the decoded payload on success, or None if invalid or expired.
+    max_age is in seconds (default 30 days).
+    """
+    try:
+        return signing.loads(token, salt="availability-inquiry", max_age=max_age)
+    except Exception:
+        return None
