@@ -1,5 +1,5 @@
-import { Fragment, useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTalentProfiles, useProjects } from '../api/hooks';
 import {
@@ -15,14 +15,12 @@ import {
   ClockIcon,
   PhotoIcon,
   ChatBubbleLeftIcon,
-  InboxIcon,
   ChatBubbleLeftRightIcon,
   UserCircleIcon,
   CalendarDaysIcon,
   FilmIcon,
   BanknotesIcon,
   CurrencyDollarIcon,
-  DocumentTextIcon,
   CreditCardIcon,
   CalendarIcon,
   ClipboardDocumentListIcon,
@@ -38,7 +36,16 @@ const portalConfigs = {
       { name: 'Productions', to: '/production/projects', icon: FolderIcon, dropdown: true },
       { name: 'Calendar', to: '/production/calendar', icon: CalendarDaysIcon },
       { name: 'Talents', to: '/production/talent', icon: UsersIcon },
-      { name: 'Talent Payments', to: '/production/talent-payments', icon: CurrencyDollarIcon },
+      {
+        name: 'Team Payments',
+        to: '/production/talent-payments',
+        icon: CurrencyDollarIcon,
+        dropdown: true,
+        children: [
+          { name: 'Talent Payments', to: '/production/talent-payments?tab=talent-payments' },
+          { name: 'Crew Payments', to: '/production/talent-payments?tab=crew-payments' },
+        ],
+      },
       { name: 'Production Crew', to: '/production/crew', icon: WrenchScrewdriverIcon },
       { name: 'Documents', to: '/production/documents', icon: DocumentDuplicateIcon },
       { name: 'Client Payments', to: '/production/invoices', icon: CreditCardIcon },
@@ -168,32 +175,36 @@ export default function PortalLayout({ portal }) {
   );
 }
 
-function ProductionsNavItem({ item, activeColor }) {
-  const [open, setOpen] = useState(false);
-  const { data } = useProjects({ status: 'active' });
-  const projects = data?.results || data || [];
+function matchesNavTarget(location, targetTo) {
+  const target = new URL(targetTo, 'http://localhost');
+
+  if (target.search) {
+    return location.pathname === target.pathname && location.search === target.search;
+  }
+
+  return location.pathname === target.pathname || location.pathname.startsWith(`${target.pathname}/`);
+}
+
+function SidebarDropdownItem({ item, activeColor, isActive, children }) {
+  const [open, setOpen] = useState(isActive);
 
   return (
     <div>
-      {/* Row: NavLink (left) + chevron toggle (right) */}
       <div className="flex items-center rounded-lg overflow-hidden">
-        <NavLink
+        <Link
           to={item.to}
-          end
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors flex-1 ${
-              isActive ? activeColor : 'text-white/80 hover:bg-white/10 hover:text-white'
-            }`
-          }
+          className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors flex-1 ${
+            isActive ? activeColor : 'text-white/80 hover:bg-white/10 hover:text-white'
+          }`}
         >
           <item.icon className="h-5 w-5 flex-shrink-0" />
           {item.name}
-        </NavLink>
+        </Link>
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => setOpen((value) => !value)}
           className="px-2 py-2.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-          aria-label="Show active productions"
+          aria-label={`Toggle ${item.name} menu`}
         >
           <ChevronDownIcon
             className={`h-4 w-4 transition-transform duration-200 ${
@@ -203,38 +214,84 @@ function ProductionsNavItem({ item, activeColor }) {
         </button>
       </div>
 
-      {/* Dropdown list */}
-      {open && (
-        <div className="ml-8 mt-0.5 space-y-0.5">
-          {projects.length === 0 ? (
-            <p className="px-3 py-1.5 text-xs text-white/40 italic">No active productions</p>
-          ) : (
-            projects.map((p) => (
-              <NavLink
-                key={p.id}
-                to={`/production/projects/${p.id}`}
-                className={({ isActive }) =>
-                  `block px-3 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${
-                    isActive ? activeColor : 'text-white/70 hover:bg-white/10 hover:text-white'
-                  }`
-                }
-              >
-                {p.name}
-              </NavLink>
-            ))
-          )}
-        </div>
-      )}
+      {open && <div className="ml-8 mt-0.5 space-y-0.5">{children}</div>}
     </div>
   );
 }
 
+function ProductionsNavItem({ item, activeColor }) {
+  const location = useLocation();
+  const { data } = useProjects({ status: 'active' });
+  const projects = data?.results || data || [];
+  const isActive = matchesNavTarget(location, item.to);
+
+  return (
+    <SidebarDropdownItem item={item} activeColor={activeColor} isActive={isActive}>
+      {projects.length === 0 ? (
+        <p className="px-3 py-1.5 text-xs text-white/40 italic">No active productions</p>
+      ) : (
+        projects.map((project) => (
+          <NavLink
+            key={project.id}
+            to={`/production/projects/${project.id}`}
+            className={({ isActive: isProjectActive }) =>
+              `block px-3 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${
+                isProjectActive ? activeColor : 'text-white/70 hover:bg-white/10 hover:text-white'
+              }`
+            }
+          >
+            {project.name}
+          </NavLink>
+        ))
+      )}
+    </SidebarDropdownItem>
+  );
+}
+
+function StaticDropdownNavItem({ item, activeColor }) {
+  const location = useLocation();
+  const hasActiveChild = item.children?.some((child) => matchesNavTarget(location, child.to)) ?? false;
+  const isActive = hasActiveChild || matchesNavTarget(location, item.to);
+
+  return (
+    <SidebarDropdownItem item={item} activeColor={activeColor} isActive={isActive}>
+      {item.children?.map((child) => {
+        const isChildActive = matchesNavTarget(location, child.to);
+
+        return (
+          <Link
+            key={child.to}
+            to={child.to}
+            className={`block px-3 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${
+              isChildActive ? activeColor : 'text-white/70 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            {child.name}
+          </Link>
+        );
+      })}
+    </SidebarDropdownItem>
+  );
+}
+
 function SidebarNav({ config, activeColor }) {
+  const location = useLocation();
+
   return (
     <nav className="flex-1 px-3 space-y-1">
       {config.nav.map((item) =>
-        item.dropdown ? (
-          <ProductionsNavItem key={item.to} item={item} activeColor={activeColor} />
+        item.dropdown && item.children ? (
+          <StaticDropdownNavItem
+            key={`${item.to}:${location.pathname}${location.search}`}
+            item={item}
+            activeColor={activeColor}
+          />
+        ) : item.dropdown ? (
+          <ProductionsNavItem
+            key={`${item.to}:${location.pathname}${location.search}`}
+            item={item}
+            activeColor={activeColor}
+          />
         ) : (
           <NavLink
             key={item.to}

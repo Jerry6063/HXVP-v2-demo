@@ -404,22 +404,6 @@ class CrewPaymentViewSet(viewsets.ModelViewSet):
         stripe.api_key = django_settings.STRIPE_SECRET_KEY
         amount_cents = int(payment.total_amount * 100)
         try:
-            balance = stripe.Balance.retrieve()
-            available_usd = next(
-                (b["amount"] for b in balance["available"] if b["currency"] == "usd"), 0
-            )
-            if available_usd < amount_cents:
-                return Response(
-                    {
-                        "detail": (
-                            f"Insufficient Stripe platform balance "
-                            f"(${available_usd / 100:.2f} available, "
-                            f"${amount_cents / 100:.2f} needed). "
-                            f"Please top up via Stripe Dashboard → Balance → Add to balance."
-                        )
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
             transfer = stripe.Transfer.create(
                 amount=amount_cents,
                 currency="usd",
@@ -431,6 +415,17 @@ class CrewPaymentViewSet(viewsets.ModelViewSet):
                 },
             )
         except stripe.error.StripeError as e:
+            if getattr(e, "code", None) in {"balance_insufficient", "insufficient_funds"}:
+                return Response(
+                    {
+                        "detail": (
+                            "Stripe reported that the platform balance is insufficient for this payout. "
+                            "Please confirm the available live USD balance in the Stripe platform account "
+                            "and try again."
+                        )
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             return Response(
                 {"detail": str(e.user_message or e)},
                 status=status.HTTP_400_BAD_REQUEST,

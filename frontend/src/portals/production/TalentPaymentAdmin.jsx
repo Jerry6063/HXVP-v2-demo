@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   useTalentProfiles,
   useTalentTimeLogs,
@@ -27,7 +28,29 @@ import { useAuth } from '../../contexts/AuthContext';
 import StatusBadge from '../../components/StatusBadge';
 
 export default function TalentPaymentAdmin() {
-  const [tab, setTab] = useState('timelogs');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const activeTab = useMemo(() => {
+    const tab = searchParams.get('tab');
+
+    if (tab === 'talent-payments' || tab === 'crew-payments') {
+      return tab;
+    }
+
+    return 'timelogs';
+  }, [searchParams]);
+
+  const switchTab = (tab) => {
+    const next = new URLSearchParams(searchParams);
+
+    if (tab === 'timelogs') {
+      next.delete('tab');
+    } else {
+      next.set('tab', tab);
+    }
+
+    setSearchParams(next, { replace: true });
+  };
 
   return (
     <div className="space-y-6">
@@ -42,9 +65,9 @@ export default function TalentPaymentAdmin() {
           ].map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => switchTab(t.id)}
               className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-                tab === t.id
+                activeTab === t.id
                   ? 'border-indigo-600 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
@@ -55,9 +78,9 @@ export default function TalentPaymentAdmin() {
         </nav>
       </div>
 
-      {tab === 'timelogs' && <TimeLogTab />}
-      {tab === 'talent-payments' && <PaymentsTab type="talent" />}
-      {tab === 'crew-payments' && <PaymentsTab type="crew" />}
+      {activeTab === 'timelogs' && <TimeLogTab />}
+      {activeTab === 'talent-payments' && <PaymentsTab type="talent" />}
+      {activeTab === 'crew-payments' && <PaymentsTab type="crew" />}
     </div>
   );
 }
