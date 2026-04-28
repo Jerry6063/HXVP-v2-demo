@@ -535,8 +535,21 @@ class TalentPaymentViewSet(viewsets.ModelViewSet):
         # hide the fact that money was already sent.
         try:
             payment.stripe_transfer_id = transfer["id"]
-            payment.stripe_payout_status = transfer["status"]
-            payment.save(update_fields=["stripe_transfer_id", "stripe_payout_status"])
+            payment.stripe_payout_status = "submitted"
+            payment.status = TalentPayment.Status.PAID
+            payment.paid_at = timezone.now()
+            if not payment.payment_reference:
+                payment.payment_reference = transfer["id"]
+            payment.save(
+                update_fields=[
+                    "stripe_transfer_id",
+                    "stripe_payout_status",
+                    "status",
+                    "paid_at",
+                    "payment_reference",
+                ]
+            )
+            send_payment_confirmation(payment)
             return Response(TalentPaymentSerializer(payment).data)
         except Exception as exc:
             # Transfer went through but we could not persist it — return the
@@ -676,6 +689,105 @@ class TalentAvailabilityViewSet(viewsets.ModelViewSet):
 class StripeWebhookView(APIView):
     permission_classes = [AllowAny]
 
+    @staticmethod
+    def _update_talent_payment_from_transfer(data):
+        transfer_id = data.get("id")
+        metadata = data.get("metadata") or {}
+        payment_id = metadata.get("talent_payment_id")
+
+        payment = None
+        if payment_id:
+            payment = TalentPayment.objects.filter(id=payment_id).first()
+        if payment is None and transfer_id:
+            payment = TalentPayment.objects.filter(stripe_transfer_id=transfer_id).first()
+        if payment is None:
+            return False
+
+        update_fields = []
+        if transfer_id and payment.stripe_transfer_id != transfer_id:
+            payment.stripe_transfer_id = transfer_id
+            update_fields.append("stripe_transfer_id")
+
+        reversed_transfer = bool(data.get("reversed"))
+        next_status = "reversed" if reversed_transfer else "submitted"
+        if payment.stripe_payout_status != next_status:
+            payment.stripe_payout_status = next_status
+            update_fields.append("stripe_payout_status")
+
+        if reversed_transfer:
+            if payment.status != TalentPayment.Status.PENDING:
+                payment.status = TalentPayment.Status.PENDING
+                update_fields.append("status")
+            if payment.paid_at is not None:
+                payment.paid_at = None
+                update_fields.append("paid_at")
+        else:
+            should_send_confirmation = payment.status != TalentPayment.Status.PAID
+            if payment.status != TalentPayment.Status.PAID:
+                payment.status = TalentPayment.Status.PAID
+                update_fields.append("status")
+            if payment.paid_at is None:
+                payment.paid_at = timezone.now()
+                update_fields.append("paid_at")
+            if not payment.payment_reference and transfer_id:
+                payment.payment_reference = transfer_id
+                update_fields.append("payment_reference")
+
+        if update_fields:
+            payment.save(update_fields=update_fields)
+            if not reversed_transfer and should_send_confirmation:
+                send_payment_confirmation(payment)
+        return True
+
+    @staticmethod
+    def _update_crew_payment_from_transfer(data):
+        from apps.crew.models import CrewPayment
+
+        transfer_id = data.get("id")
+        metadata = data.get("metadata") or {}
+        payment_id = metadata.get("crew_payment_id")
+
+        payment = None
+        if payment_id:
+            payment = CrewPayment.objects.filter(id=payment_id).first()
+        if payment is None and transfer_id:
+            payment = CrewPayment.objects.filter(stripe_transfer_id=transfer_id).first()
+        if payment is None:
+            return False
+
+        update_fields = []
+        if transfer_id and payment.stripe_transfer_id != transfer_id:
+            payment.stripe_transfer_id = transfer_id
+            update_fields.append("stripe_transfer_id")
+
+        reversed_transfer = bool(data.get("reversed"))
+        next_status = "reversed" if reversed_transfer else "submitted"
+        if payment.stripe_payout_status != next_status:
+            payment.stripe_payout_status = next_status
+            update_fields.append("stripe_payout_status")
+
+        if reversed_transfer:
+            if payment.status != CrewPayment.Status.PENDING:
+                payment.status = CrewPayment.Status.PENDING
+                update_fields.append("status")
+            if payment.paid_at is not None:
+                payment.paid_at = None
+                update_fields.append("paid_at")
+        else:
+            if payment.status != CrewPayment.Status.PAID:
+                payment.status = CrewPayment.Status.PAID
+                update_fields.append("status")
+            if payment.paid_at is None:
+                payment.paid_at = timezone.now()
+                update_fields.append("paid_at")
+            if not payment.payment_reference and transfer_id:
+                payment.payment_reference = transfer_id
+                update_fields.append("payment_reference")
+
+        if update_fields:
+            payment.save(update_fields=update_fields)
+        return True
+
     @csrf_exempt
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
@@ -695,28 +807,9 @@ class StripeWebhookView(APIView):
         event_type = event["type"]
         data = event["data"]["object"]
 
-        if event_type == "transfer.paid":
-            transfer_id = data["id"]
-            # Try TalentPayment first
-            try:
-                payment = TalentPayment.objects.get(stripe_transfer_id=transfer_id)
-                payment.status = TalentPayment.Status.PAID
-                payment.paid_at = timezone.now()
-                payment.stripe_payout_status = "paid"
-                payment.save(update_fields=["status", "paid_at", "stripe_payout_status"])
-                send_payment_confirmation(payment)
-            except TalentPayment.DoesNotExist:
-                pass
-            # Try CrewPayment
-            try:
-                from apps.crew.models import CrewPayment
-                crew_payment = CrewPayment.objects.get(stripe_transfer_id=transfer_id)
-                crew_payment.status = CrewPayment.Status.PAID
-                crew_payment.paid_at = timezone.now()
-                crew_payment.stripe_payout_status = "paid"
-                crew_payment.save(update_fields=["status", "paid_at", "stripe_payout_status"])
-            except CrewPayment.DoesNotExist:
-                pass
+        if event_type in {"transfer.created", "transfer.updated", "transfer.reversed"}:
+            self._update_talent_payment_from_transfer(data)
+            self._update_crew_payment_from_transfer(data)
 
         elif event_type == "account.updated":
             account_id = data["id"]

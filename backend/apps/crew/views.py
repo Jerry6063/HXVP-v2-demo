@@ -520,8 +520,20 @@ class CrewPaymentViewSet(viewsets.ModelViewSet):
         # hide the fact that money was already sent.
         try:
             payment.stripe_transfer_id = transfer["id"]
-            payment.stripe_payout_status = transfer["status"]
-            payment.save(update_fields=["stripe_transfer_id", "stripe_payout_status"])
+            payment.stripe_payout_status = "submitted"
+            payment.status = CrewPayment.Status.PAID
+            payment.paid_at = timezone.now()
+            if not payment.payment_reference:
+                payment.payment_reference = transfer["id"]
+            payment.save(
+                update_fields=[
+                    "stripe_transfer_id",
+                    "stripe_payout_status",
+                    "status",
+                    "paid_at",
+                    "payment_reference",
+                ]
+            )
             return Response(CrewPaymentSerializer(payment).data)
         except Exception as exc:
             return Response(
