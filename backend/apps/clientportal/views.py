@@ -1,6 +1,6 @@
 from datetime import datetime
 from django.db.models import Q
-from rest_framework import viewsets, generics, permissions, parsers, status
+from rest_framework import mixins, viewsets, generics, permissions, parsers, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -24,8 +24,11 @@ from .serializers import (
     CommunicationMessageSerializer,
     MessageThreadSerializer,
     TalentRosterShareSerializer,
+    TalentRosterShareCreateSerializer,
+    TalentRosterShareFavoriteSerializer,
 )
 from . import emails
+from .shortlists import create_talent_roster_share
 
 
 class ProjectRequestViewSet(viewsets.ModelViewSet):
@@ -258,27 +261,79 @@ class CommunicationMessageViewSet(viewsets.ModelViewSet):
         )
 
 
-class TalentRosterShareViewSet(viewsets.ModelViewSet):
+class TalentRosterShareViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
     """Production creates roster shares; client can list their own."""
-    serializer_class = TalentRosterShareSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == "client":
-            return TalentRosterShare.objects.filter(client=user)
-        return TalentRosterShare.objects.all().select_related("client", "shared_by")
+    def get_permissions(self):
+        if self.action == "create":
+            return [IsProductionAdmin()]
+        if self.action == "update_favorite":
+            return [IsClient()]
+        return [permission() for permission in self.permission_classes]
 
-    def perform_create(self, serializer):
-        share = serializer.save(shared_by=self.request.user)
-        email_sent = emails.send_talent_roster_email(share)
-        # Store on the instance so create() can access it
-        share._email_sent = email_sent
+    def get_serializer_class(self):
+        if self.action == "create":
+            return TalentRosterShareCreateSerializer
+        if self.action == "update_favorite":
+            return TalentRosterShareFavoriteSerializer
+        return TalentRosterShareSerializer
+
+    def get_queryset(self):
+        qs = TalentRosterShare.objects.select_related(
+            "client", "shared_by", "project"
+        ).prefetch_related("items__talent__user", "items__talent__photos")
+        user = self.request.user
+        project = self.request.query_params.get("project")
+        if project:
+            qs = qs.filter(project_id=project)
+        if user.role == "client":
+            qs = qs.filter(client=user)
+        return qs
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        data = serializer.data
-        data["email_sent"] = bool(getattr(serializer.instance, "_email_sent", False))
-        return Response(data, status=201)
+        share = create_talent_roster_share(
+            client=serializer.validated_data["client"],
+            talent_ids=serializer.validated_data["talent_ids"],
+            shared_by=request.user,
+            project=serializer.validated_data.get("project"),
+            message=serializer.validated_data.get("message", ""),
+        )
+        email_sent = emails.send_talent_roster_email(share)
+        response_serializer = TalentRosterShareSerializer(
+            share,
+            context=self.get_serializer_context(),
+        )
+        data = dict(response_serializer.data)
+        data["email_sent"] = bool(email_sent)
+        return Response(data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["patch"])
+    def update_favorite(self, request, pk=None):
+        share = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        item = share.items.filter(id=serializer.validated_data["item_id"]).first()
+        if not item:
+            return Response(
+                {"detail": "Talent shortlist item not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        item.client_favorite = serializer.validated_data["client_favorite"]
+        item.client_note = serializer.validated_data.get("client_note", "")
+        item.save(update_fields=["client_favorite", "client_note"])
+
+        response_serializer = TalentRosterShareSerializer(
+            share,
+            context=self.get_serializer_context(),
+        )
+        return Response(response_serializer.data)

@@ -820,6 +820,19 @@ export const useSendTalentRoster = () => {
   });
 };
 
+export const useUpdateTalentRosterFavorite = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, itemId, clientFavorite, clientNote = '' }) =>
+      api.patch(`/clientportal/talent-roster-shares/${id}/update_favorite/`, {
+        item_id: itemId,
+        client_favorite: clientFavorite,
+        client_note: clientNote,
+      }).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['talent-roster-shares'] }),
+  });
+};
+
 // Evaluations
 export const useEvaluations = (params = {}) =>
   useQuery({

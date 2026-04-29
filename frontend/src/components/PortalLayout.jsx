@@ -58,7 +58,7 @@ const portalConfigs = {
     nav: [
       { name: 'Dashboard', to: '/client/dashboard', icon: HomeIcon },
       { name: 'Production Request', to: '/client/request', icon: PlusCircleIcon },
-      { name: 'Timeline', to: '/client/timeline', icon: ClockIcon },
+      { name: 'Production', to: '/client/production', icon: FilmIcon },
       { name: 'Deliverables', to: '/client/deliverables', icon: PhotoIcon },
       { name: 'Invoices & Payments', to: '/client/payments', icon: CreditCardIcon },
       { name: 'Talent Roster', to: '/client/talent', icon: UsersIcon },

@@ -99,25 +99,27 @@ def send_message_notification_email(message):
 
 def send_talent_roster_email(share):
     """Notify a client that production has shared a talent selection with them."""
-    from apps.talent.models import TalentProfile
     client = share.client
-    profiles = TalentProfile.objects.filter(id__in=share.talent_ids).select_related("user")
+    items = share.items.select_related("talent__user")
     talent_lines = "\n".join(
-        f"  - {p.user.get_full_name()} ({p.talent_type.capitalize()})"
-        for p in profiles
+        f"  - {item.talent.user.get_full_name()} ({item.talent.get_talent_type_display()})"
+        for item in items
     )
 
     body = (
         f"Hi {client.first_name},\n\n"
-        f"Our production team has put together a talent selection for you:\n\n"
+        f"Our production team has put together a talent selection for you"
+        f"{f' for {share.project.name}' if share.project else ''}:\n\n"
         f"{talent_lines}\n\n"
     )
     if share.message:
         body += f"Message from our team:\n{share.message}\n\n"
-    body += "Please log in to the Client Portal to view their full profiles.\n\n\u2013 Studio Team"
+    if share.pdf_file:
+        body += "A PDF with profiles and photos is now saved in your Client Portal for review.\n\n"
+    body += "Please log in to the Client Portal to view their full profiles and shortlist your favorites.\n\n\u2013 Studio Team"
 
     return safe_send(
-        subject="Talent Selection Ready for Your Review",
+        subject=f"Talent Selection Ready for Review{f': {share.project.name}' if share.project else ''}",
         message=body,
         recipient_list=[client.email],
     )

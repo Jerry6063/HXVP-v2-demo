@@ -14,6 +14,7 @@ import ProductionDashboard from './portals/production/Dashboard';
 import ProductionsModule from './portals/production/ProductionsModule';
 import ProductionCalendar from './portals/production/Calendar';
 import ProjectDetail from './portals/production/ProjectDetail';
+import ProjectTalentShortlistPage from './portals/production/ProjectTalentShortlistPage';
 import TalentsModule from './portals/production/TalentsModule';
 import TalentDetailPage from './portals/production/TalentDetailPage';
 import CrewPage from './portals/production/CrewPage';
@@ -31,7 +32,7 @@ import ShootPage from './portals/production/ShootPage';
 
 import ClientDashboard from './portals/client/Dashboard';
 import ClientProjectRequest from './portals/client/ProjectRequest';
-import ClientTimeline from './portals/client/Timeline';
+import ClientProduction from './portals/client/Timeline';
 import ClientDeliverableCenter from './portals/client/DeliverableCenter';
 import ClientMessages from './portals/client/Messages';
 import ClientTalentRoster from './portals/client/TalentRoster';
@@ -77,6 +78,7 @@ export default function App() {
         <Route path="projects" element={<ProductionsModule />} />
         <Route path="calendar" element={<ProductionCalendar />} />
         <Route path="projects/:id" element={<ProjectDetail />} />
+        <Route path="projects/:id/talent-shortlist" element={<ProjectTalentShortlistPage />} />
         <Route path="projects/:id/shoots/:shootId" element={<ShootPage />} />
         <Route path="requests" element={<Navigate to="/production/projects?tab=requests" replace />} />
         <Route path="requests/:id" element={<ProductionRequestDetail />} />
@@ -111,7 +113,8 @@ export default function App() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<ClientDashboard />} />
         <Route path="request" element={<ClientProjectRequest />} />
-        <Route path="timeline" element={<ClientTimeline />} />
+        <Route path="production" element={<ClientProduction />} />
+        <Route path="timeline" element={<Navigate to="/client/production" replace />} />
         <Route path="deliverables" element={<ClientDeliverableCenter />} />
         <Route path="payments" element={<ClientInvoicesPayments />} />
         <Route path="talent" element={<ClientTalentRoster />} />

@@ -5,6 +5,13 @@ from django.conf import settings
 class TalentRosterShare(models.Model):
     """Records when production shares a selection of talent with a client."""
 
+    project = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.CASCADE,
+        related_name="talent_roster_shares",
+        null=True,
+        blank=True,
+    )
     client = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -13,6 +20,7 @@ class TalentRosterShare(models.Model):
     )
     talent_ids = models.JSONField(default=list, help_text="List of TalentProfile PKs")
     message = models.TextField(blank=True)
+    pdf_file = models.FileField(upload_to="talent_shortlists/", blank=True, null=True)
     shared_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -26,7 +34,33 @@ class TalentRosterShare(models.Model):
         ordering = ["-shared_at"]
 
     def __str__(self):
+        if self.project_id:
+            return f"Roster share → {self.project.name} ({self.shared_at.date()})"
         return f"Roster share → {self.client.get_full_name()} ({self.shared_at.date()})"
+
+
+class TalentRosterShareItem(models.Model):
+    share = models.ForeignKey(
+        TalentRosterShare,
+        on_delete=models.CASCADE,
+        related_name="items",
+    )
+    talent = models.ForeignKey(
+        "talent.TalentProfile",
+        on_delete=models.CASCADE,
+        related_name="talent_roster_items",
+    )
+    notes = models.TextField(blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    client_favorite = models.BooleanField(default=False)
+    client_note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+        unique_together = ("share", "talent")
+
+    def __str__(self):
+        return f"{self.talent.user.get_full_name()} in {self.share}"
 
 
 class ProjectRequest(models.Model):

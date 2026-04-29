@@ -19,8 +19,8 @@ import {
   useCreateMilestone,
   useUpdateMilestone,
   useDeleteMilestone,
+  useTalentRosterShares,
   useTalentConsiderations,
-  useAddTalentConsideration,
   useRemoveTalentConsideration,
   useSendTalentAvailabilityInquiry,
   useCrewConsiderations,
@@ -1239,17 +1239,17 @@ function AvailabilityInquiryModal({ consideration, project, type, onClose, onSen
 }
 
 function TeamTalentTab({ bookings, assignments, projectId, project }) {
-  const [showAddTalent, setShowAddTalent] = useState(false);
   const [showAddCrew, setShowAddCrew] = useState(false);
   const [showAddTalentReq, setShowAddTalentReq] = useState(false);
   const [showAddCrewReq, setShowAddCrewReq] = useState(false);
   const [availabilityModal, setAvailabilityModal] = useState(null);
   const [newTalentReq, setNewTalentReq] = useState({ talent_type: 'model', count: 1, notes: '' });
   const [newCrewReq, setNewCrewReq] = useState({ crew_role: 'photographer', count: 1, notes: '' });
+  const navigate = useNavigate();
 
+  const { data: rosterSharesData } = useTalentRosterShares({ project: projectId });
   const { data: talentConsData } = useTalentConsiderations({ project: projectId });
   const { data: crewConsData } = useCrewConsiderations({ project: projectId });
-  const addTalentCon = useAddTalentConsideration();
   const removeTalentCon = useRemoveTalentConsideration();
   const sendTalentInquiry = useSendTalentAvailabilityInquiry();
   const addCrewCon = useAddCrewConsideration();
@@ -1263,6 +1263,8 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
 
   const talentCons = talentConsData?.results || talentConsData || [];
   const crewCons = crewConsData?.results || crewConsData || [];
+  const rosterShares = rosterSharesData?.results || rosterSharesData || [];
+  const latestShare = rosterShares[0] || null;
 
   const talentRequirements = project?.talent_requirements || [];
   const crewRequirements = project?.crew_requirements_list || [];
@@ -1283,15 +1285,6 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
 
   const TALENT_TYPE_LABELS = { model: 'Model', actor: 'Actor', voiceover: 'Voiceover', dancer: 'Dancer', livestream: 'Livestream Host', other: 'Other' };
   const CREW_ROLE_LABELS = { director: 'Director', photographer: 'Photographer', dop: 'Director of Photography', videographer: 'Videographer', first_ac: '1st AC', second_ac: '2nd AC', gaffer: 'Gaffer', grip: 'Grip', electric: 'Electric', wardrobe: 'Wardrobe', set_design: 'Set Design', bts: 'Behind-the-Scene', pa: 'Production Assistant', ac: 'Assistant Camera', audio: 'Audio', lighting: 'Lighting', hair_makeup: 'Hair & Makeup', stylist: 'Stylist', crafty: 'Crafty', other: 'Other' };
-
-  const handleAddTalent = async ({ id, notes }) => {
-    try {
-      await addTalentCon.mutateAsync({ project: projectId, talent: id, notes });
-      setShowAddTalent(false);
-    } catch (err) {
-      console.error('Add talent failed', err);
-    }
-  };
 
   const handleAddCrew = async ({ id, notes }) => {
     try {
@@ -1440,10 +1433,10 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
         <div className="flex items-center justify-between mb-2">
           <h4 className="font-semibold text-gray-800 text-sm">Talent Bookings</h4>
           <button
-            onClick={() => setShowAddTalent(true)}
+            onClick={() => navigate(`/production/projects/${projectId}/talent-shortlist`)}
             className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700"
           >
-            <span>+ Add Talent</span>
+            <span>Open Shortlist Builder</span>
           </button>
         </div>
         {bookings.length === 0 ? (
@@ -1513,6 +1506,60 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
             </ul>
           </div>
         )}
+
+        <div className="mt-4 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-indigo-100/60 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Client Shortlist</p>
+              <h5 className="mt-1 text-sm font-semibold text-gray-900">
+                {latestShare ? 'Latest shortlist sent to client' : 'No shortlist sent yet'}
+              </h5>
+              <p className="mt-1 text-xs text-gray-500">
+                Build the shortlist on a full page, confirm the send, and a client-ready PDF is saved on the project automatically.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate(`/production/projects/${projectId}/talent-shortlist`)}
+              className="inline-flex items-center justify-center rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
+            >
+              {latestShare ? 'Update shortlist' : 'Create shortlist'}
+            </button>
+          </div>
+
+          {latestShare && (
+            <div className="mt-4 rounded-xl border border-white/80 bg-white/90 p-4">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {latestShare.talent_details?.length || 0} talent{latestShare.talent_details?.length === 1 ? '' : 's'} sent
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {latestShare.shared_at ? new Date(latestShare.shared_at).toLocaleString() : 'Recently sent'}
+                  </p>
+                </div>
+                {latestShare.pdf_url && (
+                  <a
+                    href={latestShare.pdf_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center rounded-xl border border-indigo-200 px-3 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
+                  >
+                    Open shortlist PDF
+                  </a>
+                )}
+              </div>
+              {latestShare.talent_details?.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {latestShare.talent_details.slice(0, 6).map((talent) => (
+                    <span key={talent.id} className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
+                      {talent.full_name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Crew Assignments ── */}
@@ -1595,16 +1642,6 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
         )}
       </div>
 
-      {showAddTalent && (
-        <AddTalentModal
-          onClose={() => setShowAddTalent(false)}
-          onAdd={handleAddTalent}
-          existingTalentIds={new Set([
-            ...bookings.map((b) => b.talent),
-            ...talentCons.map((c) => c.talent),
-          ])}
-        />
-      )}
       {showAddCrew && (
         <AddCrewModal
           onClose={() => setShowAddCrew(false)}

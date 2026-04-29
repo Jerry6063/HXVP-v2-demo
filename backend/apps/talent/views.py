@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 import stripe
@@ -74,18 +74,63 @@ class TalentProfileViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = TalentProfile.objects.select_related("user").prefetch_related("photos")
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(
+                Q(user__first_name__icontains=search)
+                | Q(user__last_name__icontains=search)
+                | Q(user__email__icontains=search)
+            )
         availability = self.request.query_params.get("availability")
         if availability:
             qs = qs.filter(availability=availability)
         talent_type = self.request.query_params.get("talent_type")
         if talent_type:
             qs = qs.filter(talent_type=talent_type)
+        gender = self.request.query_params.get("gender")
+        if gender:
+            qs = qs.filter(gender=gender)
+        race_ethnicity = self.request.query_params.get("race_ethnicity")
+        if race_ethnicity:
+            qs = qs.filter(race_ethnicity=race_ethnicity)
+        min_age = self.request.query_params.get("min_age")
+        if min_age and min_age.isdigit():
+            qs = qs.filter(age__gte=int(min_age))
+        max_age = self.request.query_params.get("max_age")
+        if max_age and max_age.isdigit():
+            qs = qs.filter(age__lte=int(max_age))
+        max_rate = self.request.query_params.get("max_rate")
+        if max_rate:
+            try:
+                qs = qs.filter(hourly_rate__lte=Decimal(max_rate))
+            except Exception:
+                pass
         approval = self.request.query_params.get("approval_status")
         if approval:
             qs = qs.filter(approval_status=approval)
         approved_only = self.request.query_params.get("approved_only")
         if approved_only == "true":
             qs = qs.filter(approval_status="approved")
+        date_from = self.request.query_params.get("date_from")
+        date_to = self.request.query_params.get("date_to")
+        if date_from or date_to:
+            try:
+                range_start = date.fromisoformat(date_from) if date_from else date.fromisoformat(date_to)
+                range_end = date.fromisoformat(date_to) if date_to else range_start
+            except (TypeError, ValueError):
+                range_start = None
+                range_end = None
+
+            if range_start and range_end:
+                blocked_by_booking = Booking.objects.filter(
+                    status=Booking.Status.ACCEPTED,
+                    shoot__shoot_date__range=[range_start, range_end],
+                ).values_list("talent_id", flat=True)
+                blocked_by_availability = TalentAvailability.objects.filter(
+                    date__range=[range_start, range_end],
+                    status=TalentAvailability.DayStatus.UNAVAILABLE,
+                ).values_list("talent_id", flat=True)
+                qs = qs.exclude(id__in=blocked_by_booking).exclude(id__in=blocked_by_availability)
         return qs
 
     def get_serializer_class(self):
