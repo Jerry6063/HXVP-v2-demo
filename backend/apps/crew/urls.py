@@ -9,6 +9,7 @@ router.register(
     r"availability", views.CrewAvailabilityViewSet, basename="crew-availability"
 )
 router.register(r"assignments", views.CrewAssignmentViewSet, basename="crew-assignment")
+router.register(r"timelogs", views.CrewTimeLogViewSet, basename="crew-timelog")
 router.register(r"equipment", views.EquipmentViewSet, basename="equipment")
 router.register(
     r"equipment-checkouts",

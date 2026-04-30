@@ -555,6 +555,7 @@ export const useCreateTalentTimeLog = () => {
     mutationFn: (data) => api.post('/talent/timelogs/', data).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['talent-timelogs'] });
+      qc.invalidateQueries({ queryKey: ['talent-payments'] });
       qc.invalidateQueries({ queryKey: ['talent-payment-summary'] });
     },
   });
@@ -564,7 +565,11 @@ export const useApproveTimeLog = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id) => api.post(`/talent/timelogs/${id}/approve/`).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['talent-timelogs'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['talent-timelogs'] });
+      qc.invalidateQueries({ queryKey: ['talent-payments'] });
+      qc.invalidateQueries({ queryKey: ['talent-payment-summary'] });
+    },
   });
 };
 
@@ -572,7 +577,10 @@ export const useRejectTimeLog = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id) => api.post(`/talent/timelogs/${id}/reject/`).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['talent-timelogs'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['talent-timelogs'] });
+      qc.invalidateQueries({ queryKey: ['talent-payments'] });
+    },
   });
 };
 
@@ -581,7 +589,10 @@ export const useUpdateTalentTimeLog = () => {
   return useMutation({
     mutationFn: ({ id, ...data }) =>
       api.patch(`/talent/timelogs/${id}/`, data).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['talent-timelogs'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['talent-timelogs'] });
+      qc.invalidateQueries({ queryKey: ['talent-payments'] });
+    },
   });
 };
 
@@ -597,6 +608,7 @@ export const useCreateTalentPayment = () => {
   return useMutation({
     mutationFn: (data) => api.post('/talent/payments/', data).then((r) => r.data),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['talent-timelogs'] });
       qc.invalidateQueries({ queryKey: ['talent-payments'] });
       qc.invalidateQueries({ queryKey: ['talent-payment-summary'] });
     },
@@ -609,6 +621,7 @@ export const useMarkTalentPaymentPaid = () => {
     mutationFn: ({ id, payment_reference }) =>
       api.post(`/talent/payments/${id}/mark_paid/`, { payment_reference }).then((r) => r.data),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['talent-timelogs'] });
       qc.invalidateQueries({ queryKey: ['talent-payments'] });
       qc.invalidateQueries({ queryKey: ['talent-payment-summary'] });
     },
@@ -690,6 +703,57 @@ export const useDeclineAssignment = () => {
   return useMutation({
     mutationFn: (id) => api.post(`/crew/assignments/${id}/decline/`).then((r) => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['crew-assignments'] }),
+  });
+};
+
+export const useCrewTimeLogs = (params = {}) =>
+  useQuery({
+    queryKey: ['crew-timelogs', params],
+    queryFn: () => api.get('/crew/timelogs/', { params }).then((r) => r.data),
+  });
+
+export const useCreateCrewTimeLog = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => api.post('/crew/timelogs/', data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['crew-timelogs'] });
+      qc.invalidateQueries({ queryKey: ['crew-payments'] });
+    },
+  });
+};
+
+export const useApproveCrewTimeLog = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.post(`/crew/timelogs/${id}/approve/`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['crew-timelogs'] });
+      qc.invalidateQueries({ queryKey: ['crew-payments'] });
+    },
+  });
+};
+
+export const useRejectCrewTimeLog = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => api.post(`/crew/timelogs/${id}/reject/`).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['crew-timelogs'] });
+      qc.invalidateQueries({ queryKey: ['crew-payments'] });
+    },
+  });
+};
+
+export const useUpdateCrewTimeLog = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }) =>
+      api.patch(`/crew/timelogs/${id}/`, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['crew-timelogs'] });
+      qc.invalidateQueries({ queryKey: ['crew-payments'] });
+    },
   });
 };
 
@@ -1605,11 +1669,13 @@ export const useInitiateTalentPayout = () => {
     mutationFn: (paymentId) =>
       api.post(`/talent/payments/${paymentId}/initiate_stripe_payout/`).then((r) => r.data),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['talent-timelogs'] });
       qc.invalidateQueries({ queryKey: ['talent-payments'] });
       qc.invalidateQueries({ queryKey: ['talent-payment-summary'] });
     },
     // Refresh list even on error — the transfer may have succeeded server-side
     onError: () => {
+      qc.invalidateQueries({ queryKey: ['talent-timelogs'] });
       qc.invalidateQueries({ queryKey: ['talent-payments'] });
     },
   });
@@ -1633,7 +1699,10 @@ export const useCreateCrewPayment = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data) => api.post('/crew/payments/', data).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['crew-payments'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['crew-timelogs'] });
+      qc.invalidateQueries({ queryKey: ['crew-payments'] });
+    },
   });
 };
 
@@ -1642,7 +1711,10 @@ export const useMarkCrewPaymentPaid = () => {
   return useMutation({
     mutationFn: ({ id, payment_reference }) =>
       api.post(`/crew/payments/${id}/mark_paid/`, { payment_reference }).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['crew-payments'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['crew-timelogs'] });
+      qc.invalidateQueries({ queryKey: ['crew-payments'] });
+    },
   });
 };
 
@@ -1674,9 +1746,13 @@ export const useInitiateCrewPayout = () => {
   return useMutation({
     mutationFn: (paymentId) =>
       api.post(`/crew/payments/${paymentId}/initiate_stripe_payout/`).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['crew-payments'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['crew-timelogs'] });
+      qc.invalidateQueries({ queryKey: ['crew-payments'] });
+    },
     // Refresh list even on error — the transfer may have succeeded server-side
     onError: () => {
+      qc.invalidateQueries({ queryKey: ['crew-timelogs'] });
       qc.invalidateQueries({ queryKey: ['crew-payments'] });
     },
   });

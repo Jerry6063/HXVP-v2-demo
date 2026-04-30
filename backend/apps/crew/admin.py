@@ -3,9 +3,11 @@ from .models import (
     CrewProfile,
     CrewAvailability,
     CrewAssignment,
+    CrewTimeLog,
     Equipment,
     EquipmentCheckout,
     Evaluation,
+    CrewPayment,
 )
 
 
@@ -30,6 +32,12 @@ class CrewAssignmentAdmin(admin.ModelAdmin):
     list_filter = ["status"]
 
 
+@admin.register(CrewTimeLog)
+class CrewTimeLogAdmin(admin.ModelAdmin):
+    list_display = ["crew", "project", "date", "hours_worked", "amount", "log_status", "notified"]
+    list_filter = ["date", "log_status"]
+
+
 @admin.register(Equipment)
 class EquipmentAdmin(admin.ModelAdmin):
     list_display = ["name", "equipment_type", "status"]
@@ -48,3 +56,9 @@ class EvaluationAdmin(admin.ModelAdmin):
         "evaluator", "created_at",
     ]
     list_filter = ["subject_type", "rating"]
+
+
+@admin.register(CrewPayment)
+class CrewPaymentAdmin(admin.ModelAdmin):
+    list_display = ["crew", "source_time_log", "period_month", "period_year", "total_amount", "status"]
+    list_filter = ["status", "period_year"]

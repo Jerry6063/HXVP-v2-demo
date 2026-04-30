@@ -48,6 +48,47 @@ from .emails import (
 )
 
 
+def _create_talent_payment_for_log(log):
+    defaults = {
+        "talent": log.talent,
+        "project": log.project,
+        "period_month": log.date.month,
+        "period_year": log.date.year,
+        "total_hours": log.hours_worked,
+        "total_amount": log.amount,
+        "notes": log.notes,
+    }
+    payment, created = TalentPayment.objects.get_or_create(
+        source_time_log=log,
+        defaults=defaults,
+    )
+
+    if not created:
+        update_fields = []
+        for field, value in defaults.items():
+            if getattr(payment, field) != value:
+                setattr(payment, field, value)
+                update_fields.append(field)
+        if update_fields:
+            payment.save(update_fields=update_fields)
+        return payment
+
+    if payment.project:
+        from apps.finance.models import Expense
+
+        Expense.objects.get_or_create(
+            project=payment.project,
+            category="talent",
+            amount=payment.total_amount,
+            date=log.date,
+            description=(
+                f"Talent payment: {payment.talent.user.get_full_name()} – {log.date.isoformat()}"
+            ),
+        )
+
+    return payment
+
+
 def _validate_talent_inquiry_token(consideration, token, expected_action):
     if not token:
         return
@@ -431,7 +472,7 @@ class TalentTimeLogViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = TalentTimeLog.objects.select_related(
-            "talent__user", "project", "shoot", "booking__shoot__project"
+            "talent__user", "project", "shoot", "booking__shoot__project", "payment"
         )
         user = self.request.user
         if user.role == "talent":
@@ -472,6 +513,8 @@ class TalentTimeLogViewSet(viewsets.ModelViewSet):
             extra["log_status"] = TalentTimeLog.LogStatus.APPROVED
 
         log = serializer.save(**extra)
+        if log.log_status == TalentTimeLog.LogStatus.APPROVED:
+            _create_talent_payment_for_log(log)
         if not log.notified:
             send_time_logged_notification(log)
             log.notified = True
@@ -480,8 +523,10 @@ class TalentTimeLogViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def approve(self, request, pk=None):
         log = self.get_object()
-        log.log_status = TalentTimeLog.LogStatus.APPROVED
-        log.save()
+        with transaction.atomic():
+            log.log_status = TalentTimeLog.LogStatus.APPROVED
+            log.save(update_fields=["log_status"])
+            _create_talent_payment_for_log(log)
         return Response(TalentTimeLogSerializer(log).data)
 
     @action(detail=True, methods=["post"])
@@ -497,7 +542,7 @@ class TalentPaymentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = TalentPayment.objects.select_related("talent__user", "project")
+        qs = TalentPayment.objects.select_related("talent__user", "project", "source_time_log")
         user = self.request.user
         if user.role == "talent":
             qs = qs.filter(talent__user=user)

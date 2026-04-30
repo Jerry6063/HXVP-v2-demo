@@ -5,7 +5,7 @@ import PerformanceAdmin from './PerformanceAdmin';
 
 const TABS = {
   roster: 'roster',
-  records: 'records',
+  timeLogs: 'time-logs',
 };
 
 export default function TalentsModule() {
@@ -13,7 +13,7 @@ export default function TalentsModule() {
 
   const activeTab = useMemo(() => {
     const tab = searchParams.get('tab');
-    return tab === TABS.records ? TABS.records : TABS.roster;
+    return tab === TABS.timeLogs || tab === 'records' ? TABS.timeLogs : TABS.roster;
   }, [searchParams]);
 
   const switchTab = (tab) => {
@@ -36,18 +36,18 @@ export default function TalentsModule() {
           Talents
         </button>
         <button
-          onClick={() => switchTab(TABS.records)}
+          onClick={() => switchTab(TABS.timeLogs)}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === TABS.records
+            activeTab === TABS.timeLogs
               ? 'bg-indigo-600 text-white'
               : 'text-gray-600 hover:bg-gray-100'
           }`}
         >
-          Performance & Campaign Records
+          Production Time Logs
         </button>
       </div>
 
-      {activeTab === TABS.records ? <PerformanceAdmin /> : <TalentPage />}
+      {activeTab === TABS.timeLogs ? <PerformanceAdmin /> : <TalentPage />}
     </div>
   );
 }

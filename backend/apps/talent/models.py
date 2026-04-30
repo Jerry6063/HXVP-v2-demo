@@ -251,7 +251,7 @@ class TalentAvailability(models.Model):
 
 
 class TalentPayment(models.Model):
-    """Monthly payment record for talent."""
+    """Payment record for talent, optionally linked to a source time log."""
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -259,6 +259,13 @@ class TalentPayment(models.Model):
 
     talent = models.ForeignKey(
         TalentProfile, on_delete=models.CASCADE, related_name="payments"
+    )
+    source_time_log = models.OneToOneField(
+        "talent.TalentTimeLog",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payment",
     )
     project = models.ForeignKey(
         "projects.Project", on_delete=models.SET_NULL, null=True, blank=True,
@@ -280,7 +287,6 @@ class TalentPayment(models.Model):
 
     class Meta:
         ordering = ["-period_year", "-period_month"]
-        unique_together = ["talent", "project", "period_month", "period_year"]
 
     def __str__(self):
         return f"{self.talent.user.get_full_name()} – {self.period_year}/{self.period_month}"

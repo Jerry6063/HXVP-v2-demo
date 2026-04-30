@@ -33,6 +33,9 @@ const colorMap = {
   verified: 'bg-green-100 text-green-700',
   overdue: 'bg-red-100 text-red-700',
   unpaid: 'bg-gray-100 text-gray-500',
+  awaiting_hours_confirmation: 'bg-gray-100 text-gray-600',
+  awaiting_admin_approval: 'bg-amber-100 text-amber-700',
+  awaiting_payment: 'bg-blue-100 text-blue-700',
 };
 
 export default function StatusBadge({ status }) {

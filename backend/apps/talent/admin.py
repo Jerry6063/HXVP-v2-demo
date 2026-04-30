@@ -35,11 +35,11 @@ class PerformanceRecordAdmin(admin.ModelAdmin):
 
 @admin.register(TalentTimeLog)
 class TalentTimeLogAdmin(admin.ModelAdmin):
-    list_display = ["talent", "project", "date", "hours_worked", "amount", "notified"]
-    list_filter = ["date"]
+    list_display = ["talent", "project", "date", "hours_worked", "amount", "log_status", "notified"]
+    list_filter = ["date", "log_status"]
 
 
 @admin.register(TalentPayment)
 class TalentPaymentAdmin(admin.ModelAdmin):
-    list_display = ["talent", "period_month", "period_year", "total_amount", "status"]
+    list_display = ["talent", "source_time_log", "period_month", "period_year", "total_amount", "status"]
     list_filter = ["status", "period_year"]

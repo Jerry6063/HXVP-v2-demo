@@ -19,6 +19,7 @@ from .models import (
     CrewProfile,
     CrewAvailability,
     CrewAssignment,
+    CrewTimeLog,
     Equipment,
     EquipmentCheckout,
     Evaluation,
@@ -28,11 +29,53 @@ from .serializers import (
     CrewProfileSerializer,
     CrewAvailabilitySerializer,
     CrewAssignmentSerializer,
+    CrewTimeLogSerializer,
     EquipmentSerializer,
     EquipmentCheckoutSerializer,
     EvaluationSerializer,
     CrewPaymentSerializer,
 )
+
+
+def _create_crew_payment_for_log(log):
+    defaults = {
+        "crew": log.crew,
+        "project": log.project,
+        "period_month": log.date.month,
+        "period_year": log.date.year,
+        "total_hours": log.hours_worked,
+        "total_amount": log.amount,
+        "notes": log.notes,
+    }
+    payment, created = CrewPayment.objects.get_or_create(
+        source_time_log=log,
+        defaults=defaults,
+    )
+
+    if not created:
+        update_fields = []
+        for field, value in defaults.items():
+            if getattr(payment, field) != value:
+                setattr(payment, field, value)
+                update_fields.append(field)
+        if update_fields:
+            payment.save(update_fields=update_fields)
+        return payment
+
+    if payment.project:
+        from apps.finance.models import Expense
+
+        Expense.objects.get_or_create(
+            project=payment.project,
+            category="crew",
+            amount=payment.total_amount,
+            date=log.date,
+            description=(
+                f"Crew payment: {payment.crew.user.get_full_name()} – {log.date.isoformat()}"
+            ),
+        )
+
+    return payment
 
 
 def _validate_crew_inquiry_token(consideration, token, expected_action):
@@ -331,6 +374,73 @@ class CrewAssignmentViewSet(viewsets.ModelViewSet):
         return Response(CrewAssignmentSerializer(assignment).data)
 
 
+class CrewTimeLogViewSet(viewsets.ModelViewSet):
+    serializer_class = CrewTimeLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = CrewTimeLog.objects.select_related(
+            "crew__user", "project", "shoot", "assignment__shoot__project", "payment"
+        )
+        user = self.request.user
+        if user.role == "crew":
+            qs = qs.filter(crew__user=user)
+        crew_id = self.request.query_params.get("crew")
+        if crew_id:
+            qs = qs.filter(crew_id=crew_id)
+        project = self.request.query_params.get("project")
+        if project:
+            qs = qs.filter(project_id=project)
+        assignment = self.request.query_params.get("assignment")
+        if assignment:
+            qs = qs.filter(assignment_id=assignment)
+        return qs
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        extra = {}
+
+        if user.role == "crew":
+            profile = user.crew_profile
+            extra["crew"] = profile
+            extra["log_status"] = CrewTimeLog.LogStatus.PENDING
+
+            assignment_id = self.request.data.get("assignment")
+            if assignment_id:
+                assignment = CrewAssignment.objects.select_related("shoot__project").get(
+                    id=assignment_id,
+                    crew=profile,
+                )
+                extra["assignment"] = assignment
+                extra["shoot"] = assignment.shoot
+                extra["project"] = assignment.shoot.project
+                extra["date"] = assignment.shoot.shoot_date
+                if not self.request.data.get("rate_applied"):
+                    extra["rate_applied"] = profile.hourly_rate
+        else:
+            extra["log_status"] = CrewTimeLog.LogStatus.APPROVED
+
+        log = serializer.save(**extra)
+        if log.log_status == CrewTimeLog.LogStatus.APPROVED:
+            _create_crew_payment_for_log(log)
+
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        log = self.get_object()
+        with transaction.atomic():
+            log.log_status = CrewTimeLog.LogStatus.APPROVED
+            log.save(update_fields=["log_status"])
+            _create_crew_payment_for_log(log)
+        return Response(CrewTimeLogSerializer(log).data)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        log = self.get_object()
+        log.log_status = CrewTimeLog.LogStatus.REJECTED
+        log.save(update_fields=["log_status"])
+        return Response(CrewTimeLogSerializer(log).data)
+
+
 class CrewAvailabilityInquiryViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CrewConsiderationSerializer
     permission_classes = [IsCrew]
@@ -435,7 +545,7 @@ class CrewPaymentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = CrewPayment.objects.select_related("crew__user", "project")
+        qs = CrewPayment.objects.select_related("crew__user", "project", "source_time_log")
         user = self.request.user
         if user.role == "crew":
             qs = qs.filter(crew__user=user)

@@ -5,7 +5,10 @@ import {
   useCrewAssignments,
   useCrewAvailabilityInquiries,
   useAcceptAssignment,
+  useCreateCrewTimeLog,
   useDeclineAssignment,
+  useCrewTimeLogs,
+  useMyCrewProfile,
   useRespondCrewAvailabilityInquiry,
 } from '../../api/hooks';
 import StatusBadge from '../../components/StatusBadge';
@@ -23,13 +26,19 @@ export default function CrewAssignments() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: allData, isLoading: isAssignmentsLoading } = useCrewAssignments();
   const { data: inquiriesData, isLoading: isInquiriesLoading } = useCrewAvailabilityInquiries();
+  const { data: crewTimeLogsData, isLoading: isTimeLogsLoading } = useCrewTimeLogs();
+  const { data: profile } = useMyCrewProfile();
   const acceptAssignment = useAcceptAssignment();
   const declineAssignment = useDeclineAssignment();
+  const createCrewTimeLog = useCreateCrewTimeLog();
   const acceptInquiry = useRespondCrewAvailabilityInquiry('accept');
   const declineInquiry = useRespondCrewAvailabilityInquiry('decline');
+  const [openLogFormId, setOpenLogFormId] = useState(null);
+  const [logDrafts, setLogDrafts] = useState({});
 
   const allAssignments = useMemo(() => allData?.results || allData || [], [allData]);
   const inquiries = useMemo(() => inquiriesData?.results || inquiriesData || [], [inquiriesData]);
+  const crewTimeLogs = useMemo(() => crewTimeLogsData?.results || crewTimeLogsData || [], [crewTimeLogsData]);
   const inquiryId = Number(searchParams.get('inquiry')) || null;
   const inquiryToken = searchParams.get('token') || '';
   const inquiryAction = searchParams.get('action') || '';
@@ -62,7 +71,31 @@ export default function CrewAssignments() {
   const activeList =
     tab === 'pending' ? pending : tab === 'upcoming' ? upcoming : tab === 'past' ? past : declined;
 
-  const isLoading = isAssignmentsLoading || isInquiriesLoading;
+  const isLoading = isAssignmentsLoading || isInquiriesLoading || isTimeLogsLoading;
+
+  const updateLogDraft = (assignmentId, key, value) => {
+    setLogDrafts((current) => ({
+      ...current,
+      [assignmentId]: {
+        ...(current[assignmentId] || { hours: '', notes: '' }),
+        [key]: value,
+      },
+    }));
+  };
+
+  const handleSubmitTimeLog = async (assignmentId) => {
+    const draft = logDrafts[assignmentId] || {};
+    await createCrewTimeLog.mutateAsync({
+      assignment: assignmentId,
+      hours_worked: Number(draft.hours),
+      notes: draft.notes || '',
+    });
+    setLogDrafts((current) => ({
+      ...current,
+      [assignmentId]: { hours: '', notes: '' },
+    }));
+    setOpenLogFormId(null);
+  };
 
   const clearInquiryParams = () => {
     const nextParams = new URLSearchParams(searchParams);
@@ -232,6 +265,9 @@ export default function CrewAssignments() {
         <div className="space-y-4">
           {activeList.map((a) => {
             const s = a.shoot_detail;
+            const logs = crewTimeLogs.filter((log) => String(log.assignment) === String(a.id));
+            const draft = logDrafts[a.id] || { hours: '', notes: '' };
+            const showTimeLogSection = tab === 'past' && a.status === 'accepted';
             return (
               <div key={a.id} className="bg-white rounded-xl shadow p-5">
                 <div className="flex items-start justify-between mb-4">
@@ -286,6 +322,116 @@ export default function CrewAssignments() {
                 {s?.comments && (
                   <div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
                     <span className="font-medium">Notes:</span> {s.comments}
+                  </div>
+                )}
+
+                {showTimeLogSection && (
+                  <div className="mt-5 border-t border-gray-100 pt-5 space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Time Logs</h4>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Submit your worked hours for this assignment. Production will review them before payment.
+                        </p>
+                      </div>
+                      {openLogFormId !== a.id && (
+                        <button
+                          onClick={() => setOpenLogFormId(a.id)}
+                          className="px-4 py-2 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700"
+                        >
+                          + Log Time
+                        </button>
+                      )}
+                    </div>
+
+                    {openLogFormId === a.id && (
+                      <form
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          handleSubmitTimeLog(a.id);
+                        }}
+                        className="p-4 bg-sky-50 rounded-lg space-y-3"
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Hours Worked</label>
+                            <input
+                              type="number"
+                              step="0.25"
+                              min="0.25"
+                              value={draft.hours}
+                              onChange={(event) => updateLogDraft(a.id, 'hours', event.target.value)}
+                              required
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none"
+                              placeholder="e.g. 10"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Your Rate</label>
+                            <div className="px-3 py-2 bg-white border border-sky-100 rounded-lg text-sm text-gray-600">
+                              ${profile?.hourly_rate || '—'}/hr
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Notes (optional)</label>
+                          <input
+                            type="text"
+                            value={draft.notes}
+                            onChange={(event) => updateLogDraft(a.id, 'notes', event.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 outline-none"
+                            placeholder="e.g. Overtime, extra setup, gear wrap"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="submit"
+                            disabled={createCrewTimeLog.isPending}
+                            className="px-5 py-2 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 disabled:opacity-50"
+                          >
+                            {createCrewTimeLog.isPending ? 'Submitting...' : 'Submit Time Log'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOpenLogFormId(null)}
+                            className="px-5 py-2 bg-white text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+
+                    {logs.length === 0 ? (
+                      <div className="text-sm text-gray-400">No time logs submitted yet.</div>
+                    ) : (
+                      <div className="overflow-hidden rounded-lg border border-gray-100">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="text-left text-xs text-gray-500 uppercase bg-gray-50">
+                              <th className="px-4 py-2">Date</th>
+                              <th className="px-4 py-2">Hours</th>
+                              <th className="px-4 py-2">Rate</th>
+                              <th className="px-4 py-2">Amount</th>
+                              <th className="px-4 py-2">Status</th>
+                              <th className="px-4 py-2">Notes</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {logs.map((log) => (
+                              <tr key={log.id}>
+                                <td className="px-4 py-2 text-gray-700">{log.date}</td>
+                                <td className="px-4 py-2 text-gray-700">{log.hours_worked}h</td>
+                                <td className="px-4 py-2 text-gray-500">${Number(log.rate_applied).toLocaleString()}/hr</td>
+                                <td className="px-4 py-2 font-medium text-gray-900">${Number(log.amount).toLocaleString()}</td>
+                                <td className="px-4 py-2"><StatusBadge status={log.log_status} /></td>
+                                <td className="px-4 py-2 text-gray-400 text-xs">{log.notes || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

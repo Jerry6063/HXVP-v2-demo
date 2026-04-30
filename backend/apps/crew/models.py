@@ -126,6 +126,55 @@ class CrewAssignment(models.Model):
         return f"{self.crew} – {self.shoot}"
 
 
+class CrewTimeLog(models.Model):
+    """Hours worked by crew, submitted by crew or logged by admin."""
+
+    class LogStatus(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    crew = models.ForeignKey(
+        CrewProfile, on_delete=models.CASCADE, related_name="time_logs"
+    )
+    assignment = models.ForeignKey(
+        "crew.CrewAssignment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="time_logs",
+    )
+    shoot = models.ForeignKey(
+        "projects.Shoot", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    project = models.ForeignKey(
+        "projects.Project", on_delete=models.CASCADE, related_name="crew_time_logs"
+    )
+    date = models.DateField()
+    hours_worked = models.DecimalField(max_digits=6, decimal_places=2)
+    rate_applied = models.DecimalField(max_digits=8, decimal_places=2)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    log_status = models.CharField(
+        max_length=20, choices=LogStatus.choices, default=LogStatus.APPROVED
+    )
+    notes = models.TextField(blank=True)
+    notified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date"]
+
+    def save(self, *args, **kwargs):
+        if not self.rate_applied:
+            self.rate_applied = self.crew.hourly_rate
+        if not self.amount:
+            self.amount = self.hours_worked * self.rate_applied
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.crew.user.get_full_name()} – {self.hours_worked}h on {self.date}"
+
+
 class Equipment(models.Model):
     class Type(models.TextChoices):
         CAMERA = "camera", "Camera"
@@ -232,7 +281,7 @@ class Evaluation(models.Model):
 
 
 class CrewPayment(models.Model):
-    """Per-production payment record for a crew member."""
+    """Payment record for a crew member, optionally linked to a source time log."""
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -240,6 +289,13 @@ class CrewPayment(models.Model):
 
     crew = models.ForeignKey(
         CrewProfile, on_delete=models.CASCADE, related_name="payments"
+    )
+    source_time_log = models.OneToOneField(
+        "crew.CrewTimeLog",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payment",
     )
     project = models.ForeignKey(
         "projects.Project",
@@ -264,7 +320,6 @@ class CrewPayment(models.Model):
 
     class Meta:
         ordering = ["-period_year", "-period_month"]
-        unique_together = ["crew", "project", "period_month", "period_year"]
 
     def __str__(self):
         return f"{self.crew.user.get_full_name()} – {self.period_year}/{self.period_month}"

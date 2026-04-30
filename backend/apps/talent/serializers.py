@@ -124,6 +124,8 @@ class TalentTimeLogSerializer(serializers.ModelSerializer):
     project_name = serializers.SerializerMethodField()
     shoot_date = serializers.SerializerMethodField()
     booking_detail = serializers.SerializerMethodField()
+    payment_id = serializers.SerializerMethodField()
+    payment_status = serializers.SerializerMethodField()
 
     class Meta:
         model = TalentTimeLog
@@ -149,11 +151,21 @@ class TalentTimeLogSerializer(serializers.ModelSerializer):
             "project_name": shoot.project.name if shoot and shoot.project else None,
         }
 
+    def get_payment_id(self, obj):
+        payment = getattr(obj, "payment", None)
+        return payment.id if payment else None
+
+    def get_payment_status(self, obj):
+        payment = getattr(obj, "payment", None)
+        return payment.status if payment else None
+
 
 class TalentPaymentSerializer(serializers.ModelSerializer):
     talent_name = serializers.SerializerMethodField()
     project_name = serializers.SerializerMethodField()
     period_label = serializers.SerializerMethodField()
+    source_time_log_status = serializers.SerializerMethodField()
+    source_time_log_date = serializers.SerializerMethodField()
 
     class Meta:
         model = TalentPayment
@@ -169,6 +181,12 @@ class TalentPaymentSerializer(serializers.ModelSerializer):
         import calendar
         month_name = calendar.month_name[obj.period_month]
         return f"{month_name} {obj.period_year}"
+
+    def get_source_time_log_status(self, obj):
+        return obj.source_time_log.log_status if obj.source_time_log else None
+
+    def get_source_time_log_date(self, obj):
+        return obj.source_time_log.date if obj.source_time_log else None
 
 
 class TalentAvailabilitySerializer(serializers.ModelSerializer):

@@ -4,6 +4,7 @@ from .models import (
     CrewProfile,
     CrewAvailability,
     CrewAssignment,
+    CrewTimeLog,
     Equipment,
     EquipmentCheckout,
     Evaluation,
@@ -78,6 +79,48 @@ class CrewAssignmentSerializer(serializers.ModelSerializer):
         return obj.shoot.project.name if obj.shoot and obj.shoot.project else None
 
 
+class CrewTimeLogSerializer(serializers.ModelSerializer):
+    crew_name = serializers.SerializerMethodField()
+    project_name = serializers.SerializerMethodField()
+    shoot_date = serializers.SerializerMethodField()
+    assignment_detail = serializers.SerializerMethodField()
+    payment_id = serializers.SerializerMethodField()
+    payment_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CrewTimeLog
+        fields = "__all__"
+
+    def get_crew_name(self, obj):
+        return obj.crew.user.get_full_name()
+
+    def get_project_name(self, obj):
+        return obj.project.name if obj.project else None
+
+    def get_shoot_date(self, obj):
+        return obj.shoot.shoot_date if obj.shoot else None
+
+    def get_assignment_detail(self, obj):
+        if not obj.assignment:
+            return None
+        shoot = obj.assignment.shoot
+        return {
+            "id": obj.assignment.id,
+            "shoot_date": shoot.shoot_date if shoot else None,
+            "location": shoot.location if shoot else None,
+            "project_name": shoot.project.name if shoot and shoot.project else None,
+            "role_on_shoot": obj.assignment.role_on_shoot,
+        }
+
+    def get_payment_id(self, obj):
+        payment = getattr(obj, "payment", None)
+        return payment.id if payment else None
+
+    def get_payment_status(self, obj):
+        payment = getattr(obj, "payment", None)
+        return payment.status if payment else None
+
+
 class EquipmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Equipment
@@ -120,6 +163,8 @@ class CrewPaymentSerializer(serializers.ModelSerializer):
     crew_name = serializers.SerializerMethodField()
     project_name = serializers.SerializerMethodField()
     period_label = serializers.SerializerMethodField()
+    source_time_log_status = serializers.SerializerMethodField()
+    source_time_log_date = serializers.SerializerMethodField()
 
     class Meta:
         model = CrewPayment
@@ -134,3 +179,9 @@ class CrewPaymentSerializer(serializers.ModelSerializer):
     def get_period_label(self, obj):
         import calendar
         return f"{calendar.month_name[obj.period_month]} {obj.period_year}"
+
+    def get_source_time_log_status(self, obj):
+        return obj.source_time_log.log_status if obj.source_time_log else None
+
+    def get_source_time_log_date(self, obj):
+        return obj.source_time_log.date if obj.source_time_log else None
