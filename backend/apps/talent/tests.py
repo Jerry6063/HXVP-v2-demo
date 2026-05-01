@@ -86,3 +86,54 @@ class TalentTimeLogApprovalTests(APITestCase):
             Expense.objects.filter(project=self.project, category=Expense.Category.TALENT).count(),
             1,
         )
+
+
+class TalentTimeLogCreationTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        self.talent_user = User.objects.create_user(
+            email='talent-create@example.com',
+            password='password123',
+            first_name='Taylor',
+            last_name='Creator',
+            role=User.Role.TALENT,
+        )
+        self.talent_profile = TalentProfile.objects.create(
+            user=self.talent_user,
+            hourly_rate=Decimal('125.00'),
+            approval_status=TalentProfile.ApprovalStatus.APPROVED,
+        )
+        self.project = Project.objects.create(name='Wrapped Shoot')
+        self.shoot = Shoot.objects.create(
+            project=self.project,
+            shoot_date=date(2026, 4, 20),
+            call_time=time(9, 0),
+            est_wrap_time=time(17, 0),
+            location='Studio B',
+        )
+        self.booking = Booking.objects.create(
+            shoot=self.shoot,
+            talent=self.talent_profile,
+            status=Booking.Status.ACCEPTED,
+        )
+        self.client.force_authenticate(self.talent_user)
+
+    def test_talent_can_create_time_log_with_booking_and_hours_only(self):
+        response = self.client.post(
+            '/api/talent/timelogs/',
+            {
+                'booking': self.booking.id,
+                'hours_worked': '8.00',
+                'notes': 'Wrapped on schedule.',
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        log = TalentTimeLog.objects.get(booking=self.booking)
+        self.assertEqual(log.talent, self.talent_profile)
+        self.assertEqual(log.shoot, self.shoot)
+        self.assertEqual(log.project, self.project)
+        self.assertEqual(log.date, self.shoot.shoot_date)
+        self.assertEqual(log.rate_applied, Decimal('125.00'))
+        self.assertEqual(log.amount, Decimal('1000.00'))
+        self.assertEqual(log.log_status, TalentTimeLog.LogStatus.PENDING)

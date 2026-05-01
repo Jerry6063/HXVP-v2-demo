@@ -130,6 +130,17 @@ class TalentTimeLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = TalentTimeLog
         fields = "__all__"
+        extra_kwargs = {
+            "talent": {"required": False},
+            "booking": {"required": False},
+            "shoot": {"required": False},
+            "project": {"required": False},
+            "date": {"required": False},
+            "rate_applied": {"required": False},
+            "amount": {"required": False},
+            "log_status": {"required": False},
+            "notified": {"required": False},
+        }
 
     def get_talent_name(self, obj):
         return obj.talent.user.get_full_name()

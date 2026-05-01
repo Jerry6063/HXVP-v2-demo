@@ -90,6 +90,16 @@ class CrewTimeLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = CrewTimeLog
         fields = "__all__"
+        extra_kwargs = {
+            "crew": {"required": False},
+            "assignment": {"required": False},
+            "shoot": {"required": False},
+            "project": {"required": False},
+            "date": {"required": False},
+            "rate_applied": {"required": False},
+            "amount": {"required": False},
+            "log_status": {"required": False},
+        }
 
     def get_crew_name(self, obj):
         return obj.crew.user.get_full_name()

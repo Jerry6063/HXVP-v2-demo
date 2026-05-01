@@ -87,3 +87,55 @@ class CrewTimeLogApprovalTests(APITestCase):
             Expense.objects.filter(project=self.project, category=Expense.Category.CREW).count(),
             1,
         )
+
+
+class CrewTimeLogCreationTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        self.crew_user = User.objects.create_user(
+            email='crew-create@example.com',
+            password='password123',
+            first_name='Casey',
+            last_name='Creator',
+            role=User.Role.CREW,
+        )
+        self.crew_profile = CrewProfile.objects.create(
+            user=self.crew_user,
+            crew_role=CrewProfile.CrewRole.PHOTOGRAPHER,
+            hourly_rate=Decimal('95.00'),
+        )
+        self.project = Project.objects.create(name='Crew Wrapped Shoot')
+        self.shoot = Shoot.objects.create(
+            project=self.project,
+            shoot_date=date(2026, 4, 18),
+            call_time=time(8, 30),
+            est_wrap_time=time(16, 30),
+            location='Stage C',
+        )
+        self.assignment = CrewAssignment.objects.create(
+            shoot=self.shoot,
+            crew=self.crew_profile,
+            role_on_shoot=CrewProfile.CrewRole.PHOTOGRAPHER,
+            status=CrewAssignment.Status.ACCEPTED,
+        )
+        self.client.force_authenticate(self.crew_user)
+
+    def test_crew_can_create_time_log_with_assignment_and_hours_only(self):
+        response = self.client.post(
+            '/api/crew/timelogs/',
+            {
+                'assignment': self.assignment.id,
+                'hours_worked': '9.00',
+                'notes': 'Wrapped with gear return.',
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        log = CrewTimeLog.objects.get(assignment=self.assignment)
+        self.assertEqual(log.crew, self.crew_profile)
+        self.assertEqual(log.shoot, self.shoot)
+        self.assertEqual(log.project, self.project)
+        self.assertEqual(log.date, self.shoot.shoot_date)
+        self.assertEqual(log.rate_applied, Decimal('95.00'))
+        self.assertEqual(log.amount, Decimal('855.00'))
+        self.assertEqual(log.log_status, CrewTimeLog.LogStatus.PENDING)
