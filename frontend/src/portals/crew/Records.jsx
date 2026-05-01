@@ -1,116 +1,93 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  useBookings,
-  useCreateTalentTimeLog,
-  useMyTalentProfile,
-  usePerformanceRecords,
-  useTalentTimeLogs,
+  useCreateCrewTimeLog,
+  useCrewAssignments,
+  useCrewTimeLogs,
+  useMyCrewProfile,
 } from '../../api/hooks';
 import StatusBadge from '../../components/StatusBadge';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import {
   CalendarDaysIcon,
   ClockIcon,
-  DocumentTextIcon,
-  FilmIcon,
+  ClipboardDocumentListIcon,
   MapPinIcon,
-  MegaphoneIcon,
-  PhotoIcon,
-  VideoCameraIcon,
 } from '@heroicons/react/24/outline';
 
-const typeIcons = {
-  acting: FilmIcon,
-  livestream: VideoCameraIcon,
-  commercial: MegaphoneIcon,
-  print: PhotoIcon,
-  other: DocumentTextIcon,
-};
-
-const typeLabels = {
-  acting: 'Acting Performance',
-  livestream: 'Livestream Campaign',
-  commercial: 'Commercial',
-  print: 'Print Campaign',
-  other: 'Other',
-};
-
-export default function TalentRecords() {
+export default function CrewRecords() {
   const [searchParams] = useSearchParams();
-  const targetBookingId = searchParams.get('booking') || '';
+  const targetAssignmentId = searchParams.get('assignment') || '';
   const [openFormId, setOpenFormId] = useState(null);
   const [drafts, setDrafts] = useState({});
-  const { data: bookingsData, isLoading: bookingsLoading } = useBookings();
-  const { data: timeLogsData, isLoading: timeLogsLoading } = useTalentTimeLogs();
-  const { data: profile } = useMyTalentProfile();
-  const { data: recordsData, isLoading: recordsLoading } = usePerformanceRecords();
-  const createTimeLog = useCreateTalentTimeLog();
+  const { data: assignmentsData, isLoading: assignmentsLoading } = useCrewAssignments();
+  const { data: timeLogsData, isLoading: timeLogsLoading } = useCrewTimeLogs();
+  const { data: profile } = useMyCrewProfile();
+  const createTimeLog = useCreateCrewTimeLog();
 
-  const bookings = bookingsData?.results || bookingsData || [];
+  const assignments = assignmentsData?.results || assignmentsData || [];
   const timeLogs = timeLogsData?.results || timeLogsData || [];
-  const records = recordsData?.results || recordsData || [];
 
-  const acceptedBookings = useMemo(
-    () => bookings.filter((booking) => booking.status === 'accepted'),
-    [bookings]
+  const acceptedAssignments = useMemo(
+    () => assignments.filter((assignment) => assignment.status === 'accepted'),
+    [assignments]
   );
 
-  const bookingCards = useMemo(
+  const assignmentCards = useMemo(
     () =>
-      acceptedBookings.map((booking) => ({
-        booking,
-        shoot: booking.shoot_detail,
-        hasWrapped: hasShootWrapped(booking.shoot_detail),
-        logs: timeLogs.filter((log) => String(log.booking) === String(booking.id)),
+      acceptedAssignments.map((assignment) => ({
+        assignment,
+        shoot: assignment.shoot_detail,
+        hasWrapped: hasShootWrapped(assignment.shoot_detail),
+        logs: timeLogs.filter((log) => String(log.assignment) === String(assignment.id)),
       })),
-    [acceptedBookings, timeLogs]
+    [acceptedAssignments, timeLogs]
   );
 
-  const eligibleBookings = bookingCards.filter((item) => item.hasWrapped);
-  const upcomingBookings = bookingCards.filter((item) => !item.hasWrapped);
+  const eligibleAssignments = assignmentCards.filter((item) => item.hasWrapped);
+  const upcomingAssignments = assignmentCards.filter((item) => !item.hasWrapped);
 
   useEffect(() => {
-    if (!targetBookingId) {
+    if (!targetAssignmentId) {
       return;
     }
 
-    const targetBooking = eligibleBookings.find(
-      (item) => String(item.booking.id) === String(targetBookingId)
+    const targetAssignment = eligibleAssignments.find(
+      (item) => String(item.assignment.id) === String(targetAssignmentId)
     );
 
-    if (targetBooking) {
-      setOpenFormId(String(targetBooking.booking.id));
+    if (targetAssignment) {
+      setOpenFormId(String(targetAssignment.assignment.id));
     }
-  }, [eligibleBookings, targetBookingId]);
+  }, [eligibleAssignments, targetAssignmentId]);
 
-  const handleDraftChange = (bookingId, key, value) => {
+  const handleDraftChange = (assignmentId, key, value) => {
     setDrafts((current) => ({
       ...current,
-      [bookingId]: {
-        ...(current[bookingId] || { hours: '', notes: '' }),
+      [assignmentId]: {
+        ...(current[assignmentId] || { hours: '', notes: '' }),
         [key]: value,
       },
     }));
   };
 
-  const handleSubmit = async (bookingId) => {
-    const draft = drafts[bookingId] || {};
+  const handleSubmit = async (assignmentId) => {
+    const draft = drafts[assignmentId] || {};
 
     await createTimeLog.mutateAsync({
-      booking: bookingId,
+      assignment: assignmentId,
       hours_worked: Number(draft.hours),
       notes: draft.notes || '',
     });
 
     setDrafts((current) => ({
       ...current,
-      [bookingId]: { hours: '', notes: '' },
+      [assignmentId]: { hours: '', notes: '' },
     }));
     setOpenFormId(null);
   };
 
-  if (bookingsLoading || timeLogsLoading || recordsLoading) {
+  if (assignmentsLoading || timeLogsLoading) {
     return <LoadingSpinner />;
   }
 
@@ -119,7 +96,7 @@ export default function TalentRecords() {
       <div className="space-y-2">
         <h1 className="text-2xl font-bold text-gray-900">Records</h1>
         <p className="text-sm text-gray-500 max-w-3xl">
-          Submit production hours from Records after each shoot wraps, then track the submitted logs and your performance history in one place.
+          Submit production hours from Records once an assignment wraps. Approved logs will move into Payments after production review.
         </p>
       </div>
 
@@ -127,27 +104,27 @@ export default function TalentRecords() {
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Production Time Logs</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Once a shoot has wrapped, submit your hours here for production approval. Approved logs will flow into Payments automatically.
+            <p className="mt-1 text-sm text-gray-500">
+              Use Records as the single submission point for your wrapped assignments and keep the full submission history visible here.
             </p>
           </div>
           <Link
-            to="/talent/payments"
-            className="inline-flex items-center justify-center rounded-lg border border-amber-200 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50"
+            to="/crew/payments"
+            className="inline-flex items-center justify-center rounded-lg border border-sky-200 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-50"
           >
             View Payments
           </Link>
         </div>
 
-        {eligibleBookings.length === 0 ? (
+        {eligibleAssignments.length === 0 ? (
           <div className="rounded-xl border border-gray-100 bg-white p-10 text-center text-sm text-gray-400 shadow-sm">
-            No wrapped accepted shoots are ready for time log submission yet.
+            No wrapped accepted assignments are ready for time log submission yet.
           </div>
         ) : (
           <div className="space-y-4">
-            {eligibleBookings.map(({ booking, shoot, logs }) => {
-              const draft = drafts[booking.id] || { hours: '', notes: '' };
-              const highlight = String(booking.id) === String(targetBookingId);
+            {eligibleAssignments.map(({ assignment, shoot, logs }) => {
+              const draft = drafts[assignment.id] || { hours: '', notes: '' };
+              const highlight = String(assignment.id) === String(targetAssignmentId);
               const rate = Number(profile?.hourly_rate);
               const hours = Number(draft.hours);
               const estimatedAmount =
@@ -157,19 +134,22 @@ export default function TalentRecords() {
 
               return (
                 <div
-                  key={booking.id}
+                  key={assignment.id}
                   className={`rounded-xl border bg-white p-5 shadow-sm ${
-                    highlight ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-100'
+                    highlight ? 'border-sky-300 ring-2 ring-sky-100' : 'border-gray-100'
                   }`}
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <h3 className="text-base font-semibold text-gray-900">
-                          {shoot?.project_name || shoot?.location || 'Shoot'}
+                          {assignment.project_name || shoot?.location || 'Assignment'}
                         </h3>
-                        <StatusBadge status={booking.status} />
+                        <StatusBadge status={assignment.status} />
                       </div>
+                      <p className="text-sm text-gray-500 capitalize">
+                        Role: {assignment.role_on_shoot?.replace(/_/g, ' ') || 'Crew'}
+                      </p>
                       <div className="grid gap-2 text-sm text-gray-500 md:grid-cols-3">
                         <RecordMeta icon={CalendarDaysIcon} value={formatDate(shoot?.shoot_date)} />
                         <RecordMeta icon={ClockIcon} value={`Wrap ${shoot?.est_wrap_time || 'TBD'}`} />
@@ -177,19 +157,19 @@ export default function TalentRecords() {
                       </div>
                       <p className="text-xs text-gray-500">
                         {logs.length > 0
-                          ? `${logs.length} time log${logs.length > 1 ? 's' : ''} submitted for this booking.`
-                          : 'No time logs submitted for this booking yet.'}
+                          ? `${logs.length} time log${logs.length > 1 ? 's' : ''} submitted for this assignment.`
+                          : 'No time logs submitted for this assignment yet.'}
                       </p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
                       <Link
-                        to={`/talent/bookings/${booking.id}`}
+                        to="/crew/assignments"
                         className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
                       >
-                        View Booking
+                        View Assignments
                       </Link>
-                      {openFormId === String(booking.id) ? (
+                      {openFormId === String(assignment.id) ? (
                         <button
                           type="button"
                           onClick={() => setOpenFormId(null)}
@@ -200,8 +180,8 @@ export default function TalentRecords() {
                       ) : (
                         <button
                           type="button"
-                          onClick={() => setOpenFormId(String(booking.id))}
-                          className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700"
+                          onClick={() => setOpenFormId(String(assignment.id))}
+                          className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700"
                         >
                           Log Time
                         </button>
@@ -209,13 +189,13 @@ export default function TalentRecords() {
                     </div>
                   </div>
 
-                  {openFormId === String(booking.id) && (
+                  {openFormId === String(assignment.id) && (
                     <form
                       onSubmit={(event) => {
                         event.preventDefault();
-                        handleSubmit(booking.id);
+                        handleSubmit(assignment.id);
                       }}
-                      className="mt-5 space-y-3 rounded-lg bg-amber-50 p-4"
+                      className="mt-5 space-y-3 rounded-lg bg-sky-50 p-4"
                     >
                       <div className="grid gap-4 md:grid-cols-2">
                         <div>
@@ -226,16 +206,16 @@ export default function TalentRecords() {
                             min="0.25"
                             value={draft.hours}
                             onChange={(event) =>
-                              handleDraftChange(booking.id, 'hours', event.target.value)
+                              handleDraftChange(assignment.id, 'hours', event.target.value)
                             }
                             required
-                            className="w-full rounded-lg border border-amber-200 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
-                            placeholder="e.g. 8"
+                            className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none"
+                            placeholder="e.g. 10"
                           />
                         </div>
                         <div>
                           <label className="mb-1 block text-xs text-gray-500">Your Rate</label>
-                          <div className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-gray-600">
+                          <div className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm text-gray-600">
                             ${profile?.hourly_rate || '—'}/hr
                             {estimatedAmount ? (
                               <span className="ml-2 text-gray-400">(est. ${estimatedAmount})</span>
@@ -249,17 +229,17 @@ export default function TalentRecords() {
                           type="text"
                           value={draft.notes}
                           onChange={(event) =>
-                            handleDraftChange(booking.id, 'notes', event.target.value)
+                            handleDraftChange(assignment.id, 'notes', event.target.value)
                           }
-                          className="w-full rounded-lg border border-amber-200 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
-                          placeholder="e.g. Overtime, delayed wrap"
+                          className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 outline-none"
+                          placeholder="e.g. Overtime, extra setup, gear wrap"
                         />
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="submit"
                           disabled={createTimeLog.isPending}
-                          className="rounded-lg bg-amber-600 px-5 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                          className="rounded-lg bg-sky-600 px-5 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
                         >
                           {createTimeLog.isPending ? 'Submitting...' : 'Submit Time Log'}
                         </button>
@@ -317,33 +297,33 @@ export default function TalentRecords() {
           </div>
         )}
 
-        {upcomingBookings.length > 0 && (
+        {upcomingAssignments.length > 0 && (
           <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="text-base font-semibold text-gray-900">Upcoming or Still Wrapping</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  These accepted bookings will open for time log submission in Records after the shoot wraps.
+                  These accepted assignments will unlock for time log submission here after the shoot wraps.
                 </p>
               </div>
               <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">
-                {upcomingBookings.length} booking{upcomingBookings.length > 1 ? 's' : ''}
+                {upcomingAssignments.length} assignment{upcomingAssignments.length > 1 ? 's' : ''}
               </span>
             </div>
             <div className="mt-4 space-y-3">
-              {upcomingBookings.map(({ booking, shoot }) => (
+              {upcomingAssignments.map(({ assignment, shoot }) => (
                 <div
-                  key={booking.id}
+                  key={assignment.id}
                   className={`rounded-lg border px-4 py-3 ${
-                    String(booking.id) === String(targetBookingId)
-                      ? 'border-amber-300 bg-amber-50'
+                    String(assignment.id) === String(targetAssignmentId)
+                      ? 'border-sky-300 bg-sky-50'
                       : 'border-gray-100 bg-gray-50'
                   }`}
                 >
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <div className="text-sm font-medium text-gray-900">
-                        {shoot?.project_name || shoot?.location || 'Shoot'}
+                        {assignment.project_name || shoot?.location || 'Assignment'}
                       </div>
                       <div className="mt-1 flex flex-wrap gap-3 text-xs text-gray-500">
                         <span>{formatDate(shoot?.shoot_date)}</span>
@@ -351,69 +331,19 @@ export default function TalentRecords() {
                         <span>{shoot?.location || 'Location TBD'}</span>
                       </div>
                     </div>
-                    <Link
-                      to={`/talent/bookings/${booking.id}`}
-                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-white"
-                    >
-                      View Booking
-                    </Link>
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-500">
+                      Open after wrap
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
         )}
-      </section>
 
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Performance & Campaign Records</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Keep your portfolio history alongside production work records.
-          </p>
-        </div>
-
-        {records.length === 0 ? (
-          <div className="rounded-xl border border-gray-100 bg-white p-12 text-center text-sm text-gray-400 shadow-sm">
-            No performance records yet.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {records.map((record) => {
-              const Icon = typeIcons[record.record_type] || DocumentTextIcon;
-
-              return (
-                <div key={record.id} className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="rounded-lg bg-amber-50 p-2.5">
-                      <Icon className="h-5 w-5 text-amber-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="font-semibold text-gray-900">{record.title}</h3>
-                        <span className="text-xs text-gray-400">{formatDate(record.date)}</span>
-                      </div>
-                      <p className="mt-0.5 text-xs font-medium text-amber-600">
-                        {typeLabels[record.record_type] || record.record_type}
-                      </p>
-                      {record.client_name && (
-                        <p className="mt-1 text-sm text-gray-600">Client: {record.client_name}</p>
-                      )}
-                      {record.project_name && (
-                        <p className="text-sm text-gray-500">Project: {record.project_name}</p>
-                      )}
-                      {record.description && (
-                        <p className="mt-2 text-sm text-gray-600">{record.description}</p>
-                      )}
-                      <div className="mt-2 flex gap-4 text-xs text-gray-400">
-                        {record.duration_hours > 0 && <span>{record.duration_hours}h duration</span>}
-                        {record.notes && <span>{record.notes}</span>}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+        {acceptedAssignments.length === 0 && (
+          <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-10 text-center text-sm text-gray-400">
+            Once you accept assignments, this Records page will list them here for time-log submission and history.
           </div>
         )}
       </section>

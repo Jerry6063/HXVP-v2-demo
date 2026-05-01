@@ -85,6 +85,8 @@ const portalConfigs = {
       { name: 'My Profile', to: '/crew/profile', icon: UserCircleIcon },
       { name: 'Calendar', to: '/crew/calendar', icon: CalendarIcon },
       { name: 'Assignments', to: '/crew/assignments', icon: ClipboardDocumentListIcon },
+      { name: 'Records', to: '/crew/records', icon: ClockIcon },
+      { name: 'Payments', to: '/crew/payments', icon: BanknotesIcon },
       { name: 'Reimbursements', to: '/crew/reimbursements', icon: CreditCardIcon },
     ],
   },

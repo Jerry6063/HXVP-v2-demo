@@ -51,6 +51,7 @@ import CrewDashboard from './portals/crew/Dashboard';
 import CrewProfilePage from './portals/crew/Profile';
 import CrewCalendar from './portals/crew/Calendar';
 import CrewAssignmentsPage from './portals/crew/Assignments';
+import CrewRecords from './portals/crew/Records';
 import CrewReimbursements from './portals/crew/Reimbursements';
 import CrewPayments from './portals/crew/Payments';
 import CrewDocuments from './portals/crew/Documents';
@@ -163,6 +164,7 @@ export default function App() {
         <Route path="profile" element={<CrewProfilePage />} />
         <Route path="calendar" element={<CrewCalendar />} />
         <Route path="assignments" element={<CrewAssignmentsPage />} />
+        <Route path="records" element={<CrewRecords />} />
         <Route path="payments" element={<CrewPayments />} />
         <Route path="reimbursements" element={<CrewReimbursements />} />
         <Route path="documents" element={<CrewDocuments />} />

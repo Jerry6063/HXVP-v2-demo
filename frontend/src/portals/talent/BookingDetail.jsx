@@ -1,12 +1,8 @@
-import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   useBooking,
   useAcceptBooking,
   useDeclineBooking,
-  useTalentTimeLogs,
-  useCreateTalentTimeLog,
-  useMe,
 } from '../../api/hooks';
 import StatusBadge from '../../components/StatusBadge';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -22,23 +18,14 @@ import {
 export default function BookingDetail() {
   const { id } = useParams();
   const { data: booking, isLoading } = useBooking(id);
-  const { data: meData } = useMe();
-  const { data: logsData, isLoading: logsLoading } = useTalentTimeLogs({ booking: id });
-  const createLog = useCreateTalentTimeLog();
   const acceptBooking = useAcceptBooking();
   const declineBooking = useDeclineBooking();
-
-  const [showLogForm, setShowLogForm] = useState(false);
-  const [hours, setHours] = useState('');
-  const [notes, setNotes] = useState('');
 
   if (isLoading) return <LoadingSpinner />;
   if (!booking) return <div className="text-center py-12 text-gray-400">Booking not found</div>;
 
   const s = booking.shoot_detail;
-  const logs = logsData?.results || logsData || [];
 
-  // Determine if the shoot has wrapped
   const now = new Date();
   let hasWrapped = false;
   if (s?.shoot_date) {
@@ -52,20 +39,6 @@ export default function BookingDetail() {
   }
 
   const canLogTime = booking.status === 'accepted' && hasWrapped;
-
-  const handleSubmitLog = async (e) => {
-    e.preventDefault();
-    await createLog.mutateAsync({
-      booking: booking.id,
-      hours_worked: parseFloat(hours),
-      notes,
-    });
-    setHours('');
-    setNotes('');
-    setShowLogForm(false);
-  };
-
-  const talentRate = meData?.talent_profile?.hourly_rate;
 
   return (
     <div className="space-y-6">
@@ -134,117 +107,25 @@ export default function BookingDetail() {
       {/* Time Logging Section */}
       {booking.status === 'accepted' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900">Time Logs</h2>
-            {canLogTime && !showLogForm && (
-              <button
-                onClick={() => setShowLogForm(true)}
-                className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors"
-              >
-                + Log Time
-              </button>
-            )}
-            {!canLogTime && (
-              <span className="text-xs text-gray-400">
-                Time logging available after the shoot wraps
-              </span>
-            )}
-          </div>
-
-          {/* Log Time Form */}
-          {showLogForm && (
-            <form onSubmit={handleSubmitLog} className="mb-6 p-4 bg-gray-50 rounded-lg space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Hours Worked</label>
-                  <input
-                    type="number"
-                    step="0.25"
-                    min="0.25"
-                    value={hours}
-                    onChange={(e) => setHours(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none"
-                    placeholder="e.g. 8"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Your Rate</label>
-                  <div className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-600">
-                    ${talentRate || '—'}/hr
-                    {talentRate && hours ? (
-                      <span className="ml-2 text-gray-400">
-                        (est. ${(parseFloat(hours) * parseFloat(talentRate)).toFixed(2)})
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Notes (optional)</label>
-                <input
-                  type="text"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none"
-                  placeholder="e.g. Extended shoot, overtime"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={createLog.isPending}
-                  className="px-5 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
-                >
-                  {createLog.isPending ? 'Submitting...' : 'Submit Time Log'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowLogForm(false)}
-                  className="px-5 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200"
-                >
-                  Cancel
-                </button>
-              </div>
-              <p className="text-[11px] text-gray-400">
-                Your time log will be submitted for admin review before processing.
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h2 className="font-semibold text-gray-900">Production Time Logs</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Time log submission now lives in Records so your submissions and payment status stay in one place.
               </p>
-            </form>
-          )}
-
-          {/* Existing logs table */}
-          {logsLoading ? (
-            <div className="text-gray-400 py-4 text-center text-sm">Loading...</div>
-          ) : logs.length === 0 ? (
-            <div className="text-gray-400 py-6 text-center text-sm">No time logs yet</div>
-          ) : (
-            <div className="overflow-hidden rounded-lg border border-gray-100">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-gray-500 uppercase bg-gray-50">
-                    <th className="px-4 py-2">Date</th>
-                    <th className="px-4 py-2">Hours</th>
-                    <th className="px-4 py-2">Rate</th>
-                    <th className="px-4 py-2">Amount</th>
-                    <th className="px-4 py-2">Status</th>
-                    <th className="px-4 py-2">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {logs.map((log) => (
-                    <tr key={log.id}>
-                      <td className="px-4 py-2 text-gray-700">{log.date}</td>
-                      <td className="px-4 py-2 text-gray-700">{log.hours_worked}h</td>
-                      <td className="px-4 py-2 text-gray-500">${Number(log.rate_applied).toLocaleString()}/hr</td>
-                      <td className="px-4 py-2 font-medium text-gray-900">${Number(log.amount).toLocaleString()}</td>
-                      <td className="px-4 py-2"><StatusBadge status={log.log_status} /></td>
-                      <td className="px-4 py-2 text-gray-400 text-xs">{log.notes || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <p className="mt-2 text-xs text-gray-400">
+                {canLogTime
+                  ? 'This booking is ready for time log submission.'
+                  : 'Time log submission opens in Records after the shoot wraps.'}
+              </p>
             </div>
-          )}
+            <Link
+              to={`/talent/records?booking=${booking.id}`}
+              className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+            >
+              Open Records
+            </Link>
+          </div>
         </div>
       )}
     </div>
