@@ -61,7 +61,11 @@ class Contract(models.Model):
         EXPIRED = "expired", "Expired"
 
     project = models.ForeignKey(
-        "projects.Project", on_delete=models.CASCADE, related_name="contracts"
+        "projects.Project",
+        on_delete=models.CASCADE,
+        related_name="contracts",
+        null=True,
+        blank=True,
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -84,4 +88,5 @@ class Contract(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.title or self.contract_type} – {self.project.name}"
+        project_name = self.project.name if self.project_id else "Pre-production"
+        return f"{self.title or self.contract_type} – {project_name}"

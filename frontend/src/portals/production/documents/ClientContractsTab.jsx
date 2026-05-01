@@ -14,7 +14,6 @@ import {
   useUpdateContract,
   useSendContract,
   useDeleteContract,
-  useProjects,
   useUsers,
 } from '../../../api/hooks';
 import LoadingSpinner from '../../../components/LoadingSpinner';
@@ -122,17 +121,15 @@ export default function ClientContractsTab() {
 
 // ── Contract Editor Pane ─────────────────────────────────────────────────────
 function ContractEditorPane() {
-  const { data: projectsData } = useProjects();
   const { data: usersData } = useUsers({ role: 'client' });
   const { data: allContractsData } = useContracts({ contract_type: 'client' });
   const createContract = useCreateContract();
 
   const [activeContract, setActiveContract] = useState(null);
-  const [form, setForm] = useState({ project: '', user: '', title: '' });
+  const [form, setForm] = useState({ user: '', title: '' });
   const [formError, setFormError] = useState('');
   const [opening, setOpening] = useState(false);
 
-  const projects = projectsData?.results || projectsData || [];
   const clients = usersData?.results || usersData || [];
   const draftContracts = (allContractsData?.results || allContractsData || []).filter(
     (c) => c.status === 'draft'
@@ -140,15 +137,14 @@ function ContractEditorPane() {
 
   const handleOpen = async (e) => {
     e.preventDefault();
-    if (!form.project || !form.user) {
-      setFormError('Please select a production and client.');
+    if (!form.user) {
+      setFormError('Please select a client.');
       return;
     }
     setOpening(true);
     setFormError('');
     try {
       const created = await createContract.mutateAsync({
-        project: form.project,
         user: form.user,
         contract_type: 'client',
         title: form.title || 'Client Contract',
@@ -187,20 +183,6 @@ function ContractEditorPane() {
 
         <form onSubmit={handleOpen} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Production *</label>
-              <select
-                value={form.project}
-                onChange={(e) => setForm({ ...form, project: e.target.value })}
-                className="w-full border rounded-lg p-2.5 text-sm"
-                required
-              >
-                <option value="">Select production…</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Client *</label>
               <select
@@ -250,7 +232,7 @@ function ContractEditorPane() {
               >
                 <div>
                   <p className="font-medium text-sm text-gray-900">{c.title || 'Untitled Contract'}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{c.project_name} · {c.user_name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{getContractSubtitle(c)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <StatusBadge status={c.status} />
@@ -411,7 +393,7 @@ function ContractEditor({ contract, onClose }) {
           </button>
           <div className="min-w-0">
             <p className="font-semibold text-sm text-gray-900 truncate">{contract.title || 'Untitled Contract'}</p>
-            <p className="text-xs text-gray-400">{contract.project_name} · {contract.user_name}</p>
+            <p className="text-xs text-gray-400">{getContractSubtitle(contract)}</p>
           </div>
         </div>
 
@@ -855,7 +837,7 @@ function DocumentLibraryPane() {
                       {sendSuccess === c.id && <span className="text-xs text-green-600 font-medium">✓ Sent</span>}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-3 text-xs text-gray-500">
-                      <span>Project: <strong className="text-gray-700">{c.project_name}</strong></span>
+                      <span>Production: <strong className="text-gray-700">{c.project_name || 'Pre-production'}</strong></span>
                       <span>Client: <strong className="text-gray-700">{c.user_name}</strong></span>
                       <span>Created: <strong className="text-gray-700">{new Date(c.created_at).toLocaleDateString()}</strong></span>
                     </div>
@@ -891,4 +873,9 @@ function DocumentLibraryPane() {
       )}
     </div>
   );
+}
+
+function getContractSubtitle(contract) {
+  const projectLabel = contract.project_name || 'Pre-production';
+  return `${projectLabel} · ${contract.user_name}`;
 }

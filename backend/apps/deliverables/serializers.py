@@ -29,7 +29,7 @@ class DeliverableSerializer(serializers.ModelSerializer):
 
 
 class ContractSerializer(serializers.ModelSerializer):
-    project_name = serializers.CharField(source="project.name", read_only=True)
+    project_name = serializers.SerializerMethodField()
     user_name = serializers.SerializerMethodField()
     user_email = serializers.SerializerMethodField()
     file_abs_url = serializers.SerializerMethodField()
@@ -38,6 +38,9 @@ class ContractSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contract
         fields = "__all__"
+
+    def get_project_name(self, obj):
+        return obj.project.name if obj.project_id else None
 
     def get_user_name(self, obj):
         return obj.user.get_full_name()

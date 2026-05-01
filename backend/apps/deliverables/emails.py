@@ -20,7 +20,7 @@ def send_document_to_recipient(contract, request=None):
     """Email the contract recipient with portal access instructions."""
     recipient = contract.user
     type_label = TYPE_LABELS.get(contract.contract_type, "Document")
-    project_name = contract.project.name
+    project_name = contract.project.name if contract.project_id else "Pre-production"
     title = contract.title or type_label
 
     role_portal_map = {
