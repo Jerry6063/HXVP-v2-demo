@@ -109,6 +109,7 @@ export default function ActiveProjects() {
 
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
+  const [formError, setFormError] = useState('');
   const [clientMode, setClientMode] = useState('existing'); // 'existing' | 'new'
   const [newClientForm, setNewClientForm] = useState({ first_name: '', last_name: '', email: '' });
   const [form, setForm] = useState({
@@ -120,28 +121,58 @@ export default function ActiveProjects() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    let clientId = form.client || null;
-    if (clientMode === 'new' && (newClientForm.first_name || newClientForm.email)) {
-      const newUser = await createClient.mutateAsync(newClientForm);
-      clientId = newUser.id;
+    setFormError('');
+
+    // Pre-submit validation
+    const missing = [];
+    if (!form.name.trim()) missing.push('Production Name');
+    if (clientMode === 'existing' && !form.client) missing.push('Client');
+    if (clientMode === 'new') {
+      if (!newClientForm.first_name.trim()) missing.push('First Name');
+      if (!newClientForm.last_name.trim()) missing.push('Last Name');
+      if (!newClientForm.email.trim()) missing.push('Email');
     }
-    const project = await createProject.mutateAsync({
-      ...form,
-      client: clientId,
-      budget: form.budget || 0,
-      status: 'active',
-    });
-    // Create requirement rows
-    await Promise.all([
-      ...talentReqs.map((r) => createTalentReq.mutateAsync({ project: project.id, talent_type: r.type, count: r.count || 1, notes: r.notes })),
-      ...crewReqs.map((r) => createCrewReq.mutateAsync({ project: project.id, crew_role: r.role, count: r.count || 1, notes: r.notes })),
-    ]);
-    setShowForm(false);
-    setForm({ name: '', description: '', budget: '', deadline: '', client: '', location: '', other_requirements: '' });
-    setClientMode('existing');
-    setNewClientForm({ first_name: '', last_name: '', email: '' });
-    setTalentReqs([]);
-    setCrewReqs([]);
+    if (!form.budget) missing.push('Budget');
+    if (!form.deadline) missing.push('Deadline');
+    if (missing.length > 0) {
+      setFormError(`Please fill in required fields: ${missing.join(', ')}`);
+      return;
+    }
+
+    try {
+      let clientId = form.client || null;
+      if (clientMode === 'new') {
+        const newUser = await createClient.mutateAsync(newClientForm);
+        clientId = newUser.id;
+      }
+      const project = await createProject.mutateAsync({
+        ...form,
+        client: clientId,
+        budget: form.budget || 0,
+        status: 'active',
+      });
+      // Create requirement rows
+      await Promise.all([
+        ...talentReqs.map((r) => createTalentReq.mutateAsync({ project: project.id, talent_type: r.type, count: r.count || 1, notes: r.notes })),
+        ...crewReqs.map((r) => createCrewReq.mutateAsync({ project: project.id, crew_role: r.role, count: r.count || 1, notes: r.notes })),
+      ]);
+      setShowForm(false);
+      setForm({ name: '', description: '', budget: '', deadline: '', client: '', location: '', other_requirements: '' });
+      setClientMode('existing');
+      setNewClientForm({ first_name: '', last_name: '', email: '' });
+      setTalentReqs([]);
+      setCrewReqs([]);
+    } catch (err) {
+      const detail = err?.response?.data;
+      if (detail && typeof detail === 'object') {
+        const messages = Object.entries(detail)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(' ') : msgs}`)
+          .join(' | ');
+        setFormError(messages);
+      } else {
+        setFormError(err?.message || 'An unexpected error occurred. Please try again.');
+      }
+    }
   };
 
   const projectList = (projects?.results || projects || []).filter((p) =>
@@ -174,51 +205,46 @@ export default function ActiveProjects() {
       {/* New Project Form */}
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Production</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">Create New Production</h3>
+          <p className="text-xs text-gray-400 mb-4"><span className="text-red-500">*</span> Required fields</p>
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Production Name</label>
-              <input
-                required
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-              />
-            </div>
-
-            {/* ── Client ── */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Client</label>
-
-              {/* Toggle */}
-              <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 mb-3">
-                <button
-                  type="button"
-                  onClick={() => setClientMode('existing')}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                    clientMode === 'existing' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  Existing Client
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setClientMode('new')}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                    clientMode === 'new' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  New Client
-                </button>
+            {/* Client */}
+            <div className="md:col-span-2 rounded-lg border border-gray-200 bg-gray-50/70 p-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Client <span className="text-red-500">*</span></label>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {clientMode === 'existing'
+                      ? 'Select an existing client for this production.'
+                      : 'Create a new client account and attach it to this production.'}
+                  </p>
+                </div>
+                {clientMode === 'existing' ? (
+                  <button
+                    type="button"
+                    onClick={() => setClientMode('new')}
+                    className="inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+                  >
+                    + New Client
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setClientMode('existing')}
+                    className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                  >
+                    Back to Existing Client
+                  </button>
+                )}
               </div>
 
               {clientMode === 'existing' ? (
                 <select
                   value={form.client}
                   onChange={(e) => setForm({ ...form, client: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                 >
-                  <option value="">— No client —</option>
+                  <option value="">Select a client...</option>
                   {clientList.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.first_name} {u.last_name} ({u.email})
@@ -230,31 +256,41 @@ export default function ActiveProjects() {
                   <input
                     value={newClientForm.first_name}
                     onChange={(e) => setNewClientForm({ ...newClientForm, first_name: e.target.value })}
-                    placeholder="First name"
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                    placeholder="First name *"
+                    className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                   />
                   <input
                     value={newClientForm.last_name}
                     onChange={(e) => setNewClientForm({ ...newClientForm, last_name: e.target.value })}
-                    placeholder="Last name"
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                    placeholder="Last name *"
+                    className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                   />
                   <input
                     type="email"
                     value={newClientForm.email}
                     onChange={(e) => setNewClientForm({ ...newClientForm, email: e.target.value })}
-                    placeholder="Email address"
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                    placeholder="Email address *"
+                    className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                   />
-                  <p className="md:col-span-3 text-xs text-gray-400">
+                  <p className="md:col-span-3 text-xs text-gray-500">
                     A client account will be created. They can set their password via "Forgot Password" on the client portal.
                   </p>
                 </div>
               )}
             </div>
 
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Production Name <span className="text-red-500">*</span></label>
+              <input
+                required
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Budget ($)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Budget ($) <span className="text-red-500">*</span></label>
               <input
                 type="number"
                 value={form.budget}
@@ -263,7 +299,7 @@ export default function ActiveProjects() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Deadline <span className="text-red-500">*</span></label>
               <input
                 type="date"
                 value={form.deadline}
@@ -389,6 +425,11 @@ export default function ActiveProjects() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
               />
             </div>
+            {formError && (
+              <div className="md:col-span-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                {formError}
+              </div>
+            )}
             <div className="md:col-span-2 flex gap-3">
               <button
                 type="submit"

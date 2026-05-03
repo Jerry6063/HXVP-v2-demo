@@ -196,6 +196,14 @@ class CrewProfileViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         stripe.api_key = django_settings.STRIPE_SECRET_KEY
         try:
+            if profile.stripe_account_id:
+                try:
+                    stripe.Account.retrieve(profile.stripe_account_id)
+                except stripe.error.StripeError:
+                    profile.stripe_account_id = ""
+                    profile.stripe_onboarding_complete = False
+                    profile.save(update_fields=["stripe_account_id", "stripe_onboarding_complete"])
+
             if not profile.stripe_account_id:
                 account = stripe.Account.create(
                     type="express",
@@ -207,7 +215,8 @@ class CrewProfileViewSet(viewsets.ModelViewSet):
                     },
                 )
                 profile.stripe_account_id = account["id"]
-                profile.save(update_fields=["stripe_account_id"])
+                profile.stripe_onboarding_complete = False
+                profile.save(update_fields=["stripe_account_id", "stripe_onboarding_complete"])
             if user.role == "crew":
                 refresh_url = f"{django_settings.FRONTEND_URL}/crew/payments?tab=payout&refresh=1"
                 return_url = f"{django_settings.FRONTEND_URL}/crew/payments?tab=payout&success=1"
@@ -231,9 +240,26 @@ class CrewProfileViewSet(viewsets.ModelViewSet):
         if user.role == "crew" and profile.user_id != user.id:
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         if not profile.stripe_account_id:
-            return Response({"stripe_account_id": None, "onboarding_complete": False})
+            return Response({
+                "stripe_account_id": None,
+                "onboarding_complete": False,
+                "requires_reconnect": False,
+            })
         stripe.api_key = django_settings.STRIPE_SECRET_KEY
-        account = stripe.Account.retrieve(profile.stripe_account_id)
+        try:
+            account = stripe.Account.retrieve(profile.stripe_account_id)
+        except stripe.error.StripeError:
+            if profile.stripe_onboarding_complete:
+                profile.stripe_onboarding_complete = False
+                profile.save(update_fields=["stripe_onboarding_complete"])
+            return Response({
+                "stripe_account_id": profile.stripe_account_id,
+                "onboarding_complete": False,
+                "details_submitted": False,
+                "payouts_enabled": False,
+                "requires_reconnect": True,
+                "detail": "This payout account was linked to a previous Stripe platform account and must be reconnected.",
+            })
         complete = bool(
             account.get("details_submitted")
             and account.get("payouts_enabled")
@@ -246,6 +272,7 @@ class CrewProfileViewSet(viewsets.ModelViewSet):
             "onboarding_complete": complete,
             "details_submitted": account.get("details_submitted"),
             "payouts_enabled": account.get("payouts_enabled"),
+            "requires_reconnect": False,
         })
 
     @action(detail=False, methods=["get"], url_path="mine")

@@ -1,4 +1,5 @@
 import logging
+from django.conf import settings as django_settings
 from apps.utils.email import safe_send
 
 logger = logging.getLogger(__name__)
@@ -30,11 +31,22 @@ def send_document_to_recipient(contract, request=None):
     }
     portal = role_portal_map.get(recipient.role, "portal")
 
+    # Build direct portal link (talent/crew roles have a /documents page)
+    frontend_url = getattr(django_settings, "FRONTEND_URL", "").rstrip("/")
+    if portal in ("talent", "crew"):
+        docs_url = f"{frontend_url}/{portal}/documents"
+        portal_line = (
+            f"Please log in to your {portal} portal to review and sign the document:\n"
+            f"{docs_url}"
+        )
+    else:
+        portal_line = f"Please log in to your {portal} portal to review the document."
+
     # Build file link if available
     file_line = ""
     if contract.file_url and request:
         abs_url = request.build_absolute_uri(contract.file_url.url)
-        file_line = f"\nDocument link: {abs_url}\n"
+        file_line = f"\nDocument file: {abs_url}\n"
 
     result = safe_send(
         subject=f"Document Ready for Review: {title}",
@@ -43,7 +55,7 @@ def send_document_to_recipient(contract, request=None):
             f"A {type_label} has been prepared for you in connection with the "
             f'production "{project_name}".\n'
             f"{file_line}\n"
-            f"Please log in to your {portal} portal to review the document.\n\n"
+            f"{portal_line}\n\n"
             f"– Studio Portal"
         ),
         recipient_list=[recipient.email],

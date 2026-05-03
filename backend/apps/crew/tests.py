@@ -1,6 +1,8 @@
 from datetime import date, time
 from decimal import Decimal
+from unittest.mock import patch
 
+import stripe
 from rest_framework.test import APITestCase
 
 from apps.accounts.models import User
@@ -139,3 +141,73 @@ class CrewTimeLogCreationTests(APITestCase):
         self.assertEqual(log.rate_applied, Decimal('95.00'))
         self.assertEqual(log.amount, Decimal('855.00'))
         self.assertEqual(log.log_status, CrewTimeLog.LogStatus.PENDING)
+
+
+class CrewStripeReconnectTests(APITestCase):
+    def setUp(self):
+        super().setUp()
+        self.production_user = User.objects.create_user(
+            email='producer-crew-stripe@example.com',
+            password='password123',
+            first_name='Prod',
+            last_name='CrewStripe',
+            role=User.Role.PRODUCTION_ADMIN,
+        )
+        self.crew_user = User.objects.create_user(
+            email='crew-stripe@example.com',
+            password='password123',
+            first_name='Casey',
+            last_name='Reconnect',
+            role=User.Role.CREW,
+        )
+        self.crew_profile = CrewProfile.objects.create(
+            user=self.crew_user,
+            crew_role=CrewProfile.CrewRole.PHOTOGRAPHER,
+            hourly_rate=Decimal('95.00'),
+            stripe_account_id='acct_old_platform',
+            stripe_onboarding_complete=True,
+        )
+        self.client.force_authenticate(self.production_user)
+
+    @patch('apps.crew.views.stripe.Account.retrieve')
+    def test_stripe_status_marks_old_platform_account_for_reconnect(self, mock_retrieve):
+        mock_retrieve.side_effect = stripe.error.InvalidRequestError('No such account', 'account')
+
+        response = self.client.get(f'/api/crew/profiles/{self.crew_profile.id}/stripe_account_status/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['stripe_account_id'], 'acct_old_platform')
+        self.assertFalse(response.data['onboarding_complete'])
+        self.assertTrue(response.data['requires_reconnect'])
+
+        self.crew_profile.refresh_from_db()
+        self.assertFalse(self.crew_profile.stripe_onboarding_complete)
+
+    @patch('apps.crew.views.stripe.AccountLink.create')
+    @patch('apps.crew.views.stripe.Account.create')
+    @patch('apps.crew.views.stripe.Account.retrieve')
+    def test_reconnecting_creates_fresh_account_when_old_platform_account_is_stale(
+        self,
+        mock_retrieve,
+        mock_create,
+        mock_account_link,
+    ):
+        mock_retrieve.side_effect = stripe.error.InvalidRequestError('No such account', 'account')
+        mock_create.return_value = {'id': 'acct_new_platform'}
+        mock_account_link.return_value = {'url': 'https://stripe.test/onboarding'}
+
+        response = self.client.post(f'/api/crew/profiles/{self.crew_profile.id}/create_stripe_account/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['stripe_account_id'], 'acct_new_platform')
+        self.assertEqual(response.data['url'], 'https://stripe.test/onboarding')
+
+        self.crew_profile.refresh_from_db()
+        self.assertEqual(self.crew_profile.stripe_account_id, 'acct_new_platform')
+        self.assertFalse(self.crew_profile.stripe_onboarding_complete)
+        mock_account_link.assert_called_once_with(
+            account='acct_new_platform',
+            refresh_url='http://localhost:5173/production/talent-payments',
+            return_url='http://localhost:5173/production/talent-payments',
+            type='account_onboarding',
+        )

@@ -144,13 +144,13 @@ export default function TalentDashboard() {
                 <p className="p-4 text-xs text-gray-400">No contracts</p>
               ) : (
                 contractList.map((c) => (
-                  <div key={c.id} className="px-5 py-3">
+                  <Link key={c.id} to="/talent/documents" className="block px-5 py-3 hover:bg-gray-50 transition-colors">
                     <p className="text-sm font-medium text-gray-700">{c.title || c.contract_type}</p>
                     <div className="flex items-center justify-between mt-1">
                       <p className="text-xs text-gray-400">{c.project_name}</p>
                       <StatusBadge status={c.status} />
                     </div>
-                  </div>
+                  </Link>
                 ))
               )}
             </div>

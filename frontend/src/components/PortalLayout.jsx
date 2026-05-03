@@ -35,7 +35,6 @@ const portalConfigs = {
       { name: 'Dashboard', to: '/production/dashboard', icon: HomeIcon },
       { name: 'Productions', to: '/production/projects', icon: FolderIcon, dropdown: true },
       { name: 'Calendar', to: '/production/calendar', icon: CalendarDaysIcon },
-      { name: 'Talents', to: '/production/talent', icon: UsersIcon },
       {
         name: 'Team Payments',
         to: '/production/talent-payments',
@@ -46,6 +45,7 @@ const portalConfigs = {
           { name: 'Crew Payments', to: '/production/talent-payments?tab=crew-payments' },
         ],
       },
+      { name: 'Talents', to: '/production/talent', icon: UsersIcon },
       { name: 'Production Crew', to: '/production/crew', icon: WrenchScrewdriverIcon },
       { name: 'Documents', to: '/production/documents', icon: DocumentDuplicateIcon },
       { name: 'Client Payments', to: '/production/invoices', icon: CreditCardIcon },

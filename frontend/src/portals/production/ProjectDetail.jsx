@@ -45,11 +45,9 @@ import {
 import StatusBadge from '../../components/StatusBadge';
 
 const tabs = [
-  'Workflow',
-  'Team & Talent',
-  'Assets & Deliverables',
-  'Budget & Expenses',
-  'Contracts',
+  { id: 'workflow', label: 'Workflow' },
+  { id: 'assets', label: 'Assets & Deliverables' },
+  { id: 'contracts', label: 'Contracts' },
 ];
 
 const PHASE_MAIN_TITLES = {
@@ -83,7 +81,7 @@ function isPhaseMainMilestone(ms) {
 export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeSection, setActiveSection] = useState('workflow');
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const { data: project, isLoading } = useProject(id);
   const { data: deliverables } = useDeliverables({ project: id });
@@ -188,17 +186,17 @@ export default function ProjectDetail() {
           {/* Tabs */}
           <div className="border-b border-gray-200 mb-4">
             <nav className="flex gap-6 -mb-px overflow-x-auto">
-              {tabs.map((tab, i) => (
+              {tabs.map((tab) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(i)}
+                  key={tab.id}
+                  onClick={() => setActiveSection(tab.id)}
                   className={`pb-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
-                    activeTab === i
+                    activeSection === tab.id
                       ? 'border-indigo-600 text-indigo-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  {tab}
+                  {tab.label}
                 </button>
               ))}
             </nav>
@@ -206,7 +204,7 @@ export default function ProjectDetail() {
 
           {/* Tab Content */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            {activeTab === 0 && (
+            {activeSection === 'workflow' && (
               <WorkflowTab
                 project={project}
                 milestones={milestonesArr}
@@ -220,10 +218,10 @@ export default function ProjectDetail() {
                 updateProject={updateProject}
               />
             )}
-            {activeTab === 1 && (
+            {activeSection === 'team-talent' && (
               <TeamTalentTab bookings={bookingsArr} assignments={assignmentsArr} projectId={id} project={project} />
             )}
-            {activeTab === 2 && (
+            {activeSection === 'assets' && (
               <AssetsTab
                 project={project}
                 deliverables={deliverablesArr}
@@ -233,10 +231,10 @@ export default function ProjectDetail() {
                 updateProject={updateProject}
               />
             )}
-            {activeTab === 3 && (
+            {activeSection === 'budget' && (
               <BudgetTab expenses={expensesArr} financials={financials} projectId={id} project={project} />
             )}
-            {activeTab === 4 && (
+            {activeSection === 'contracts' && (
               <ContractsTab contracts={contractsArr} />
             )}
           </div>
@@ -244,51 +242,64 @@ export default function ProjectDetail() {
 
         {/* Sidebar */}
         <div className="space-y-4">
-          {/* Assigned Crew */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <h3 className="font-semibold text-gray-900 text-sm mb-3">Assigned Crew</h3>
-            {assignmentsArr.length === 0 ? (
-              <p className="text-xs text-gray-400">No crew assigned yet</p>
-            ) : (
-              <ul className="space-y-2">
-                {assignmentsArr.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between gap-1">
-                    <Link to={`/production/crew/${a.crew}`} className="text-sm text-gray-800 hover:text-indigo-600 transition-colors truncate">
-                      {a.crew_name}
-                    </Link>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-xs text-gray-400 capitalize hidden sm:inline">{a.role_on_shoot?.replace(/_/g, ' ')}</span>
-                      <StatusBadge status={a.status} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          {/* Talent & Crew */}
+          <button
+            type="button"
+            onClick={() => setActiveSection('team-talent')}
+            className={`w-full text-left bg-white rounded-xl shadow-sm border p-4 transition-colors ${
+              activeSection === 'team-talent'
+                ? 'border-indigo-300 ring-2 ring-indigo-100'
+                : 'border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-gray-900 text-sm">Talent & Crew</h3>
+              <span className="text-xs font-medium text-indigo-600">Open</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+              <div className="rounded-lg bg-gray-50 p-2.5">
+                <p className="text-xs text-gray-500">Assigned Talent</p>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">{bookingsArr.length}</p>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-2.5">
+                <p className="text-xs text-gray-500">Assigned Crew</p>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">{assignmentsArr.length}</p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {bookingsArr.slice(0, 2).map((b) => (
+                <div key={`talent-${b.id}`} className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-gray-600 truncate">Talent: {b.talent_name}</span>
+                  <StatusBadge status={b.status} />
+                </div>
+              ))}
+              {assignmentsArr.slice(0, 2).map((a) => (
+                <div key={`crew-${a.id}`} className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-gray-600 truncate">Crew: {a.crew_name}</span>
+                  <StatusBadge status={a.status} />
+                </div>
+              ))}
+              {bookingsArr.length === 0 && assignmentsArr.length === 0 && (
+                <p className="text-xs text-gray-400">No assigned talent or crew yet</p>
+              )}
+            </div>
+          </button>
 
-          {/* Assigned Talent */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <h3 className="font-semibold text-gray-900 text-sm mb-3">Assigned Talent</h3>
-            {bookingsArr.length === 0 ? (
-              <p className="text-xs text-gray-400">No talent assigned yet</p>
-            ) : (
-              <ul className="space-y-2">
-                {bookingsArr.map((b) => (
-                  <li key={b.id} className="flex items-center justify-between gap-1">
-                    <Link to={`/production/talent/${b.talent}`} className="text-sm text-gray-800 hover:text-indigo-600 transition-colors truncate">
-                      {b.talent_name}
-                    </Link>
-                    <StatusBadge status={b.status} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Financials */}
+          {/* Budget & Expenses */}
           {financials && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-              <h3 className="font-semibold text-gray-900 text-sm mb-3">Project Financials</h3>
+            <button
+              type="button"
+              onClick={() => setActiveSection('budget')}
+              className={`w-full text-left bg-white rounded-xl shadow-sm border p-4 transition-colors ${
+                activeSection === 'budget'
+                  ? 'border-indigo-300 ring-2 ring-indigo-100'
+                  : 'border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-900 text-sm">Budget & Expenses</h3>
+                <span className="text-xs font-medium text-indigo-600">Open</span>
+              </div>
               <dl className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-gray-500">Budget</dt>
@@ -309,7 +320,7 @@ export default function ProjectDetail() {
                   </dd>
                 </div>
               </dl>
-            </div>
+            </button>
           )}
         </div>
       </div>

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -7,14 +6,13 @@ import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import {
-  useProjectRequests,
-  useUploadContract,
   useContracts,
   useCreateContract,
   useUpdateContract,
   useSendContract,
   useDeleteContract,
   useUsers,
+  useProjects,
 } from '../../../api/hooks';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import StatusBadge from '../../../components/StatusBadge';
@@ -23,7 +21,6 @@ import {
   TrashIcon,
   DocumentArrowUpIcon,
   PlusIcon,
-  ArrowTopRightOnSquareIcon,
   ArrowDownTrayIcon,
   CloudArrowUpIcon,
   PencilSquareIcon,
@@ -32,7 +29,37 @@ import {
 
 const CONTRACT_TEMPLATE_URL = '/contract-template-2026.docx';
 
-/** Fetch the DOCX template and convert to editor-ready HTML via mammoth. */
+function buildHighlightedFragment(doc, value) {
+  const pattern = /(\[[^\]\n]{2,80}\]|_{3,}|\.{5,})/g;
+  pattern.lastIndex = 0;
+  if (!pattern.test(value)) return null;
+
+  const fragment = doc.createDocumentFragment();
+  let cursor = 0;
+  let match;
+  pattern.lastIndex = 0;
+
+  while ((match = pattern.exec(value)) !== null) {
+    if (match.index > cursor) {
+      fragment.appendChild(doc.createTextNode(value.slice(cursor, match.index)));
+    }
+
+    const mark = doc.createElement('mark');
+    mark.setAttribute('data-color', '#fef08a');
+    mark.textContent = match[0];
+    fragment.appendChild(mark);
+
+    cursor = match.index + match[0].length;
+  }
+
+  if (cursor < value.length) {
+    fragment.appendChild(doc.createTextNode(value.slice(cursor)));
+  }
+
+  return fragment;
+}
+
+/** Fetch DOCX template and return HTML plus placeholder-detection metadata. */
 async function loadTemplateAsHtml() {
   const response = await fetch(CONTRACT_TEMPLATE_URL);
   if (!response.ok) throw new Error('Template not found');
@@ -40,9 +67,12 @@ async function loadTemplateAsHtml() {
   const mammothModule = await import('mammoth');
   const mammoth = mammothModule.default || mammothModule;
   const result = await mammoth.convertToHtml({ arrayBuffer });
-  // Convert yellow-highlighted <span style="background-color:yellow"> → <mark data-color="#fef08a">
+
   const parser = new DOMParser();
   const doc = parser.parseFromString(result.value, 'text/html');
+  let detectedCount = 0;
+
+  // Preserve any pre-existing yellow highlights from DOCX styles.
   doc.querySelectorAll('span').forEach((span) => {
     const style = span.getAttribute('style') || '';
     if (/background-color\s*:\s*(yellow|#[fF]{2}[fF]{2}00)/i.test(style)) {
@@ -50,40 +80,40 @@ async function loadTemplateAsHtml() {
       mark.setAttribute('data-color', '#fef08a');
       while (span.firstChild) mark.appendChild(span.firstChild);
       span.replaceWith(mark);
+      detectedCount += 1;
     }
   });
-  return doc.body.innerHTML || '<p>Template loaded — start editing.</p>';
-}
 
-function TemplateDownloadBanner() {
-  return (
-    <div className="flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
-      <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
-        <DocumentArrowUpIcon className="w-5 h-5 text-amber-600" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-amber-900">2026 Contract Template available</p>
-        <p className="text-xs text-amber-700 mt-0.5">
-          Download the studio's standard contract template. Fill in all{' '}
-          <span className="font-semibold">highlighted (yellow) fields</span> before uploading the completed file below.
-        </p>
-      </div>
-      <a
-        href={CONTRACT_TEMPLATE_URL}
-        download="2026 contract template.docx"
-        className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition"
-      >
-        <ArrowDownTrayIcon className="w-4 h-4" />
-        Download Template
-      </a>
-    </div>
-  );
+  // If template has no style highlights, infer placeholders from tokens like ____ or [Client Name].
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  let current = walker.nextNode();
+  while (current) {
+    textNodes.push(current);
+    current = walker.nextNode();
+  }
+
+  textNodes.forEach((node) => {
+    if (!node.nodeValue?.trim()) return;
+    const parentTag = node.parentElement?.tagName;
+    if (parentTag === 'MARK') return;
+
+    const fragment = buildHighlightedFragment(doc, node.nodeValue);
+    if (!fragment) return;
+
+    detectedCount += (node.nodeValue.match(/(\[[^\]\n]{2,80}\]|_{3,}|\.{5,})/g) || []).length;
+    node.replaceWith(fragment);
+  });
+
+  return {
+    html: doc.body.innerHTML || '<p>Template loaded — start editing.</p>',
+    detectedCount,
+  };
 }
 
 const MODES = [
   { id: 'editor', label: '✏️ Contract Editor' },
-  { id: 'requests', label: 'Request Contracts' },
-  { id: 'library', label: 'Document Library' },
+  { id: 'library', label: '📁 Document Library' },
 ];
 
 export default function ClientContractsTab() {
@@ -113,7 +143,6 @@ export default function ClientContractsTab() {
       </div>
 
       {mode === 'editor' && <ContractEditorPane />}
-      {mode === 'requests' && <RequestContractsPane />}
       {mode === 'library' && <DocumentLibraryPane />}
     </div>
   );
@@ -172,11 +201,9 @@ function ContractEditorPane() {
           <div>
             <h3 className="font-semibold text-gray-800">New Contract from Template</h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              Opens the 2026 studio contract template in the editor.{' '}
-              <span className="font-medium text-amber-700 bg-amber-50 px-1 rounded">
-                Yellow&nbsp;highlighted areas
-              </span>{' '}
-              mark fields to customize for this client.
+              Opens the 2026 studio contract template in the editor. Placeholder-like fields
+              (for example <span className="font-mono">____</span> or <span className="font-mono">[Client Name]</span>)
+              are highlighted automatically when detected.
             </p>
           </div>
         </div>
@@ -256,6 +283,7 @@ function ContractEditor({ contract, onClose }) {
   const [lastSaved, setLastSaved] = useState(null);
   const [sendStatus, setSendStatus] = useState('idle'); // idle | sending | sent | error
   const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateFieldsDetected, setTemplateFieldsDetected] = useState(null);
   const initializedRef = useRef(false);
 
   const editor = useEditor({
@@ -278,16 +306,19 @@ function ContractEditor({ contract, onClose }) {
     const init = async () => {
       if (contract.draft_html) {
         editor.commands.setContent(contract.draft_html, false);
+        setTemplateFieldsDetected(/<mark\b/i.test(contract.draft_html));
       } else {
         setTemplateLoading(true);
         try {
-          const html = await loadTemplateAsHtml();
+          const { html, detectedCount } = await loadTemplateAsHtml();
           editor.commands.setContent(html, false);
+          setTemplateFieldsDetected(detectedCount > 0);
         } catch {
           editor.commands.setContent(
             '<p>The template could not be loaded. Start typing your contract here.</p>',
             false
           );
+          setTemplateFieldsDetected(false);
         } finally {
           setTemplateLoading(false);
         }
@@ -487,11 +518,21 @@ function ContractEditor({ contract, onClose }) {
         <button onClick={() => editor?.chain().focus().redo().run()} title="Redo" className="px-2 h-7 rounded text-xs text-gray-600 hover:bg-gray-200 transition">Redo ↪</button>
       </div>
 
-      {/* ── Highlight hint strip ── */}
+      {/* ── Template guidance strip ── */}
       <div className="border-b border-amber-100 bg-amber-50 px-4 py-2 flex items-center gap-2">
         <span className="inline-block w-4 h-4 flex-shrink-0 rounded border border-amber-300" style={{ backgroundColor: '#fef08a' }} />
         <p className="text-xs text-amber-700">
-          <strong>Yellow highlighted areas</strong> are fields specific to this contract — fill in client name, project details, dates, and payment terms before sending.
+          {templateFieldsDetected
+            ? (
+              <>
+                <strong>Highlighted placeholders</strong> were detected from the template. Fill these fields before sending.
+              </>
+            )
+            : (
+              <>
+                <strong>No placeholder highlights detected.</strong> Use this checklist before sending: client name, project details, dates, payment terms, and signatures.
+              </>
+            )}
         </p>
       </div>
 
@@ -544,125 +585,6 @@ function ContractEditor({ contract, onClose }) {
   );
 }
 
-/* ── Production-request-linked contracts ─────────────────────────────────── */
-function RequestContractsPane() {
-  const navigate = useNavigate();
-  const { data: requestsData, isLoading } = useProjectRequests();
-  const uploadContract = useUploadContract();
-
-  const [selectedRequest, setSelectedRequest] = useState('');
-  const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-
-  const requests = requestsData?.results || requestsData || [];
-  const activeRequests = requests.filter(
-    (r) => !['rejected'].includes(r.status)
-  );
-
-  const handleUpload = async () => {
-    if (!selectedRequest || !file) return;
-    setUploading(true);
-    try {
-      await uploadContract.mutateAsync({ requestId: selectedRequest, file });
-      setFile(null);
-      setSelectedRequest('');
-      toast.success('Contract uploaded and sent to client.');
-    } catch (err) {
-      toast.error('Failed to upload contract: ' + (err.response?.data?.detail || err.message));
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  if (isLoading) return <LoadingSpinner />;
-
-  return (
-    <div className="space-y-5">
-      <TemplateDownloadBanner />
-
-      {/* Upload section */}
-      <div className="bg-white rounded-xl shadow border-t-4 border-indigo-500 p-6">
-        <h3 className="font-semibold text-gray-800 mb-4">Upload Contract for a Production Request</h3>
-        <p className="text-sm text-gray-500 mb-4">
-          Select a production request and upload a contract PDF. The client will be notified by email and can review, comment, and sign it in their portal.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Production Request *</label>
-            <select
-              value={selectedRequest}
-              onChange={(e) => setSelectedRequest(e.target.value)}
-              className="w-full border rounded-lg p-2.5 text-sm"
-            >
-              <option value="">Choose a request…</option>
-              {activeRequests.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.title} – {r.client_name || 'Client'} ({r.status.replace(/_/g, ' ')})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Contract File (PDF/DOC) *</label>
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx"
-              onChange={(e) => setFile(e.target.files[0] || null)}
-              className="text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
-            />
-          </div>
-        </div>
-        <div className="mt-4 flex gap-3">
-          <button
-            onClick={handleUpload}
-            disabled={!selectedRequest || !file || uploading}
-            className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
-          >
-            {uploading ? 'Uploading & Sending…' : 'Upload & Send to Client'}
-          </button>
-          {selectedRequest && (
-            <button
-              onClick={() => navigate(`/production/requests/${selectedRequest}`)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition"
-            >
-              <ArrowTopRightOnSquareIcon className="w-4 h-4" />
-              View Request Detail
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Requests list with contract status */}
-      <div>
-        <h3 className="font-semibold text-gray-700 text-sm mb-3">All Production Requests – Contract Status</h3>
-        <div className="space-y-2">
-          {activeRequests.length === 0 && (
-            <p className="text-sm text-gray-400 bg-white rounded-xl shadow p-6 text-center">No active production requests.</p>
-          )}
-          {activeRequests.map((r) => (
-            <div
-              key={r.id}
-              className="bg-white rounded-xl shadow p-4 flex items-center justify-between cursor-pointer hover:shadow-md transition"
-              onClick={() => navigate(`/production/requests/${r.id}`)}
-            >
-              <div>
-                <p className="font-medium text-sm text-gray-900">{r.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {r.client_name} · {new Date(r.created_at).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <StatusBadge status={r.status} />
-                <ArrowTopRightOnSquareIcon className="w-4 h-4 text-gray-400" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ── Document Library (all client agreements) ──────────────────────────────── */
 function DocumentLibraryPane() {
   const { data: contractsData, isLoading } = useContracts({ contract_type: 'client' });
@@ -678,14 +600,19 @@ function DocumentLibraryPane() {
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ project: '', user: '', title: '', notes: '', file: null });
+  const [fileInput, setFileInput] = useState(null);
   const [sendingId, setSendingId] = useState(null);
   const [sendSuccess, setSendSuccess] = useState(null);
   const [error, setError] = useState('');
 
   const resetForm = () => {
     setForm({ project: '', user: '', title: '', notes: '', file: null });
-    setShowForm(false);
-    setError('');
+    setFileInput(null); setShowForm(false); setError('');
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this document?')) return;
+    await deleteContract.mutateAsync(id);
   };
 
   const handleSubmit = async (e) => {
@@ -729,8 +656,9 @@ function DocumentLibraryPane() {
   if (isLoading) return <LoadingSpinner />;
 
   return (
-    <div className="space-y-5">
-      <div className="flex justify-end">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">Upload a signed agreement or view previously created documents.</p>
         <button
           onClick={() => setShowForm((p) => !p)}
           className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
@@ -754,7 +682,7 @@ function DocumentLibraryPane() {
                   required
                 >
                   <option value="">Select production…</option>
-                  {projects.map((p) => (
+                  {projects.filter((p) => p.status !== 'archived').map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
@@ -791,6 +719,7 @@ function DocumentLibraryPane() {
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 rows={2}
                 className="w-full border rounded-lg p-2.5 text-sm resize-none"
+                placeholder="Optional notes for the client…"
               />
             </div>
             <div>
@@ -801,9 +730,10 @@ function DocumentLibraryPane() {
               <input
                 type="file"
                 accept=".pdf,.doc,.docx"
-                onChange={(e) => setForm({ ...form, file: e.target.files[0] || null })}
+                onChange={(e) => { const f = e.target.files[0] || null; setForm({ ...form, file: f }); setFileInput(f?.name || null); }}
                 className="text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100"
               />
+              {fileInput && <p className="text-xs text-gray-400 mt-1">Selected: {fileInput}</p>}
             </div>
             {error && <p className="text-sm text-red-500">{error}</p>}
             <div className="flex gap-3">
@@ -825,50 +755,83 @@ function DocumentLibraryPane() {
         </div>
       ) : (
         <div className="space-y-3">
-          {contracts.map((c) => {
-            const isSent = c.status === 'sent' || c.status === 'signed';
-            return (
-              <div key={c.id} className="bg-white rounded-xl shadow border-l-4 border-indigo-500 p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm text-gray-900">{c.title || `Client Agreement #${c.id}`}</span>
-                      <StatusBadge status={c.status} />
-                      {sendSuccess === c.id && <span className="text-xs text-green-600 font-medium">✓ Sent</span>}
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-3 text-xs text-gray-500">
-                      <span>Production: <strong className="text-gray-700">{c.project_name || 'Pre-production'}</strong></span>
-                      <span>Client: <strong className="text-gray-700">{c.user_name}</strong></span>
-                      <span>Created: <strong className="text-gray-700">{new Date(c.created_at).toLocaleDateString()}</strong></span>
-                    </div>
-                    {c.file_abs_url && (
-                      <a href={c.file_abs_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
-                        <DocumentArrowUpIcon className="w-3.5 h-3.5" />View File
-                      </a>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {!isSent && (
-                      <button
-                        onClick={() => handleSend(c.id)}
-                        disabled={sendingId === c.id}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
-                      >
-                        <PaperAirplaneIcon className="w-3.5 h-3.5" />
-                        {sendingId === c.id ? 'Sending…' : 'Send'}
-                      </button>
-                    )}
-                    {isSent && (
-                      <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded-lg">✓ Delivered</span>
-                    )}
-                    <button onClick={() => deleteContract.mutate(c.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded transition">
-                      <TrashIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {contracts.map((c) => (
+            <ClientContractRow
+              key={c.id}
+              contract={c}
+              sendingId={sendingId}
+              sendSuccess={sendSuccess}
+              onSend={handleSend}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientContractRow({ contract: c, sendingId, sendSuccess, onSend, onDelete }) {
+  const [expanded, setExpanded] = useState(false);
+  const isSent = c.status === 'sent' || c.status === 'signed';
+  return (
+    <div className="bg-white rounded-xl shadow border-l-4 border-indigo-500">
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium text-sm text-gray-900">{c.title || `Client Agreement #${c.id}`}</span>
+              <StatusBadge status={c.status} />
+              {sendSuccess === c.id && <span className="text-xs text-green-600 font-medium">✓ Sent just now</span>}
+            </div>
+            <div className="mt-1 flex flex-wrap gap-3 text-xs text-gray-500">
+              <span>Production: <strong className="text-gray-700">{c.project_name || 'Pre-production'}</strong></span>
+              <span>Client: <strong className="text-gray-700">{c.user_name}</strong></span>
+              {c.sent_at && <span>Sent: <strong className="text-gray-700">{new Date(c.sent_at).toLocaleDateString()}</strong></span>}
+              <span>Created: <strong className="text-gray-700">{new Date(c.created_at).toLocaleDateString()}</strong></span>
+            </div>
+            {c.file_abs_url && (
+              <a href={c.file_abs_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
+                <DocumentArrowUpIcon className="w-3.5 h-3.5" /> View File
+              </a>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {c.draft_html && (
+              <button
+                onClick={() => setExpanded((p) => !p)}
+                className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition"
+              >
+                {expanded ? 'Hide' : 'View Document'}
+              </button>
+            )}
+            {!isSent && (
+              <button
+                onClick={() => onSend(c.id)}
+                disabled={sendingId === c.id}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50 transition"
+              >
+                <PaperAirplaneIcon className="w-3.5 h-3.5" />
+                {sendingId === c.id ? 'Sending…' : 'Send'}
+              </button>
+            )}
+            {isSent && (
+              <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded-lg">
+                <PaperAirplaneIcon className="w-3.5 h-3.5" /> Delivered
+              </span>
+            )}
+            <button onClick={() => onDelete(c.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded transition">
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+      {expanded && c.draft_html && (
+        <div className="border-t border-gray-100 px-5 pb-5 pt-4">
+          <div
+            className="prose prose-sm max-w-none [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_mark]:rounded"
+            dangerouslySetInnerHTML={{ __html: c.draft_html }}
+          />
         </div>
       )}
     </div>

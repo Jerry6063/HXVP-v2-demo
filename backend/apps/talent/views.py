@@ -7,7 +7,7 @@ from django.db import transaction
 from django.db.models import Sum, Q
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework import viewsets, permissions, parsers, status, generics
+from rest_framework import viewsets, permissions, parsers, status, generics, serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -85,8 +85,50 @@ def _create_talent_payment_for_log(log):
                 f"Talent payment: {payment.talent.user.get_full_name()} – {log.date.isoformat()}"
             ),
         )
+    _sync_talent_expense_status(payment)
 
     return payment
+
+
+def _sync_talent_expense_status(payment):
+    if not payment or not payment.project:
+        return
+
+    from apps.finance.models import Expense
+
+    talent_name = payment.talent.user.get_full_name()
+    expense_qs = Expense.objects.filter(
+        project=payment.project,
+        category="talent",
+        amount=payment.total_amount,
+    )
+
+    if payment.source_time_log and payment.source_time_log.date:
+        expense_qs = expense_qs.filter(date=payment.source_time_log.date)
+
+    expense = expense_qs.filter(description__icontains=talent_name).order_by("-id").first()
+    if expense is None:
+        expense = expense_qs.order_by("-id").first()
+    if expense is None:
+        return
+
+    should_mark_reimbursed = payment.status == TalentPayment.Status.PAID
+    update_fields = []
+
+    if expense.reimbursed != should_mark_reimbursed:
+        expense.reimbursed = should_mark_reimbursed
+        update_fields.append("reimbursed")
+
+    if should_mark_reimbursed and expense.reimbursed_at is None:
+        expense.reimbursed_at = payment.paid_at or timezone.now()
+        update_fields.append("reimbursed_at")
+
+    if not should_mark_reimbursed and expense.reimbursed_at is not None:
+        expense.reimbursed_at = None
+        update_fields.append("reimbursed_at")
+
+    if update_fields:
+        expense.save(update_fields=update_fields)
 
 
 def _validate_talent_inquiry_token(consideration, token, expected_action):
@@ -223,6 +265,14 @@ class TalentProfileViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         stripe.api_key = django_settings.STRIPE_SECRET_KEY
         try:
+            if profile.stripe_account_id:
+                try:
+                    stripe.Account.retrieve(profile.stripe_account_id)
+                except stripe.error.StripeError:
+                    profile.stripe_account_id = ""
+                    profile.stripe_onboarding_complete = False
+                    profile.save(update_fields=["stripe_account_id", "stripe_onboarding_complete"])
+
             if not profile.stripe_account_id:
                 account = stripe.Account.create(
                     type="express",
@@ -234,7 +284,8 @@ class TalentProfileViewSet(viewsets.ModelViewSet):
                     },
                 )
                 profile.stripe_account_id = account["id"]
-                profile.save(update_fields=["stripe_account_id"])
+                profile.stripe_onboarding_complete = False
+                profile.save(update_fields=["stripe_account_id", "stripe_onboarding_complete"])
             if user.role == "talent":
                 refresh_url = f"{django_settings.FRONTEND_URL}/talent/payments?tab=payout&refresh=1"
                 return_url = f"{django_settings.FRONTEND_URL}/talent/payments?tab=payout&success=1"
@@ -258,9 +309,26 @@ class TalentProfileViewSet(viewsets.ModelViewSet):
         if user.role == "talent" and profile.user_id != user.id:
             return Response({"detail": "Forbidden."}, status=status.HTTP_403_FORBIDDEN)
         if not profile.stripe_account_id:
-            return Response({"stripe_account_id": None, "onboarding_complete": False})
+            return Response({
+                "stripe_account_id": None,
+                "onboarding_complete": False,
+                "requires_reconnect": False,
+            })
         stripe.api_key = django_settings.STRIPE_SECRET_KEY
-        account = stripe.Account.retrieve(profile.stripe_account_id)
+        try:
+            account = stripe.Account.retrieve(profile.stripe_account_id)
+        except stripe.error.StripeError:
+            if profile.stripe_onboarding_complete:
+                profile.stripe_onboarding_complete = False
+                profile.save(update_fields=["stripe_onboarding_complete"])
+            return Response({
+                "stripe_account_id": profile.stripe_account_id,
+                "onboarding_complete": False,
+                "details_submitted": False,
+                "payouts_enabled": False,
+                "requires_reconnect": True,
+                "detail": "This payout account was linked to a previous Stripe platform account and must be reconnected.",
+            })
         complete = bool(
             account.get("details_submitted")
             and account.get("payouts_enabled")
@@ -273,6 +341,7 @@ class TalentProfileViewSet(viewsets.ModelViewSet):
             "onboarding_complete": complete,
             "details_submitted": account.get("details_submitted"),
             "payouts_enabled": account.get("payouts_enabled"),
+            "requires_reconnect": False,
         })
 
     @action(detail=False, methods=["get"], url_path="mine")
@@ -565,6 +634,7 @@ class TalentPaymentViewSet(viewsets.ModelViewSet):
                 description=f"Talent payment: {payment.talent.user.get_full_name()} \u2013 {month_name} {payment.period_year}",
                 date=timezone.now().date(),
             )
+        _sync_talent_expense_status(payment)
 
     @action(detail=True, methods=["post"])
     def mark_paid(self, request, pk=None):
@@ -573,6 +643,7 @@ class TalentPaymentViewSet(viewsets.ModelViewSet):
         payment.paid_at = timezone.now()
         payment.payment_reference = request.data.get("payment_reference", "")
         payment.save()
+        _sync_talent_expense_status(payment)
         send_payment_confirmation(payment)
         return Response(TalentPaymentSerializer(payment).data)
 
@@ -825,6 +896,7 @@ class StripeWebhookView(APIView):
 
         if update_fields:
             payment.save(update_fields=update_fields)
+            _sync_talent_expense_status(payment)
             if not reversed_transfer and should_send_confirmation:
                 send_payment_confirmation(payment)
         return True

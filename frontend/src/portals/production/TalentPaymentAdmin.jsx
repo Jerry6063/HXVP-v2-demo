@@ -300,6 +300,8 @@ function PaymentDetailPanel({ payment, type, onClose }) {
   const stripeStatus = stripeStatusQuery.data;
   const onboardingComplete = stripeStatus?.onboarding_complete;
   const hasAccount = !!stripeStatus?.stripe_account_id;
+  const requiresReconnect = !!stripeStatus?.requires_reconnect;
+  const stripeStatusDetail = stripeStatus?.detail;
 
   const handleSetupStripe = () => {
     createStripeAccount.mutate(profileId, {
@@ -355,6 +357,10 @@ function PaymentDetailPanel({ payment, type, onClose }) {
 
           {stripeStatusQuery.isLoading ? (
             <div className="text-sm text-gray-400">Checking Stripe account…</div>
+          ) : stripeStatusQuery.isError ? (
+            <div className="rounded-lg bg-red-50 border border-red-100 p-3 text-sm text-red-700">
+              {stripeStatusQuery.error?.response?.data?.detail || 'Unable to verify the Stripe payout account right now.'}
+            </div>
           ) : !hasAccount ? (
             <div className="space-y-2">
               <p className="text-sm text-gray-500">{isTalent ? 'This talent has' : 'This crew member has'} no Stripe payout account yet.</p>
@@ -364,6 +370,19 @@ function PaymentDetailPanel({ payment, type, onClose }) {
                 className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
               >
                 {createStripeAccount.isPending ? 'Creating…' : 'Set Up Stripe Payout Account'}
+              </button>
+            </div>
+          ) : requiresReconnect ? (
+            <div className="space-y-2">
+              <div className="rounded-lg bg-yellow-50 border border-yellow-100 p-3 text-sm text-yellow-800">
+                {stripeStatusDetail || 'This payout account was linked to a previous Stripe platform account and must be reconnected.'}
+              </div>
+              <button
+                onClick={handleSetupStripe}
+                disabled={createStripeAccount.isPending}
+                className="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600 disabled:opacity-50"
+              >
+                {createStripeAccount.isPending ? 'Generating…' : 'Reconnect Stripe Payout Account'}
               </button>
             </div>
           ) : !onboardingComplete ? (
@@ -424,7 +443,7 @@ function PaymentDetailPanel({ payment, type, onClose }) {
                 className="w-32 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
               />
               <button
-                onClick={() => markPaid.mutate({ id: payment.id, payment_reference: manualRef })}
+                onClick={() => markPaid.mutate({ id: payment.id, payment_reference: manualRef, projectId: payment.project })}
                 disabled={markPaid.isPending}
                 className="px-3 py-1.5 bg-gray-600 text-white rounded-lg text-xs font-medium hover:bg-gray-700 disabled:opacity-50"
               >

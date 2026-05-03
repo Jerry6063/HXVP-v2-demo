@@ -620,10 +620,15 @@ export const useMarkTalentPaymentPaid = () => {
   return useMutation({
     mutationFn: ({ id, payment_reference }) =>
       api.post(`/talent/payments/${id}/mark_paid/`, { payment_reference }).then((r) => r.data),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['talent-timelogs'] });
       qc.invalidateQueries({ queryKey: ['talent-payments'] });
       qc.invalidateQueries({ queryKey: ['talent-payment-summary'] });
+      qc.invalidateQueries({ queryKey: ['expenses'] });
+      qc.invalidateQueries({ queryKey: ['project-financials'] });
+      if (vars?.projectId != null) {
+        qc.invalidateQueries({ queryKey: ['project-financials', String(vars.projectId)] });
+      }
     },
   });
 };

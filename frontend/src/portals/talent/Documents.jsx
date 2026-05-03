@@ -84,6 +84,16 @@ function ContractCard({ contract: c, accentColor, signBtnClass }) {
                 <CheckBadgeIcon className="w-3.5 h-3.5" /> Signed
               </span>
             )}
+            {c.file_abs_url && (
+              <a
+                href={c.file_abs_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50"
+              >
+                View File
+              </a>
+            )}
             {c.draft_html && (
               <button
                 onClick={() => setView(view === 'summary' ? 'document' : 'summary')}

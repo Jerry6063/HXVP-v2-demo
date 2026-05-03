@@ -441,47 +441,66 @@ function LibraryPane({ contractType, recipientRole, recipientLabel, typeLabel, c
 }
 
 function ContractRow({ contract: c, typeLabel, color, sendingId, sendSuccess, onSend, onDelete }) {
+  const [expanded, setExpanded] = useState(false);
   const isSent = c.status === 'sent' || c.status === 'signed';
   const justSent = sendSuccess === c.id;
   return (
-    <div className={`bg-white rounded-xl shadow border-l-4 ${color} p-5`}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-gray-900 text-sm">{c.title || typeLabel} #{c.id}</span>
-            <StatusBadge status={c.status} />
-            {justSent && <span className="text-xs text-green-600 font-medium">✓ Sent just now</span>}
+    <div className={`bg-white rounded-xl shadow border-l-4 ${color}`}>
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium text-gray-900 text-sm">{c.title || typeLabel} #{c.id}</span>
+              <StatusBadge status={c.status} />
+              {justSent && <span className="text-xs text-green-600 font-medium">✓ Sent just now</span>}
+            </div>
+            <div className="mt-1 flex flex-wrap gap-3 text-xs text-gray-500">
+              <span>Project: <strong className="text-gray-700">{c.project_name}</strong></span>
+              <span>To: <strong className="text-gray-700">{c.user_name}</strong></span>
+              {c.sent_at && <span>Sent: <strong className="text-gray-700">{new Date(c.sent_at).toLocaleDateString()}</strong></span>}
+              <span>Created: <strong className="text-gray-700">{new Date(c.created_at).toLocaleDateString()}</strong></span>
+            </div>
+            {c.notes && <p className="mt-2 text-xs text-gray-500 bg-gray-50 rounded p-2">{c.notes}</p>}
+            {c.file_abs_url && (
+              <a href={c.file_abs_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
+                <DocumentArrowUpIcon className="w-3.5 h-3.5" /> View File
+              </a>
+            )}
           </div>
-          <div className="mt-1 flex flex-wrap gap-3 text-xs text-gray-500">
-            <span>Project: <strong className="text-gray-700">{c.project_name}</strong></span>
-            <span>To: <strong className="text-gray-700">{c.user_name}</strong></span>
-            {c.sent_at && <span>Sent: <strong className="text-gray-700">{new Date(c.sent_at).toLocaleDateString()}</strong></span>}
-            <span>Created: <strong className="text-gray-700">{new Date(c.created_at).toLocaleDateString()}</strong></span>
-          </div>
-          {c.notes && <p className="mt-2 text-xs text-gray-500 bg-gray-50 rounded p-2">{c.notes}</p>}
-          {c.file_abs_url && (
-            <a href={c.file_abs_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700">
-              <DocumentArrowUpIcon className="w-3.5 h-3.5" /> View File
-            </a>
-          )}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {!isSent && (
-            <button onClick={() => onSend(c.id)} disabled={sendingId === c.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50 transition">
-              <PaperAirplaneIcon className="w-3.5 h-3.5" />
-              {sendingId === c.id ? 'Sending…' : 'Send'}
+          <div className="flex items-center gap-2 shrink-0">
+            {c.draft_html && (
+              <button
+                onClick={() => setExpanded((p) => !p)}
+                className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 transition"
+              >
+                {expanded ? 'Hide' : 'View Document'}
+              </button>
+            )}
+            {!isSent && (
+              <button onClick={() => onSend(c.id)} disabled={sendingId === c.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50 transition">
+                <PaperAirplaneIcon className="w-3.5 h-3.5" />
+                {sendingId === c.id ? 'Sending…' : 'Send'}
+              </button>
+            )}
+            {isSent && (
+              <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded-lg">
+                <PaperAirplaneIcon className="w-3.5 h-3.5" /> Delivered
+              </span>
+            )}
+            <button onClick={() => onDelete(c.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded transition" title="Delete">
+              <TrashIcon className="w-4 h-4" />
             </button>
-          )}
-          {isSent && (
-            <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded-lg">
-              <PaperAirplaneIcon className="w-3.5 h-3.5" /> Delivered
-            </span>
-          )}
-          <button onClick={() => onDelete(c.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded transition" title="Delete">
-            <TrashIcon className="w-4 h-4" />
-          </button>
+          </div>
         </div>
       </div>
+      {expanded && c.draft_html && (
+        <div className="border-t border-gray-100 px-5 pb-5 pt-4">
+          <div
+            className="prose prose-sm max-w-none [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_mark]:rounded"
+            dangerouslySetInnerHTML={{ __html: c.draft_html }}
+          />
+        </div>
+      )}
     </div>
   );
 }
