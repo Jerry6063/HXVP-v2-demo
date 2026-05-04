@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { PencilIcon, TrashIcon, PlusIcon, CheckIcon, XMarkIcon, PaperClipIcon } from '@heroicons/react/24/outline';
 import ShootSchedule from './ShootSchedule';
 import {
@@ -24,13 +24,10 @@ import {
   useRemoveTalentConsideration,
   useSendTalentAvailabilityInquiry,
   useCrewConsiderations,
-  useAddCrewConsideration,
   useRemoveCrewConsideration,
   useSendCrewAvailabilityInquiry,
   useTalentProfiles,
-  useCrewProfiles,
   useTalentAvailability,
-  useCrewAvailability,
   useCreateExpense,
   useDeleteExpense,
   useUpdateExpense,
@@ -60,6 +57,7 @@ const PHASE_MAIN_TITLES = {
 };
 
 const PHASE_DISPLAY_ORDER = ['preparing', 'pre_production', 'shooting', 'post_production', 'review', 'delivered'];
+const PROJECT_SECTION_IDS = new Set(['workflow', 'team-talent', 'assets', 'budget', 'contracts']);
 
 function normalizeMsTitle(value = '') {
   return String(value).trim().toLowerCase();
@@ -78,10 +76,15 @@ function isPhaseMainMilestone(ms) {
   return normalizeMsTitle(ms.title) === normalizeMsTitle(getMainTitleForPhase(ms.phase));
 }
 
+function getProjectSection(section) {
+  return PROJECT_SECTION_IDS.has(section) ? section : 'workflow';
+}
+
 export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState('workflow');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeSection = getProjectSection(searchParams.get('section'));
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const { data: project, isLoading } = useProject(id);
   const { data: deliverables } = useDeliverables({ project: id });
@@ -111,6 +114,19 @@ export default function ProjectDetail() {
   const bookingsArr = bookings?.results || bookings || [];
   const assignmentsArr = assignments?.results || assignments || [];
   const shoots = project?.shoots || [];
+
+  const handleSectionChange = (sectionId) => {
+    const nextSection = getProjectSection(sectionId);
+    const nextParams = new URLSearchParams(searchParams);
+
+    if (nextSection === 'workflow') {
+      nextParams.delete('section');
+    } else {
+      nextParams.set('section', nextSection);
+    }
+
+    setSearchParams(nextParams, { replace: true });
+  };
 
   if (isLoading) return <div className="text-center py-10 text-gray-400">Loading...</div>;
   if (!project) return <div className="text-center py-10 text-gray-400">Project not found</div>;
@@ -189,7 +205,7 @@ export default function ProjectDetail() {
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveSection(tab.id)}
+                  onClick={() => handleSectionChange(tab.id)}
                   className={`pb-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
                     activeSection === tab.id
                       ? 'border-indigo-600 text-indigo-600'
@@ -245,7 +261,7 @@ export default function ProjectDetail() {
           {/* Talent & Crew */}
           <button
             type="button"
-            onClick={() => setActiveSection('team-talent')}
+            onClick={() => handleSectionChange('team-talent')}
             className={`w-full text-left bg-white rounded-xl shadow-sm border p-4 transition-colors ${
               activeSection === 'team-talent'
                 ? 'border-indigo-300 ring-2 ring-indigo-100'
@@ -289,7 +305,7 @@ export default function ProjectDetail() {
           {financials && (
             <button
               type="button"
-              onClick={() => setActiveSection('budget')}
+              onClick={() => handleSectionChange('budget')}
               className={`w-full text-left bg-white rounded-xl shadow-sm border p-4 transition-colors ${
                 activeSection === 'budget'
                   ? 'border-indigo-300 ring-2 ring-indigo-100'
@@ -799,10 +815,6 @@ function WorkflowTab({ project, milestones, createMilestone, updateMilestone, de
 
 const GENDER_OPTIONS = ['male', 'female', 'non_binary', 'other', 'prefer_not_to_say'];
 const AVAILABILITY_OPTIONS = ['available', 'booked', 'unavailable'];
-const CREW_ROLE_OPTIONS = [
-  'photographer', 'dop', 'videographer', 'gaffer', 'grip', 'wardrobe',
-  'set_design', 'bts', 'pa', 'ac', 'audio', 'lighting', 'hair_makeup', 'stylist', 'other',
-];
 
 function AddTalentModal({ onClose, onAdd, existingTalentIds = new Set() }) {
   const [search, setSearch] = useState('');
@@ -968,149 +980,6 @@ function AddTalentModal({ onClose, onAdd, existingTalentIds = new Set() }) {
   );
 }
 
-function AddCrewModal({ onClose, onAdd, existingCrewIds = new Set() }) {
-  const [search, setSearch] = useState('');
-  const [role, setRole] = useState('');
-  const [availStatus, setAvailStatus] = useState('');
-  const [availDate, setAvailDate] = useState('');
-  const [maxRate, setMaxRate] = useState('');
-  const [selectedId, setSelectedId] = useState(null);
-  const [notes, setNotes] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const availParams = availDate ? { date_from: availDate, date_to: availDate } : {};
-  const { data: availData } = useCrewAvailability(availDate ? availParams : { enabled: false });
-  const { data: crewProfilesData } = useCrewProfiles();
-
-  const unavailableIds = useMemo(() => {
-    if (!availDate || !availData) return new Set();
-    const entries = availData?.results || availData || [];
-    return new Set(
-      entries
-        .filter((e) => e.status === 'unavailable')
-        .map((e) => e.crew)
-    );
-  }, [availData, availDate]);
-
-  const profilesArr = useMemo(() => crewProfilesData?.results || crewProfilesData || [], [crewProfilesData]);
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return profilesArr.filter((p) => {
-      if (existingCrewIds.has(p.id)) return false;
-      if (q && !(p.full_name || p.user_full_name || '').toLowerCase().includes(q)) return false;
-      if (role && p.crew_role !== role) return false;
-      if (availStatus && p.availability !== availStatus) return false;
-      if (availDate && unavailableIds.has(p.id)) return false;
-      if (maxRate && parseFloat(p.day_rate) > parseFloat(maxRate)) return false;
-      return true;
-    });
-  }, [profilesArr, search, role, availStatus, availDate, unavailableIds, maxRate, existingCrewIds]);
-
-  const handleAdd = async () => {
-    if (!selectedId) return;
-    setSaving(true);
-    try { await onAdd({ id: selectedId, notes }); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-900">Add Crew to Consideration</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
-        </div>
-
-        {/* Filters */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <input
-            className="col-span-2 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
-            placeholder="Search by name…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
-          >
-            <option value="">All roles</option>
-            {CREW_ROLE_OPTIONS.map((r) => (
-              <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>
-            ))}
-          </select>
-          <select
-            value={availStatus}
-            onChange={(e) => setAvailStatus(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
-          >
-            <option value="">Any availability</option>
-            {AVAILABILITY_OPTIONS.map((a) => (
-              <option key={a} value={a}>{a}</option>
-            ))}
-          </select>
-          <input
-            type="date"
-            value={availDate}
-            onChange={(e) => setAvailDate(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
-            title="Available on this date"
-          />
-          <input
-            type="number"
-            min="0"
-            placeholder="Max rate ($/day)"
-            value={maxRate}
-            onChange={(e) => setMaxRate(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
-          />
-        </div>
-
-        <div className="max-h-52 overflow-y-auto divide-y divide-gray-50 border border-gray-100 rounded-lg mb-3">
-          {filtered.length === 0 && <p className="text-xs text-gray-400 p-3">No results</p>}
-          {filtered.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setSelectedId(p.id)}
-              className={`w-full text-left px-3 py-2 text-sm flex justify-between items-center transition-colors ${
-                selectedId === p.id ? 'bg-sky-50 text-sky-700' : 'hover:bg-gray-50 text-gray-700'
-              }`}
-            >
-              <span className="font-medium">{p.full_name || p.user_full_name}</span>
-              <span className="text-xs text-gray-400 flex gap-2">
-                <span className="capitalize">{(p.crew_role || '').replace(/_/g, ' ')}</span>
-                {p.day_rate > 0 && <span>${p.day_rate}/day</span>}
-                {p.years_experience != null && <span>{p.years_experience}y exp</span>}
-                <span className={`capitalize ${p.availability === 'available' ? 'text-green-500' : p.availability === 'booked' ? 'text-yellow-500' : 'text-red-400'}`}>
-                  {p.availability}
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>
-
-        <textarea
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-sky-300 resize-none"
-          rows={2}
-          placeholder="Notes (optional)"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
-          <button
-            onClick={handleAdd}
-            disabled={!selectedId || saving}
-            className="px-4 py-2 bg-sky-600 text-white rounded-lg text-sm font-medium hover:bg-sky-700 disabled:opacity-50"
-          >
-            {saving ? 'Adding…' : 'Add'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function formatInquiryRate(value) {
   if (value == null || value === '') return 'Rate TBD';
   const numericValue = Number(value);
@@ -1250,7 +1119,6 @@ function AvailabilityInquiryModal({ consideration, project, type, onClose, onSen
 }
 
 function TeamTalentTab({ bookings, assignments, projectId, project }) {
-  const [showAddCrew, setShowAddCrew] = useState(false);
   const [showAddTalentReq, setShowAddTalentReq] = useState(false);
   const [showAddCrewReq, setShowAddCrewReq] = useState(false);
   const [availabilityModal, setAvailabilityModal] = useState(null);
@@ -1263,7 +1131,6 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
   const { data: crewConsData } = useCrewConsiderations({ project: projectId });
   const removeTalentCon = useRemoveTalentConsideration();
   const sendTalentInquiry = useSendTalentAvailabilityInquiry();
-  const addCrewCon = useAddCrewConsideration();
   const removeCrewCon = useRemoveCrewConsideration();
   const sendCrewInquiry = useSendCrewAvailabilityInquiry();
 
@@ -1296,15 +1163,10 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
 
   const TALENT_TYPE_LABELS = { model: 'Model', actor: 'Actor', voiceover: 'Voiceover', dancer: 'Dancer', livestream: 'Livestream Host', other: 'Other' };
   const CREW_ROLE_LABELS = { director: 'Director', photographer: 'Photographer', dop: 'Director of Photography', videographer: 'Videographer', first_ac: '1st AC', second_ac: '2nd AC', gaffer: 'Gaffer', grip: 'Grip', electric: 'Electric', wardrobe: 'Wardrobe', set_design: 'Set Design', bts: 'Behind-the-Scene', pa: 'Production Assistant', ac: 'Assistant Camera', audio: 'Audio', lighting: 'Lighting', hair_makeup: 'Hair & Makeup', stylist: 'Stylist', crafty: 'Crafty', other: 'Other' };
-
-  const handleAddCrew = async ({ id, notes }) => {
-    try {
-      await addCrewCon.mutateAsync({ project: projectId, crew: id, notes });
-      setShowAddCrew(false);
-    } catch (err) {
-      console.error('Add crew failed', err);
-    }
-  };
+  const totalTalentNeeded = talentRequirements.reduce((total, req) => total + Number(req.count || 0), 0);
+  const totalCrewNeeded = crewRequirements.reduce((total, req) => total + Number(req.count || 0), 0);
+  const filledTalentSlots = talentFulfillment.reduce((total, req) => total + Math.min(req.filled, Number(req.count || 0)), 0);
+  const filledCrewSlots = crewFulfillment.reduce((total, req) => total + Math.min(req.filled, Number(req.count || 0)), 0);
 
   const handleAddTalentReq = async () => {
     await createTalentReq.mutateAsync({ project: projectId, ...newTalentReq });
@@ -1333,151 +1195,184 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
   };
 
   return (
-    <div className="space-y-8">
-      {/* ── Staffing Requirements ── */}
-      {(talentRequirements.length > 0 || crewRequirements.length > 0) && (
-        <div>
-          <h4 className="font-semibold text-gray-800 text-sm mb-3">Staffing Requirements</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Talent Requirements */}
-            {talentRequirements.length > 0 && (
-              <div className="bg-indigo-50/50 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">Talent Needs</p>
-                  <button onClick={() => setShowAddTalentReq(true)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">+ Add</button>
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950 shadow-lg">
+        <div className="flex flex-col gap-5 border-b border-white/10 px-5 py-5 text-white lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200">Staffing Requirements</p>
+            <h4 className="mt-2 text-xl font-semibold">Plan the roster before the project gets busy</h4>
+            <p className="mt-2 max-w-2xl text-sm text-slate-300">
+              Keep the project staffing targets visible here, then use the dedicated talent and crew builders below to fill the remaining gaps.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:min-w-[320px]">
+            <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-100">Talent</p>
+              <p className="mt-2 text-2xl font-semibold">{filledTalentSlots}/{totalTalentNeeded || 0}</p>
+              <p className="mt-1 text-xs text-slate-300">filled against requested slots</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-100">Crew</p>
+              <p className="mt-2 text-2xl font-semibold">{filledCrewSlots}/{totalCrewNeeded || 0}</p>
+              <p className="mt-1 text-xs text-slate-300">filled against requested slots</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
+          <div className="rounded-3xl border border-white/10 bg-white/10 p-4 text-white">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-100">Talent Needs</p>
+                <p className="mt-1 text-sm text-slate-300">Booked and shortlisted talent should roll up against these targets.</p>
+              </div>
+              <button onClick={() => setShowAddTalentReq(true)} className="rounded-full border border-white/15 px-3 py-1 text-xs font-medium text-white hover:bg-white/10">+ Add</button>
+            </div>
+            {talentRequirements.length === 0 ? (
+              <p className="mt-4 rounded-2xl border border-dashed border-white/15 px-4 py-5 text-sm text-slate-300">No talent requirements yet.</p>
+            ) : (
+              <ul className="mt-4 space-y-2">
+                {talentFulfillment.map((r) => (
+                  <li key={r.id} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/10 px-3 py-3 text-sm">
+                    <FulfillIcon filled={r.filled} needed={r.count} />
+                    <div>
+                      <p className="font-medium text-white">{r.count}× {TALENT_TYPE_LABELS[r.talent_type] || r.talent_type}</p>
+                      <p className="text-xs text-slate-300">{r.filled}/{r.count} filled</p>
+                    </div>
+                    {r.notes && <span className="text-xs text-slate-400 italic">{r.notes}</span>}
+                    <button onClick={() => deleteTalentReq.mutate(r.id)} className="ml-auto text-xs text-slate-400 hover:text-red-300">×</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/10 p-4 text-white">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-100">Crew Needs</p>
+                <p className="mt-1 text-sm text-slate-300">Use the crew builder to source the open roles and check real availability before adding them.</p>
+              </div>
+              <button onClick={() => setShowAddCrewReq(true)} className="rounded-full border border-white/15 px-3 py-1 text-xs font-medium text-white hover:bg-white/10">+ Add</button>
+            </div>
+            {crewRequirements.length === 0 ? (
+              <p className="mt-4 rounded-2xl border border-dashed border-white/15 px-4 py-5 text-sm text-slate-300">No crew requirements yet.</p>
+            ) : (
+              <ul className="mt-4 space-y-2">
+                {crewFulfillment.map((r) => (
+                  <li key={r.id} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/10 px-3 py-3 text-sm">
+                    <FulfillIcon filled={r.filled} needed={r.count} />
+                    <div>
+                      <p className="font-medium text-white">{r.count}× {CREW_ROLE_LABELS[r.crew_role] || r.crew_role?.replace(/_/g, ' ')}</p>
+                      <p className="text-xs text-slate-300">{r.filled}/{r.count} filled</p>
+                    </div>
+                    {r.notes && <span className="text-xs text-slate-400 italic">{r.notes}</span>}
+                    <button onClick={() => deleteCrewReq.mutate(r.id)} className="ml-auto text-xs text-slate-400 hover:text-red-300">×</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        {(showAddTalentReq || showAddCrewReq) && (
+          <div className="space-y-4 border-t border-white/10 bg-white/95 px-5 py-5 text-gray-900">
+            {showAddTalentReq && (
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4 space-y-3">
+                <p className="text-xs font-semibold text-indigo-700 uppercase">Add Talent Requirement</p>
+                <div className="flex gap-2 items-end">
+                  <div>
+                    <label className="text-xs text-gray-500">Count</label>
+                    <input type="number" min="1" value={newTalentReq.count} onChange={(e) => setNewTalentReq({ ...newTalentReq, count: parseInt(e.target.value) || 1 })} className="w-16 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Type</label>
+                    <select value={newTalentReq.talent_type} onChange={(e) => setNewTalentReq({ ...newTalentReq, talent_type: e.target.value })} className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm">
+                      {Object.entries(TALENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs text-gray-500">Notes</label>
+                    <input value={newTalentReq.notes} onChange={(e) => setNewTalentReq({ ...newTalentReq, notes: e.target.value })} placeholder="Optional notes" className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <button onClick={handleAddTalentReq} disabled={createTalentReq.isPending} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">Add</button>
+                  <button onClick={() => setShowAddTalentReq(false)} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200">Cancel</button>
                 </div>
-                <ul className="space-y-2">
-                  {talentFulfillment.map((r) => (
-                    <li key={r.id} className="flex items-center gap-2 text-sm">
-                      <FulfillIcon filled={r.filled} needed={r.count} />
-                      <span className="font-medium text-gray-800">{r.count}× {TALENT_TYPE_LABELS[r.talent_type] || r.talent_type}</span>
-                      <span className="text-xs text-gray-500">({r.filled}/{r.count} filled)</span>
-                      {r.notes && <span className="text-xs text-gray-400 italic ml-1">{r.notes}</span>}
-                      <button onClick={() => deleteTalentReq.mutate(r.id)} className="ml-auto text-xs text-gray-300 hover:text-red-500">×</button>
-                    </li>
-                  ))}
-                </ul>
               </div>
             )}
-            {/* Crew Requirements */}
-            {crewRequirements.length > 0 && (
-              <div className="bg-sky-50/50 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold text-sky-700 uppercase tracking-wide">Crew Needs</p>
-                  <button onClick={() => setShowAddCrewReq(true)} className="text-xs font-medium text-sky-600 hover:text-sky-700">+ Add</button>
+
+            {showAddCrewReq && (
+              <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 space-y-3">
+                <p className="text-xs font-semibold text-sky-700 uppercase">Add Crew Requirement</p>
+                <div className="flex gap-2 items-end">
+                  <div>
+                    <label className="text-xs text-gray-500">Count</label>
+                    <input type="number" min="1" value={newCrewReq.count} onChange={(e) => setNewCrewReq({ ...newCrewReq, count: parseInt(e.target.value) || 1 })} className="w-16 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Role</label>
+                    <select value={newCrewReq.crew_role} onChange={(e) => setNewCrewReq({ ...newCrewReq, crew_role: e.target.value })} className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm">
+                      {Object.entries(CREW_ROLE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs text-gray-500">Notes</label>
+                    <input value={newCrewReq.notes} onChange={(e) => setNewCrewReq({ ...newCrewReq, notes: e.target.value })} placeholder="Optional notes" className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <button onClick={handleAddCrewReq} disabled={createCrewReq.isPending} className="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-xs font-medium hover:bg-sky-700 disabled:opacity-50">Add</button>
+                  <button onClick={() => setShowAddCrewReq(false)} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200">Cancel</button>
                 </div>
-                <ul className="space-y-2">
-                  {crewFulfillment.map((r) => (
-                    <li key={r.id} className="flex items-center gap-2 text-sm">
-                      <FulfillIcon filled={r.filled} needed={r.count} />
-                      <span className="font-medium text-gray-800">{r.count}× {CREW_ROLE_LABELS[r.crew_role] || r.crew_role?.replace(/_/g, ' ')}</span>
-                      <span className="text-xs text-gray-500">({r.filled}/{r.count} filled)</span>
-                      {r.notes && <span className="text-xs text-gray-400 italic ml-1">{r.notes}</span>}
-                      <button onClick={() => deleteCrewReq.mutate(r.id)} className="ml-auto text-xs text-gray-300 hover:text-red-500">×</button>
-                    </li>
-                  ))}
-                </ul>
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Add requirement inline forms */}
-      {(talentRequirements.length === 0 && crewRequirements.length === 0) && (
-        <div className="flex gap-3">
-          <button onClick={() => setShowAddTalentReq(true)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">+ Add Talent Requirement</button>
-          <button onClick={() => setShowAddCrewReq(true)} className="text-xs font-medium text-sky-600 hover:text-sky-700">+ Add Crew Requirement</button>
-        </div>
-      )}
-
-      {showAddTalentReq && (
-        <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
-          <p className="text-xs font-semibold text-indigo-700 uppercase">Add Talent Requirement</p>
-          <div className="flex gap-2 items-end">
-            <div>
-              <label className="text-xs text-gray-500">Count</label>
-              <input type="number" min="1" value={newTalentReq.count} onChange={(e) => setNewTalentReq({ ...newTalentReq, count: parseInt(e.target.value) || 1 })} className="w-16 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500">Type</label>
-              <select value={newTalentReq.talent_type} onChange={(e) => setNewTalentReq({ ...newTalentReq, talent_type: e.target.value })} className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm">
-                {Object.entries(TALENT_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="text-xs text-gray-500">Notes</label>
-              <input value={newTalentReq.notes} onChange={(e) => setNewTalentReq({ ...newTalentReq, notes: e.target.value })} placeholder="Optional notes" className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
-            </div>
-            <button onClick={handleAddTalentReq} disabled={createTalentReq.isPending} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">Add</button>
-            <button onClick={() => setShowAddTalentReq(false)} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200">Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {showAddCrewReq && (
-        <div className="bg-sky-50 rounded-xl p-4 space-y-3">
-          <p className="text-xs font-semibold text-sky-700 uppercase">Add Crew Requirement</p>
-          <div className="flex gap-2 items-end">
-            <div>
-              <label className="text-xs text-gray-500">Count</label>
-              <input type="number" min="1" value={newCrewReq.count} onChange={(e) => setNewCrewReq({ ...newCrewReq, count: parseInt(e.target.value) || 1 })} className="w-16 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500">Role</label>
-              <select value={newCrewReq.crew_role} onChange={(e) => setNewCrewReq({ ...newCrewReq, crew_role: e.target.value })} className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm">
-                {Object.entries(CREW_ROLE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="text-xs text-gray-500">Notes</label>
-              <input value={newCrewReq.notes} onChange={(e) => setNewCrewReq({ ...newCrewReq, notes: e.target.value })} placeholder="Optional notes" className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
-            </div>
-            <button onClick={handleAddCrewReq} disabled={createCrewReq.isPending} className="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-xs font-medium hover:bg-sky-700 disabled:opacity-50">Add</button>
-            <button onClick={() => setShowAddCrewReq(false)} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200">Cancel</button>
-          </div>
-        </div>
-      )}
+        )}
+      </section>
 
       {/* ── Talent Bookings ── */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="font-semibold text-gray-800 text-sm">Talent Bookings</h4>
-          <button
-            onClick={() => navigate(`/production/projects/${projectId}/talent-shortlist`)}
-            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700"
-          >
-            <span>Open Shortlist Builder</span>
-          </button>
+      <section className="rounded-[28px] border border-indigo-100 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Talent Bookings</p>
+            <h4 className="mt-1 text-lg font-semibold text-gray-900">Client-facing talent shortlist and booked roster</h4>
+            <p className="mt-1 text-sm text-gray-500">Keep confirmed talent visible here and send the shortlist from the single builder flow below.</p>
+          </div>
+          <div className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
+            {bookings.length} booking{bookings.length === 1 ? '' : 's'}
+          </div>
         </div>
+
+        <div className="mt-5">
         {bookings.length === 0 ? (
-          <p className="text-sm text-gray-400 mb-3">No talent booked to shoots yet</p>
+          <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-6 text-sm text-gray-400">No talent booked to shoots yet.</p>
         ) : (
-          <table className="w-full text-sm mb-3">
-            <thead>
-              <tr className="text-left text-xs text-gray-500 uppercase">
-                <th className="pb-2">Talent</th>
-                <th className="pb-2">Role</th>
-                <th className="pb-2">Shoot</th>
-                <th className="pb-2">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {bookings.map((b) => (
-                <tr key={b.id}>
-                  <td className="py-2 text-gray-700">{b.talent_name}</td>
-                  <td className="py-2 text-gray-500 capitalize">{(b.talent_type || '').replace(/_/g, ' ')}</td>
-                  <td className="py-2 text-gray-500">{b.shoot_detail?.location} – {b.shoot_detail?.shoot_date}</td>
-                  <td className="py-2"><StatusBadge status={b.status} /></td>
+          <div className="overflow-hidden rounded-2xl border border-gray-100">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr className="text-left text-xs text-gray-500 uppercase">
+                  <th className="px-4 py-3">Talent</th>
+                  <th className="px-4 py-3">Role</th>
+                  <th className="px-4 py-3">Shoot</th>
+                  <th className="px-4 py-3">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {bookings.map((b) => (
+                  <tr key={b.id}>
+                    <td className="px-4 py-3 text-gray-700">{b.talent_name}</td>
+                    <td className="px-4 py-3 text-gray-500 capitalize">{(b.talent_type || '').replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-3 text-gray-500">{b.shoot_detail?.location} – {b.shoot_detail?.shoot_date}</td>
+                    <td className="px-4 py-3"><StatusBadge status={b.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
+        </div>
 
         {/* Talent Under Consideration */}
         {talentCons.length > 0 && (
-          <div className="bg-indigo-50 rounded-xl p-4">
+          <div className="mt-4 bg-indigo-50 rounded-2xl p-4">
             <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-2">Under Consideration</p>
             <ul className="space-y-2">
               {talentCons.map((c) => (
@@ -1571,47 +1466,56 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
             </div>
           )}
         </div>
-      </div>
+      </section>
 
       {/* ── Crew Assignments ── */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="font-semibold text-gray-800 text-sm">Crew Assignments</h4>
+      <section className="rounded-[28px] border border-sky-100 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">Crew Assignments</p>
+            <h4 className="mt-1 text-lg font-semibold text-gray-900">Internal crew sourcing and assignment tracking</h4>
+            <p className="mt-1 text-sm text-gray-500">Filter crew on a dedicated page, review availability calendars, and add them to project consideration before assigning shoots.</p>
+          </div>
           <button
-            onClick={() => setShowAddCrew(true)}
-            className="flex items-center gap-1 px-3 py-1.5 bg-sky-600 text-white rounded-lg text-xs font-medium hover:bg-sky-700"
+            onClick={() => navigate(`/production/projects/${projectId}/crew-builder`)}
+            className="inline-flex items-center justify-center rounded-xl bg-sky-600 px-4 py-2 text-xs font-medium text-white hover:bg-sky-700"
           >
             <span>+ Add Crew</span>
           </button>
         </div>
+
+        <div className="mt-5">
         {assignments.length === 0 ? (
-          <p className="text-sm text-gray-400 mb-3">No crew assigned to shoots yet</p>
+          <p className="rounded-2xl border border-dashed border-gray-200 px-4 py-6 text-sm text-gray-400">No crew assigned to shoots yet.</p>
         ) : (
-          <table className="w-full text-sm mb-3">
-            <thead>
-              <tr className="text-left text-xs text-gray-500 uppercase">
-                <th className="pb-2">Crew</th>
-                <th className="pb-2">Role</th>
-                <th className="pb-2">Shoot</th>
-                <th className="pb-2">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {assignments.map((a) => (
-                <tr key={a.id}>
-                  <td className="py-2 text-gray-700">{a.crew_name}</td>
-                  <td className="py-2 text-gray-500 capitalize">{a.role_on_shoot?.replace(/_/g, ' ')}</td>
-                  <td className="py-2 text-gray-500">{a.shoot_detail?.location} – {a.shoot_detail?.shoot_date}</td>
-                  <td className="py-2"><StatusBadge status={a.status} /></td>
+          <div className="overflow-hidden rounded-2xl border border-gray-100">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr className="text-left text-xs text-gray-500 uppercase">
+                  <th className="px-4 py-3">Crew</th>
+                  <th className="px-4 py-3">Role</th>
+                  <th className="px-4 py-3">Shoot</th>
+                  <th className="px-4 py-3">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {assignments.map((a) => (
+                  <tr key={a.id}>
+                    <td className="px-4 py-3 text-gray-700">{a.crew_name}</td>
+                    <td className="px-4 py-3 text-gray-500 capitalize">{a.role_on_shoot?.replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-3 text-gray-500">{a.shoot_detail?.location} – {a.shoot_detail?.shoot_date}</td>
+                    <td className="px-4 py-3"><StatusBadge status={a.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
+        </div>
 
         {/* Crew Under Consideration */}
         {crewCons.length > 0 && (
-          <div className="bg-sky-50 rounded-xl p-4">
+          <div className="mt-4 bg-sky-50 rounded-2xl p-4">
             <p className="text-xs font-semibold text-sky-700 uppercase tracking-wide mb-2">Under Consideration</p>
             <ul className="space-y-2">
               {crewCons.map((c) => (
@@ -1651,18 +1555,7 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
             </ul>
           </div>
         )}
-      </div>
-
-      {showAddCrew && (
-        <AddCrewModal
-          onClose={() => setShowAddCrew(false)}
-          onAdd={handleAddCrew}
-          existingCrewIds={new Set([
-            ...assignments.map((a) => a.crew),
-            ...crewCons.map((c) => c.crew),
-          ])}
-        />
-      )}
+      </section>
       {availabilityModal && (
         <AvailabilityInquiryModal
           key={`${availabilityModal.type}-${availabilityModal.consideration.id}`}

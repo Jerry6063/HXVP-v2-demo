@@ -100,12 +100,14 @@ const DEAL_MEMO_HTML = `
 <h2>13. Governing Law</h2>
 <p>This agreement is governed by the laws of the State of Texas. Disputes shall be resolved in Dallas County, Texas.</p>
 <p><br /></p>
+<hr />
 <h2>Crew Information</h2>
 <p>Crew Member Name: ______________________________</p>
 <p>Role / Department: ______________________________</p>
 <p>Phone: ______________________________</p>
 <p>Email: ______________________________</p>
 <p><br /></p>
+<hr />
 <h2>Acknowledgment &amp; Signature</h2>
 <p>By signing below, the crew member acknowledges that they have read and agree to the terms outlined in this Master Crew Deal Memo.</p>
 <p><br /></p>

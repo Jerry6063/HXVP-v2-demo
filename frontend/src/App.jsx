@@ -15,6 +15,7 @@ import ProductionsModule from './portals/production/ProductionsModule';
 import ProductionCalendar from './portals/production/Calendar';
 import ProjectDetail from './portals/production/ProjectDetail';
 import ProjectTalentShortlistPage from './portals/production/ProjectTalentShortlistPage';
+import ProjectCrewBuilderPage from './portals/production/ProjectCrewBuilderPage';
 import TalentsModule from './portals/production/TalentsModule';
 import TalentDetailPage from './portals/production/TalentDetailPage';
 import CrewPage from './portals/production/CrewPage';
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="calendar" element={<ProductionCalendar />} />
         <Route path="projects/:id" element={<ProjectDetail />} />
         <Route path="projects/:id/talent-shortlist" element={<ProjectTalentShortlistPage />} />
+        <Route path="projects/:id/crew-builder" element={<ProjectCrewBuilderPage />} />
         <Route path="projects/:id/shoots/:shootId" element={<ShootPage />} />
         <Route path="requests" element={<Navigate to="/production/projects?tab=requests" replace />} />
         <Route path="requests/:id" element={<ProductionRequestDetail />} />
