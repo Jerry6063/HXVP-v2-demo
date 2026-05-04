@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
+  useCreateCrewPayment,
   useCreateCrewStripeAccount,
+  useCreateTalentPayment,
   useCreateTalentStripeAccount,
+  useCrewProfiles,
   useCrewPayments,
   useCrewStripeAccountStatus,
   useInitiateCrewPayout,
   useInitiateTalentPayout,
   useMarkCrewPaymentPaid,
   useMarkTalentPaymentPaid,
+  useProjects,
+  useTalentProfiles,
   useTalentPayments,
   useTalentStripeAccountStatus,
   useVerifyPaymentPassword,
@@ -22,6 +27,7 @@ const SORT_OPTIONS = [
   { key: 'date', label: 'Log Date' },
   { key: 'hours', label: 'Hours' },
   { key: 'amount', label: 'Amount' },
+  { key: 'overdue', label: 'Overdue' },
   { key: 'status', label: 'Status' },
 ];
 
@@ -88,16 +94,27 @@ export default function TalentPaymentAdmin() {
 
 function PaymentsTab({ type, selectedPaymentId, onSelectPayment }) {
   const isTalent = type === 'talent';
+  const now = new Date();
   const { data: talentPaymentsData, isLoading: talentLoading } = useTalentPayments();
   const { data: crewPaymentsData, isLoading: crewLoading } = useCrewPayments();
+  const { data: talentProfilesData } = useTalentProfiles();
+  const { data: crewProfilesData } = useCrewProfiles();
+  const { data: projectsData } = useProjects();
+  const createTalentPayment = useCreateTalentPayment();
+  const createCrewPayment = useCreateCrewPayment();
   const paymentsData = isTalent ? talentPaymentsData : crewPaymentsData;
   const isLoading = isTalent ? talentLoading : crewLoading;
   const payments = paymentsData?.results || paymentsData || [];
+  const people = isTalent
+    ? (talentProfilesData?.results || talentProfilesData || [])
+    : (crewProfilesData?.results || crewProfilesData || []);
+  const projects = projectsData?.results || projectsData || [];
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortKey, setSortKey] = useState('date');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [showAddPaymentForm, setShowAddPaymentForm] = useState(false);
 
   useEffect(() => {
     if (!selectedPaymentId) {
@@ -138,8 +155,8 @@ function PaymentsTab({ type, selectedPaymentId, onSelectPayment }) {
       return haystack.includes(searchValue);
     });
 
-    return next.sort((left, right) => comparePayments(left, right, sortKey, sortDirection, isTalent));
-  }, [isTalent, payments, query, sortDirection, sortKey, statusFilter]);
+    return next.sort((left, right) => comparePayments(left, right, sortKey, sortDirection, isTalent, now));
+  }, [isTalent, payments, query, sortDirection, sortKey, statusFilter, now]);
 
   const toggleSort = (key) => {
     if (sortKey === key) {
@@ -164,6 +181,13 @@ function PaymentsTab({ type, selectedPaymentId, onSelectPayment }) {
           <p className="text-sm text-gray-500 mt-1">Sorted and filterable payment rows linked back to approved time logs.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAddPaymentForm((prev) => !prev)}
+            className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
+          >
+            {showAddPaymentForm ? 'Cancel' : 'Add Payment'}
+          </button>
           <input
             type="search"
             value={query}
@@ -183,6 +207,17 @@ function PaymentsTab({ type, selectedPaymentId, onSelectPayment }) {
         </div>
       </div>
 
+      {showAddPaymentForm && (
+        <AddPaymentForm
+          type={type}
+          people={people}
+          projects={projects}
+          createTalentPayment={createTalentPayment}
+          createCrewPayment={createCrewPayment}
+          onDone={() => setShowAddPaymentForm(false)}
+        />
+      )}
+
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-gray-400">Loading...</div>
@@ -197,6 +232,7 @@ function PaymentsTab({ type, selectedPaymentId, onSelectPayment }) {
                 <SortableHeader label="Log Date" sortKey="date" activeKey={sortKey} direction={sortDirection} onSort={toggleSort} />
                 <SortableHeader label="Hours" sortKey="hours" activeKey={sortKey} direction={sortDirection} onSort={toggleSort} />
                 <SortableHeader label="Amount" sortKey="amount" activeKey={sortKey} direction={sortDirection} onSort={toggleSort} />
+                <SortableHeader label="Overdue" sortKey="overdue" activeKey={sortKey} direction={sortDirection} onSort={toggleSort} />
                 <SortableHeader label="Status" sortKey="status" activeKey={sortKey} direction={sortDirection} onSort={toggleSort} />
               </tr>
             </thead>
@@ -212,6 +248,7 @@ function PaymentsTab({ type, selectedPaymentId, onSelectPayment }) {
                   <td className="px-5 py-3 text-gray-600">{payment.source_time_log_date || '—'}</td>
                   <td className="px-5 py-3 text-gray-500">{payment.total_hours}h</td>
                   <td className="px-5 py-3 font-medium text-gray-900">${Number(payment.total_amount).toLocaleString()}</td>
+                  <td className="px-5 py-3"><OverdueBadge payment={payment} now={now} /></td>
                   <td className="px-5 py-3"><StatusBadge status={payment.status} /></td>
                 </tr>
               ))}
@@ -233,6 +270,167 @@ function PaymentsTab({ type, selectedPaymentId, onSelectPayment }) {
   );
 }
 
+function AddPaymentForm({ type, people, projects, createTalentPayment, createCrewPayment, onDone }) {
+  const isTalent = type === 'talent';
+  const current = new Date();
+  const [form, setForm] = useState({
+    personId: '',
+    projectId: '',
+    month: String(current.getMonth() + 1),
+    year: String(current.getFullYear()),
+    hours: '',
+    amount: '',
+    notes: '',
+  });
+  const [error, setError] = useState('');
+  const createMutation = isTalent ? createTalentPayment : createCrewPayment;
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!form.personId || !form.month || !form.year || !form.hours || !form.amount) {
+      setError('Please fill person, month, year, hours, and amount.');
+      return;
+    }
+    setError('');
+    const payload = {
+      [isTalent ? 'talent' : 'crew']: Number(form.personId),
+      project: form.projectId ? Number(form.projectId) : null,
+      period_month: Number(form.month),
+      period_year: Number(form.year),
+      total_hours: Number(form.hours),
+      total_amount: Number(form.amount),
+      notes: form.notes,
+    };
+    try {
+      await createMutation.mutateAsync(payload);
+      setForm({
+        personId: '',
+        projectId: '',
+        month: String(current.getMonth() + 1),
+        year: String(current.getFullYear()),
+        hours: '',
+        amount: '',
+        notes: '',
+      });
+      onDone();
+    } catch (err) {
+      setError(err?.response?.data?.detail || 'Failed to add payment.');
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-indigo-100 shadow-sm p-4 space-y-3">
+      <h3 className="text-sm font-semibold text-gray-900">Add {isTalent ? 'Talent' : 'Crew'} Payment</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">{isTalent ? 'Talent' : 'Crew'} *</label>
+          <select
+            value={form.personId}
+            onChange={(event) => setForm((prev) => ({ ...prev, personId: event.target.value }))}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            required
+          >
+            <option value="">Select {isTalent ? 'talent' : 'crew'}…</option>
+            {people.map((person) => (
+              <option key={person.id} value={person.id}>{person.full_name || `${person.user?.first_name || ''} ${person.user?.last_name || ''}`.trim()}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Production</label>
+          <select
+            value={form.projectId}
+            onChange={(event) => setForm((prev) => ({ ...prev, projectId: event.target.value }))}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+          >
+            <option value="">No production</option>
+            {projects.filter((project) => project.status !== 'archived').map((project) => (
+              <option key={project.id} value={project.id}>{project.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Month *</label>
+            <input
+              type="number"
+              min="1"
+              max="12"
+              value={form.month}
+              onChange={(event) => setForm((prev) => ({ ...prev, month: event.target.value }))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Year *</label>
+            <input
+              type="number"
+              min="2020"
+              max="2100"
+              value={form.year}
+              onChange={(event) => setForm((prev) => ({ ...prev, year: event.target.value }))}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              required
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Hours *</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={form.hours}
+            onChange={(event) => setForm((prev) => ({ ...prev, hours: event.target.value }))}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Amount *</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={form.amount}
+            onChange={(event) => setForm((prev) => ({ ...prev, amount: event.target.value }))}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            required
+          />
+        </div>
+
+        <div className="md:col-span-3">
+          <label className="block text-xs text-gray-500 mb-1">Notes</label>
+          <textarea
+            value={form.notes}
+            onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+            rows={2}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+            placeholder="Optional manual payment note"
+          />
+        </div>
+      </div>
+
+      {error && <p className="text-xs text-red-500">{error}</p>}
+
+      <div className="flex justify-end gap-2">
+        <button
+          type="submit"
+          disabled={createMutation.isPending}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {createMutation.isPending ? 'Saving…' : 'Add Payment'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function SortableHeader({ label, sortKey, activeKey, direction, onSort }) {
   const isActive = activeKey === sortKey;
 
@@ -246,17 +444,17 @@ function SortableHeader({ label, sortKey, activeKey, direction, onSort }) {
   );
 }
 
-function comparePayments(left, right, sortKey, sortDirection, isTalent) {
+function comparePayments(left, right, sortKey, sortDirection, isTalent, now) {
   const factor = sortDirection === 'asc' ? 1 : -1;
-  const leftValue = getSortValue(left, sortKey, isTalent);
-  const rightValue = getSortValue(right, sortKey, isTalent);
+  const leftValue = getSortValue(left, sortKey, isTalent, now);
+  const rightValue = getSortValue(right, sortKey, isTalent, now);
 
   if (leftValue < rightValue) return -1 * factor;
   if (leftValue > rightValue) return 1 * factor;
   return 0;
 }
 
-function getSortValue(payment, sortKey, isTalent) {
+function getSortValue(payment, sortKey, isTalent, now) {
   switch (sortKey) {
     case 'person':
       return (isTalent ? payment.talent_name : payment.crew_name) || '';
@@ -266,6 +464,8 @@ function getSortValue(payment, sortKey, isTalent) {
       return Number(payment.total_hours) || 0;
     case 'amount':
       return Number(payment.total_amount) || 0;
+    case 'overdue':
+      return getOverdueSortValue(payment, now);
     case 'status':
       return payment.status || '';
     case 'date':
@@ -274,9 +474,57 @@ function getSortValue(payment, sortKey, isTalent) {
   }
 }
 
+function getPaymentDueDate(payment) {
+  if (payment?.source_time_log_date) {
+    const sourceDate = new Date(`${payment.source_time_log_date}T23:59:59`);
+    sourceDate.setDate(sourceDate.getDate() + 30);
+    return sourceDate;
+  }
+  if (payment?.created_at) {
+    const created = new Date(payment.created_at);
+    created.setDate(created.getDate() + 30);
+    return created;
+  }
+  return null;
+}
+
+function getOverdueSortValue(payment, now) {
+  if (payment.status === 'paid') return -9999;
+  const due = getPaymentDueDate(payment);
+  if (!due) return -9998;
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.floor((now.getTime() - due.getTime()) / msPerDay);
+}
+
+function OverdueBadge({ payment, now }) {
+  if (payment.status === 'paid') {
+    return <span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700">No</span>;
+  }
+
+  const due = getPaymentDueDate(payment);
+  if (!due) {
+    return <span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500">Unknown</span>;
+  }
+
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const dayDiff = Math.floor((now.getTime() - due.getTime()) / msPerDay);
+
+  if (dayDiff > 0) {
+    return <span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700">Overdue {dayDiff}d</span>;
+  }
+
+  return <span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700">On time</span>;
+}
+
 function PaymentDetailPanel({ payment, type, onClose }) {
   const isTalent = type === 'talent';
   const profileId = isTalent ? payment.talent : payment.crew;
+  const dueDate = getPaymentDueDate(payment);
+  const dueBasis = payment.source_time_log_date
+    ? '30 days after source shoot log date'
+    : payment.created_at
+      ? '30 days after payment record creation'
+      : null;
   const { paymentUnlocked, setPaymentUnlocked } = useAuth();
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [manualRef, setManualRef] = useState('');
@@ -331,6 +579,12 @@ function PaymentDetailPanel({ payment, type, onClose }) {
         <InfoItem label="Period" value={payment.period_label} />
         <InfoItem label="Source Log Date" value={payment.source_time_log_date || '—'} />
         <InfoItem label="Source Log Status" value={<StatusBadge status={payment.source_time_log_status || 'pending'} />} />
+      </div>
+
+      <div className="rounded-lg bg-gray-50 border border-gray-100 p-3 text-xs text-gray-600">
+        <span className="font-medium text-gray-700">Due date:</span>{' '}
+        {dueDate ? dueDate.toLocaleDateString() : 'Unknown'}
+        {dueBasis && <span className="text-gray-500"> ({dueBasis})</span>}
       </div>
 
       {payment.status === 'paid' && (

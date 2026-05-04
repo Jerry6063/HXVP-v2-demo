@@ -21,6 +21,7 @@ const DEAL_MEMO_HTML = `
 <h2>Master Crew Deal Memo</h2>
 <p>This Master Crew Deal Memo outlines the general working terms and expectations between the Crew Member and HXVP Marketing Group (&ldquo;Company&rdquo;).</p>
 <p>This document serves as a standing agreement for future productions. Individual projects will be confirmed through call sheets, booking confirmations, or written production notices specifying role, production details, and agreed compensation.</p>
+<p><br /></p>
 <h2>1. Onboarding Process</h2>
 <p>Before working on a production with the Company, crew members will:</p>
 <ul>
@@ -29,6 +30,7 @@ const DEAL_MEMO_HTML = `
   <li>Provide payment information</li>
   <li>Confirm understanding of production policies</li>
 </ul>
+<p><br /></p>
 <h2>2. Production Workflow</h2>
 <p>Each production will be confirmed through a call sheet, booking confirmation, or production notice including:</p>
 <ul>
@@ -36,6 +38,7 @@ const DEAL_MEMO_HTML = `
   <li>Role / responsibilities</li><li>Confirmed rate for the project</li>
 </ul>
 <p>Once the crew member confirms availability, the call sheet becomes the deal memo for that production.</p>
+<p><br /></p>
 <h2>3. Rate Structure</h2>
 <p>Typical day rate ranges:</p>
 <ul>
@@ -54,45 +57,63 @@ const DEAL_MEMO_HTML = `
   <li>Social Media / Live Operator: $300 &ndash; $700</li>
 </ul>
 <p>Final compensation will be confirmed per project through call sheet or booking confirmation.</p>
+<p><br /></p>
 <h2>4. Production Scale &amp; Budget</h2>
-<p>Projects may include commercial productions, brand campaigns, e-commerce shoots, social media content, live streaming productions, and product demonstrations.</p>
+<p>Projects may include commercial productions, brand campaigns, e-commerce shoots, social media content, live streaming productions, and product demonstrations. Production scale and compensation may vary depending on project scope.</p>
+<p><br /></p>
 <h2>5. Production Day &amp; Overtime</h2>
-<p>Standard production day: up to 12 hours. Meal break approximately every 6 hours when applicable.</p>
+<p>Standard production day: up to 12 hours.</p>
+<p>Meal break approximately every 6 hours when applicable.</p>
 <p>Overtime begins after 12 hours and is compensated at 1.5&times; the hourly equivalent of the agreed day rate.</p>
+<p><br /></p>
 <h2>6. Cancellation Policy</h2>
 <ul>
   <li>24&ndash;48 hours before call time: 50% of agreed rate</li>
   <li>Less than 24 hours before call time: 100% of agreed rate</li>
   <li>Pre-approved rentals and expenses may be reimbursed.</li>
 </ul>
+<p><br /></p>
 <h2>7. Payment Terms</h2>
-<p>Payment issued within 14 calendar days after production provided: invoice submitted, W-9 on file, required deliverables submitted.</p>
+<p>Payment issued within 14 calendar days after production provided:</p>
+<ul>
+  <li>Invoice submitted</li>
+  <li>W-9 on file</li>
+  <li>Required deliverables submitted</li>
+</ul>
+<p><br /></p>
 <h2>8. Professional Expectations</h2>
 <p>Crew members agree to maintain professionalism, follow safety instructions, and respect clients and fellow crew.</p>
 <p>Crew members may not share behind-the-scenes media or confidential project information without approval.</p>
+<p><br /></p>
 <h2>9. Client Non-Solicitation</h2>
 <p>Crew members agree not to solicit or accept direct work from clients introduced through Company productions for 12 months without written consent.</p>
+<p><br /></p>
 <h2>10. Equipment Responsibility</h2>
 <p>Crew members are responsible for their own equipment. Company is not liable for crew gear except in cases of direct company negligence.</p>
+<p><br /></p>
 <h2>11. Work Product &amp; Ownership</h2>
 <p>All materials created during production are considered work-for-hire and property of the Company and its clients.</p>
+<p><br /></p>
 <h2>12. Independent Contractor Status</h2>
 <p>Crew members are engaged as independent contractors and are responsible for their own taxes, insurance, and benefits.</p>
+<p><br /></p>
 <h2>13. Governing Law</h2>
 <p>This agreement is governed by the laws of the State of Texas. Disputes shall be resolved in Dallas County, Texas.</p>
-<hr />
-<h2>Crew / Talent Information</h2>
-<p>Crew Member Name: <mark>______________________________</mark></p>
-<p>Role / Department: <mark>______________________________</mark></p>
-<p>Phone: <mark>______________________________</mark></p>
-<p>Email: <mark>______________________________</mark></p>
+<p><br /></p>
+<h2>Crew Information</h2>
+<p>Crew Member Name: ______________________________</p>
+<p>Role / Department: ______________________________</p>
+<p>Phone: ______________________________</p>
+<p>Email: ______________________________</p>
+<p><br /></p>
 <h2>Acknowledgment &amp; Signature</h2>
-<p>By signing below, the crew member acknowledges that they have read and agree to
- the terms outlined in this Master Crew Deal Memo.</p>
-<p>Crew Member Signature: <mark>______________________________</mark></p>
-<p>Date: <mark>______________________________</mark></p>
-<p>Company Representative: <mark>______________________________</mark></p>
-<p>Date: <mark>______________________________</mark></p>
+<p>By signing below, the crew member acknowledges that they have read and agree to the terms outlined in this Master Crew Deal Memo.</p>
+<p><br /></p>
+<p>Crew Member Signature: ______________________________</p>
+<p>Date: ______________________________</p>
+<p><br /></p>
+<p>Company Representative: ______________________________</p>
+<p>Date: ______________________________</p>
 `;
 
 const MODES = [
@@ -310,7 +331,7 @@ function AgreementEditor({ contract, typeLabel, color, onClose }) {
       <div className={`bg-white rounded-xl shadow border-t-4 ${color} overflow-hidden`}>
         <EditorContent
           editor={editor}
-          className="prose prose-sm max-w-none p-6 min-h-[600px] focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror_mark]:bg-yellow-200 [&_.ProseMirror_mark]:px-0.5 [&_.ProseMirror_mark]:rounded"
+          className="prose prose-sm max-w-none p-6 min-h-[600px] focus:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror_h2]:mt-6 [&_.ProseMirror_h2]:mb-2 [&_.ProseMirror_p]:ml-4 [&_.ProseMirror_ul]:ml-8 [&_.ProseMirror_ol]:ml-8 [&_.ProseMirror_mark]:bg-yellow-200 [&_.ProseMirror_mark]:px-0.5 [&_.ProseMirror_mark]:rounded"
         />
       </div>
     </div>

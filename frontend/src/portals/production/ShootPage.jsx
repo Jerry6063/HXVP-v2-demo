@@ -193,6 +193,192 @@ function SendCallSheetModal({ callSheetId, talent, crew, onClose }) {
   );
 }
 
+function CallSheetPreviewAndSend({ callSheetId, talent, crew, onClose }) {
+  const { data: detail, isLoading } = useCallSheet(callSheetId);
+  const sendMutation = useSendCallSheet();
+  const [selectedTalent, setSelectedTalent] = useState(() => talent.map((p) => p.talent_id));
+  const [selectedCrew, setSelectedCrew] = useState(() => crew.map((p) => p.crew_id));
+  const [sent, setSent] = useState(false);
+
+  const entries = detail?.entries || [];
+  const talentEntries = entries.filter((e) => e.person_type === 'talent');
+  const crewEntries = entries.filter((e) => e.person_type === 'crew');
+
+  const toggleAll = (list, setter, current, idKey) => {
+    if (current.length === list.length) {
+      setter([]);
+    } else {
+      setter(list.map((p) => p[idKey]));
+    }
+  };
+
+  const handleSend = async () => {
+    try {
+      const result = await sendMutation.mutateAsync({
+        id: callSheetId,
+        talent_profile_ids: selectedTalent,
+        crew_profile_ids: selectedCrew,
+      });
+      setSent(true);
+      if (result.failed > 0) {
+        toast.warning(`Sent to ${result.sent}, but failed for: ${result.failed_recipients.join(', ')}`);
+      } else if (result.skipped > 0) {
+        toast.success(`Call sheet sent to ${result.sent} recipient(s). ${result.skipped} skipped (no valid email).`);
+      } else {
+        toast.success(`Call sheet sent to ${result.sent} recipient(s).`);
+      }
+    } catch (err) {
+      toast.error('Failed to send call sheet: ' + (err.response?.data?.detail || err.message));
+    }
+  };
+
+  return (
+    <div className="border border-indigo-200 rounded-xl bg-indigo-50/30 p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-bold text-gray-900">Call Sheet Preview</h4>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><XMarkIcon className="h-4 w-4" /></button>
+      </div>
+
+      {isLoading || !detail ? (
+        <div className="text-sm text-gray-500">Loading preview…</div>
+      ) : sent ? (
+        <div className="bg-white border border-emerald-200 rounded-xl p-5 text-center">
+          <p className="text-emerald-700 font-semibold">Call sheet sent.</p>
+          <p className="text-xs text-gray-500 mt-1">You can still send again from the call sheet card below at any time.</p>
+          <button onClick={onClose} className="mt-3 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">Done</button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-4 space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">{detail.title}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{detail.shoot_date} · {detail.location}</p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div><span className="text-gray-400 block">Call Time</span><span className="font-medium text-gray-700">{formatTime(detail.call_time)}</span></div>
+              <div><span className="text-gray-400 block">Wrap Time</span><span className="font-medium text-gray-700">{formatTime(detail.est_wrap_time)}</span></div>
+              <div><span className="text-gray-400 block">Location</span><span className="font-medium text-gray-700">{detail.location}</span></div>
+              {detail.address && <div><span className="text-gray-400 block">Address</span><span className="font-medium text-gray-700">{detail.address}</span></div>}
+            </div>
+
+            {(detail.wardrobe_instructions || detail.hair_makeup_notes || detail.production_notes) && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                {detail.wardrobe_instructions && <div className="bg-amber-50 text-amber-800 rounded-lg p-2"><span className="font-semibold block mb-0.5">Wardrobe</span>{detail.wardrobe_instructions}</div>}
+                {detail.hair_makeup_notes && <div className="bg-pink-50 text-pink-800 rounded-lg p-2"><span className="font-semibold block mb-0.5">Hair & Makeup</span>{detail.hair_makeup_notes}</div>}
+                {detail.production_notes && <div className="bg-blue-50 text-blue-800 rounded-lg p-2"><span className="font-semibold block mb-0.5">Production Notes</span>{detail.production_notes}</div>}
+              </div>
+            )}
+
+            <div>
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1.5">Talent Entries ({talentEntries.length})</p>
+              {talentEntries.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">No talent entries yet.</p>
+              ) : (
+                <div className="space-y-1">
+                  {talentEntries.map((entry) => (
+                    <div key={entry.id} className="bg-amber-50/50 rounded-lg px-3 py-2 text-xs text-gray-700">
+                      <span className="font-medium">{entry.name}</span>
+                      {entry.role && <span className="text-gray-400 ml-2">{entry.role}</span>}
+                      {entry.call_time && <span className="text-gray-400 ml-2">Call: {formatTime(entry.call_time)}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-sky-700 uppercase tracking-wide mb-1.5">Crew Entries ({crewEntries.length})</p>
+              {crewEntries.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">No crew entries yet.</p>
+              ) : (
+                <div className="space-y-1">
+                  {crewEntries.map((entry) => (
+                    <div key={entry.id} className="bg-sky-50/50 rounded-lg px-3 py-2 text-xs text-gray-700">
+                      <span className="font-medium">{entry.name}</span>
+                      {entry.role && <span className="text-gray-400 ml-2">{entry.role}</span>}
+                      {entry.call_time && <span className="text-gray-400 ml-2">Call: {formatTime(entry.call_time)}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-4">
+            <p className="text-sm font-semibold text-gray-900">Send To</p>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Talent</p>
+                <button type="button" onClick={() => toggleAll(talent, setSelectedTalent, selectedTalent, 'talent_id')} className="text-xs text-indigo-600 hover:underline">
+                  {selectedTalent.length === talent.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+              <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                {talent.length === 0 && <p className="text-xs text-gray-400">No talent assigned.</p>}
+                {talent.map((b) => (
+                  <label key={b.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedTalent.includes(b.talent_id)}
+                      onChange={() =>
+                        setSelectedTalent((prev) =>
+                          prev.includes(b.talent_id) ? prev.filter((x) => x !== b.talent_id) : [...prev, b.talent_id]
+                        )
+                      }
+                      className="rounded text-indigo-600"
+                    />
+                    <PersonAvatar name={b.talent_name} photoUrl={b.photo_url} size="xs" />
+                    <span className="text-xs text-gray-800">{b.talent_name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-sky-700 uppercase tracking-wide">Crew</p>
+                <button type="button" onClick={() => toggleAll(crew, setSelectedCrew, selectedCrew, 'crew_id')} className="text-xs text-indigo-600 hover:underline">
+                  {selectedCrew.length === crew.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+              <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                {crew.length === 0 && <p className="text-xs text-gray-400">No crew assigned.</p>}
+                {crew.map((a) => (
+                  <label key={a.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedCrew.includes(a.crew_id)}
+                      onChange={() =>
+                        setSelectedCrew((prev) =>
+                          prev.includes(a.crew_id) ? prev.filter((x) => x !== a.crew_id) : [...prev, a.crew_id]
+                        )
+                      }
+                      className="rounded text-indigo-600"
+                    />
+                    <PersonAvatar name={a.crew_name} photoUrl={a.photo_url} size="xs" />
+                    <span className="text-xs text-gray-800">{a.crew_name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleSend}
+              disabled={sendMutation.isPending || (selectedTalent.length === 0 && selectedCrew.length === 0)}
+              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            >
+              <PaperAirplaneIcon className="h-4 w-4" />
+              {sendMutation.isPending ? 'Sending…' : 'Send It Out'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Call Sheet Card ──
 
 function CallSheetCard({ cs, shootData, talent, crew }) {
@@ -383,7 +569,7 @@ function CallSheetCard({ cs, shootData, talent, crew }) {
 
 // ── Create Call Sheet Form ──
 
-function CreateCallSheetForm({ shootData, projectId, onClose }) {
+function CreateCallSheetForm({ shootData, projectId, onClose, onCreated }) {
   const createMutation = useCreateCallSheet();
   const autoPopulate = useGenerateCallSheetFromShoot();
   const [form, setForm] = useState({
@@ -419,6 +605,7 @@ function CreateCallSheetForm({ shootData, projectId, onClose }) {
       if (autoPopulateOnCreate) {
         try { await autoPopulate.mutateAsync(cs.id); } catch (_) { /* non-critical */ }
       }
+      onCreated?.(cs);
       onClose();
     } catch (err) {
       setError(err?.response?.data?.detail || 'Failed to create call sheet.');
@@ -494,7 +681,7 @@ function CreateCallSheetForm({ shootData, projectId, onClose }) {
 
       <div className="flex gap-2">
         <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50">
-          {createMutation.isPending ? 'Creating…' : 'Create Call Sheet'}
+          {createMutation.isPending ? 'Preparing…' : 'Preview Call Sheet'}
         </button>
         <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200">Cancel</button>
       </div>
@@ -514,6 +701,7 @@ export default function ShootPage() {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateCS, setShowCreateCS] = useState(false);
+  const [previewCallSheetId, setPreviewCallSheetId] = useState(null);
 
   const callSheets = useMemo(() => callSheetsData?.results || callSheetsData || [], [callSheetsData]);
   const talent = shoot?.bookings || [];
@@ -701,7 +889,7 @@ export default function ShootPage() {
           <h3 className="font-semibold text-gray-800 text-sm">Call Sheets for this Shoot</h3>
           {!showCreateCS && (
             <button
-              onClick={() => setShowCreateCS(true)}
+              onClick={() => { setPreviewCallSheetId(null); setShowCreateCS(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700"
             >
               <PlusIcon className="h-3.5 w-3.5" /> New Call Sheet
@@ -710,7 +898,21 @@ export default function ShootPage() {
         </div>
 
         {showCreateCS && (
-          <CreateCallSheetForm shootData={shoot} projectId={projectId} onClose={() => setShowCreateCS(false)} />
+          <CreateCallSheetForm
+            shootData={shoot}
+            projectId={projectId}
+            onClose={() => setShowCreateCS(false)}
+            onCreated={(cs) => setPreviewCallSheetId(cs.id)}
+          />
+        )}
+
+        {previewCallSheetId && (
+          <CallSheetPreviewAndSend
+            callSheetId={previewCallSheetId}
+            talent={talent}
+            crew={crew}
+            onClose={() => setPreviewCallSheetId(null)}
+          />
         )}
 
         {callSheets.length === 0 && !showCreateCS ? (
