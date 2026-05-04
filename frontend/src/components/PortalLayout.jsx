@@ -41,6 +41,7 @@ const portalConfigs = {
         icon: CurrencyDollarIcon,
         dropdown: true,
         children: [
+          { name: 'Production Time Logs', to: '/production/talent-payments?tab=production-time-logs' },
           { name: 'Talent Payments', to: '/production/talent-payments?tab=talent-payments' },
           { name: 'Crew Payments', to: '/production/talent-payments?tab=crew-payments' },
         ],

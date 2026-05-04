@@ -1163,11 +1163,6 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
 
   const TALENT_TYPE_LABELS = { model: 'Model', actor: 'Actor', voiceover: 'Voiceover', dancer: 'Dancer', livestream: 'Livestream Host', other: 'Other' };
   const CREW_ROLE_LABELS = { director: 'Director', photographer: 'Photographer', dop: 'Director of Photography', videographer: 'Videographer', first_ac: '1st AC', second_ac: '2nd AC', gaffer: 'Gaffer', grip: 'Grip', electric: 'Electric', wardrobe: 'Wardrobe', set_design: 'Set Design', bts: 'Behind-the-Scene', pa: 'Production Assistant', ac: 'Assistant Camera', audio: 'Audio', lighting: 'Lighting', hair_makeup: 'Hair & Makeup', stylist: 'Stylist', crafty: 'Crafty', other: 'Other' };
-  const totalTalentNeeded = talentRequirements.reduce((total, req) => total + Number(req.count || 0), 0);
-  const totalCrewNeeded = crewRequirements.reduce((total, req) => total + Number(req.count || 0), 0);
-  const filledTalentSlots = talentFulfillment.reduce((total, req) => total + Math.min(req.filled, Number(req.count || 0)), 0);
-  const filledCrewSlots = crewFulfillment.reduce((total, req) => total + Math.min(req.filled, Number(req.count || 0)), 0);
-
   const handleAddTalentReq = async () => {
     await createTalentReq.mutateAsync({ project: projectId, ...newTalentReq });
     setNewTalentReq({ talent_type: 'model', count: 1, notes: '' });
@@ -1196,78 +1191,56 @@ function TeamTalentTab({ bookings, assignments, projectId, project }) {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950 shadow-lg">
-        <div className="flex flex-col gap-5 border-b border-white/10 px-5 py-5 text-white lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-200">Staffing Requirements</p>
-            <h4 className="mt-2 text-xl font-semibold">Plan the roster before the project gets busy</h4>
-            <p className="mt-2 max-w-2xl text-sm text-slate-300">
-              Keep the project staffing targets visible here, then use the dedicated talent and crew builders below to fill the remaining gaps.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:min-w-[320px]">
-            <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-100">Talent</p>
-              <p className="mt-2 text-2xl font-semibold">{filledTalentSlots}/{totalTalentNeeded || 0}</p>
-              <p className="mt-1 text-xs text-slate-300">filled against requested slots</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-100">Crew</p>
-              <p className="mt-2 text-2xl font-semibold">{filledCrewSlots}/{totalCrewNeeded || 0}</p>
-              <p className="mt-1 text-xs text-slate-300">filled against requested slots</p>
-            </div>
-          </div>
-        </div>
-
+      <section className="overflow-hidden rounded-[28px] border border-sky-100 bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-100 shadow-sm">
         <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
-          <div className="rounded-3xl border border-white/10 bg-white/10 p-4 text-white">
+          <div className="rounded-3xl border border-sky-200/80 bg-white/75 p-4 text-slate-900 backdrop-blur-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-100">Talent Needs</p>
-                <p className="mt-1 text-sm text-slate-300">Booked and shortlisted talent should roll up against these targets.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Staffing Requirements</p>
+                <p className="mt-1 text-sm text-slate-600">Talent needs and bookings roll up here.</p>
               </div>
-              <button onClick={() => setShowAddTalentReq(true)} className="rounded-full border border-white/15 px-3 py-1 text-xs font-medium text-white hover:bg-white/10">+ Add</button>
+              <button onClick={() => setShowAddTalentReq(true)} className="rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-medium text-sky-700 hover:bg-sky-50">+ Add</button>
             </div>
             {talentRequirements.length === 0 ? (
-              <p className="mt-4 rounded-2xl border border-dashed border-white/15 px-4 py-5 text-sm text-slate-300">No talent requirements yet.</p>
+              <p className="mt-4 rounded-2xl border border-dashed border-sky-200 bg-white/60 px-4 py-5 text-sm text-slate-500">No talent requirements yet.</p>
             ) : (
               <ul className="mt-4 space-y-2">
                 {talentFulfillment.map((r) => (
-                  <li key={r.id} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/10 px-3 py-3 text-sm">
+                  <li key={r.id} className="flex items-center gap-2 rounded-2xl border border-sky-100 bg-white/70 px-3 py-3 text-sm">
                     <FulfillIcon filled={r.filled} needed={r.count} />
                     <div>
-                      <p className="font-medium text-white">{r.count}× {TALENT_TYPE_LABELS[r.talent_type] || r.talent_type}</p>
-                      <p className="text-xs text-slate-300">{r.filled}/{r.count} filled</p>
+                      <p className="font-medium text-slate-900">{r.count}× {TALENT_TYPE_LABELS[r.talent_type] || r.talent_type}</p>
+                      <p className="text-xs text-slate-500">{r.filled}/{r.count} filled</p>
                     </div>
-                    {r.notes && <span className="text-xs text-slate-400 italic">{r.notes}</span>}
-                    <button onClick={() => deleteTalentReq.mutate(r.id)} className="ml-auto text-xs text-slate-400 hover:text-red-300">×</button>
+                    {r.notes && <span className="text-xs text-slate-500 italic">{r.notes}</span>}
+                    <button onClick={() => deleteTalentReq.mutate(r.id)} className="ml-auto text-xs text-slate-400 hover:text-red-500">×</button>
                   </li>
                 ))}
               </ul>
             )}
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/10 p-4 text-white">
+          <div className="rounded-3xl border border-sky-200/80 bg-white/75 p-4 text-slate-900 backdrop-blur-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-100">Crew Needs</p>
-                <p className="mt-1 text-sm text-slate-300">Use the crew builder to source the open roles and check real availability before adding them.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Crew Needs</p>
+                <p className="mt-1 text-sm text-slate-600">Use the crew builder to source open roles and confirm availability.</p>
               </div>
-              <button onClick={() => setShowAddCrewReq(true)} className="rounded-full border border-white/15 px-3 py-1 text-xs font-medium text-white hover:bg-white/10">+ Add</button>
+              <button onClick={() => setShowAddCrewReq(true)} className="rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-medium text-sky-700 hover:bg-sky-50">+ Add</button>
             </div>
             {crewRequirements.length === 0 ? (
-              <p className="mt-4 rounded-2xl border border-dashed border-white/15 px-4 py-5 text-sm text-slate-300">No crew requirements yet.</p>
+              <p className="mt-4 rounded-2xl border border-dashed border-sky-200 bg-white/60 px-4 py-5 text-sm text-slate-500">No crew requirements yet.</p>
             ) : (
               <ul className="mt-4 space-y-2">
                 {crewFulfillment.map((r) => (
-                  <li key={r.id} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/10 px-3 py-3 text-sm">
+                  <li key={r.id} className="flex items-center gap-2 rounded-2xl border border-sky-100 bg-white/70 px-3 py-3 text-sm">
                     <FulfillIcon filled={r.filled} needed={r.count} />
                     <div>
-                      <p className="font-medium text-white">{r.count}× {CREW_ROLE_LABELS[r.crew_role] || r.crew_role?.replace(/_/g, ' ')}</p>
-                      <p className="text-xs text-slate-300">{r.filled}/{r.count} filled</p>
+                      <p className="font-medium text-slate-900">{r.count}× {CREW_ROLE_LABELS[r.crew_role] || r.crew_role?.replace(/_/g, ' ')}</p>
+                      <p className="text-xs text-slate-500">{r.filled}/{r.count} filled</p>
                     </div>
-                    {r.notes && <span className="text-xs text-slate-400 italic">{r.notes}</span>}
-                    <button onClick={() => deleteCrewReq.mutate(r.id)} className="ml-auto text-xs text-slate-400 hover:text-red-300">×</button>
+                    {r.notes && <span className="text-xs text-slate-500 italic">{r.notes}</span>}
+                    <button onClick={() => deleteCrewReq.mutate(r.id)} className="ml-auto text-xs text-slate-400 hover:text-red-500">×</button>
                   </li>
                 ))}
               </ul>

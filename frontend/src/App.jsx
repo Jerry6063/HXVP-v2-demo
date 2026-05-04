@@ -87,7 +87,7 @@ export default function App() {
         <Route path="requests/:id" element={<ProductionRequestDetail />} />
         <Route path="talent" element={<TalentsModule />} />
         <Route path="talent/:id" element={<TalentDetailPage />} />
-        <Route path="performances" element={<Navigate to="/production/talent?tab=time-logs" replace />} />
+        <Route path="performances" element={<Navigate to="/production/talent-payments?tab=production-time-logs" replace />} />
         <Route path="talent-payments" element={<TalentPaymentAdmin />} />
         <Route path="crew" element={<CrewPage />} />
         <Route path="crew/:id" element={<CrewDetailPage />} />

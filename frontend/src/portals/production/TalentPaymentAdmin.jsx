@@ -20,6 +20,13 @@ import {
 } from '../../api/hooks';
 import StatusBadge from '../../components/StatusBadge';
 import { useAuth } from '../../contexts/AuthContext';
+import PerformanceAdmin from './PerformanceAdmin';
+
+const TEAM_PAYMENT_TABS = [
+  { id: 'production-time-logs', label: 'Production Time Logs' },
+  { id: 'talent-payments', label: 'Talent Payments' },
+  { id: 'crew-payments', label: 'Crew Payments' },
+];
 
 const SORT_OPTIONS = [
   { key: 'person', label: 'Person' },
@@ -33,7 +40,10 @@ const SORT_OPTIONS = [
 
 export default function TalentPaymentAdmin() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') === 'crew-payments' ? 'crew-payments' : 'talent-payments';
+  const requestedTab = searchParams.get('tab');
+  const activeTab = TEAM_PAYMENT_TABS.some((tab) => tab.id === requestedTab)
+    ? requestedTab
+    : 'talent-payments';
   const selectedPaymentId = Number(searchParams.get('payment')) || null;
 
   const switchTab = (tab) => {
@@ -58,16 +68,13 @@ export default function TalentPaymentAdmin() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Team Payments</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Each payment row maps to a single approved production time log.
+          Review production time logs and manage the linked talent and crew payments.
         </p>
       </div>
 
       <div className="border-b border-gray-200">
         <nav className="flex gap-6 -mb-px">
-          {[
-            { id: 'talent-payments', label: 'Talent Payments' },
-            { id: 'crew-payments', label: 'Crew Payments' },
-          ].map((tab) => (
+          {TEAM_PAYMENT_TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => switchTab(tab.id)}
@@ -83,11 +90,15 @@ export default function TalentPaymentAdmin() {
         </nav>
       </div>
 
-      <PaymentsTab
-        type={activeTab === 'talent-payments' ? 'talent' : 'crew'}
-        selectedPaymentId={selectedPaymentId}
-        onSelectPayment={selectPayment}
-      />
+      {activeTab === 'production-time-logs' ? (
+        <PerformanceAdmin />
+      ) : (
+        <PaymentsTab
+          type={activeTab === 'talent-payments' ? 'talent' : 'crew'}
+          selectedPaymentId={selectedPaymentId}
+          onSelectPayment={selectPayment}
+        />
+      )}
     </div>
   );
 }
