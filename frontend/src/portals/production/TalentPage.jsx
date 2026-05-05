@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
+  useCreateTalentInvite,
   useTalentProfiles,
   useTalentAvailability,
   useBookings,
@@ -9,6 +10,7 @@ import {
   useSendTalentRoster,
   useProjects,
 } from '../../api/hooks';
+import ProfileInviteModal from '../../components/ProfileInviteModal';
 import StatusBadge from '../../components/StatusBadge';
 import {
   UserIcon,
@@ -17,6 +19,7 @@ import {
   PaperAirplaneIcon,
   CheckIcon,
   XMarkIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline';
 
 const TALENT_TYPES = [
@@ -105,6 +108,8 @@ export default function TalentPage() {
   const [calMonth, setCalMonth] = useState(today.getMonth());
   const [selectedTalentIds, setSelectedTalentIds] = useState(new Set());
   const [showSendModal, setShowSendModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const createTalentInvite = useCreateTalentInvite();
 
   const params = {};
   if (typeFilter) params.talent_type = typeFilter;
@@ -114,21 +119,31 @@ export default function TalentPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Talents</h1>
-        <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
-          <TabButton
-            active={activeTab === 'roster'}
-            icon={<UsersIcon className="w-4 h-4" />}
-            label="Roster"
-            onClick={() => setActiveTab('roster')}
-          />
-          <TabButton
-            active={activeTab === 'calendar'}
-            icon={<CalendarDaysIcon className="w-4 h-4" />}
-            label="Availability Calendar"
-            onClick={() => setActiveTab('calendar')}
-          />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+          <button
+            type="button"
+            onClick={() => setShowInviteModal(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Add Talent
+          </button>
+          <div className="flex gap-1 rounded-xl bg-gray-100 p-1">
+            <TabButton
+              active={activeTab === 'roster'}
+              icon={<UsersIcon className="w-4 h-4" />}
+              label="Roster"
+              onClick={() => setActiveTab('roster')}
+            />
+            <TabButton
+              active={activeTab === 'calendar'}
+              icon={<CalendarDaysIcon className="w-4 h-4" />}
+              label="Availability Calendar"
+              onClick={() => setActiveTab('calendar')}
+            />
+          </div>
         </div>
       </div>
 
@@ -168,6 +183,15 @@ export default function TalentPage() {
             setShowSendModal(false);
             setSelectedTalentIds(new Set());
           }}
+        />
+      )}
+
+      {showInviteModal && (
+        <ProfileInviteModal
+          kindLabel="Talent"
+          createMutation={createTalentInvite}
+          successMessage="Talent profile created and invitation email sent."
+          onClose={() => setShowInviteModal(false)}
         />
       )}
     </div>

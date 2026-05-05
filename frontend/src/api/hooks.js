@@ -27,6 +27,22 @@ export const useMe = () => {
   });
 };
 
+export const useCreateTalentInvite = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => api.post('/auth/users/invite-talent/', data).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['talent-profiles'] }),
+  });
+};
+
+export const useCreateCrewInvite = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => api.post('/auth/users/invite-crew/', data).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['crew-profiles'] }),
+  });
+};
+
 // Production Stats
 export const useProductionStats = () =>
   useQuery({

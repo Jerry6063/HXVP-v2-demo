@@ -58,6 +58,24 @@ def send_email_verification(user, verify_url):
     )
 
 
+def send_portal_invitation_email(user, verify_url, portal):
+    portal_name = PORTAL_NAMES.get(portal, "Studio Portal")
+    role_label = "talent profile" if portal == "talent" else "crew profile"
+    return safe_send(
+        subject=f"Complete your {portal_name} registration",
+        message=(
+            f"Hi {user.first_name},\n\n"
+            f"HXVP Studio production has created your {role_label} and invited you to join the {portal_name}.\n\n"
+            f"Complete your registration by setting your password using the link below. This invite expires in 24 hours:\n\n"
+            f"{verify_url}\n\n"
+            f"After registration, you can sign in with {user.email}.\n\n"
+            f"If you were not expecting this invitation, you can ignore this email.\n\n"
+            f"— HXVP Studio"
+        ),
+        recipient_list=[user.email],
+    )
+
+
 def send_calendar_update_reminder(user, portal, calendar_url, month_label):
     portal_name = PORTAL_NAMES.get(portal, "Studio Portal")
     return safe_send(

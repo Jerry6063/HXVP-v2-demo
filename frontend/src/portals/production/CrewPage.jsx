@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCrewStats, useCrewProfiles, useCrewAssignments, useProjects } from '../../api/hooks';
+import { useCrewStats, useCrewProfiles, useCrewAssignments, useProjects, useCreateCrewInvite } from '../../api/hooks';
+import ProfileInviteModal from '../../components/ProfileInviteModal';
 import StatCard from '../../components/StatCard';
 import StatusBadge from '../../components/StatusBadge';
 import {
@@ -8,16 +10,19 @@ import {
   CurrencyDollarIcon,
   WrenchScrewdriverIcon,
   DocumentTextIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline';
 
 const CREW_ROLE_LABELS = { director: 'Director', photographer: 'Photographer', dop: 'Director of Photography', videographer: 'Videographer', first_ac: '1st AC', second_ac: '2nd AC', gaffer: 'Gaffer', grip: 'Grip', electric: 'Electric', wardrobe: 'Wardrobe', set_design: 'Set Design', bts: 'Behind-the-Scene', pa: 'Production Assistant', ac: 'Assistant Camera', audio: 'Audio', lighting: 'Lighting', hair_makeup: 'Hair & Makeup', stylist: 'Stylist', crafty: 'Crafty', other: 'Other' };
 
 export default function CrewPage() {
   const navigate = useNavigate();
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const { data: stats, isLoading: statsLoading } = useCrewStats();
   const { data: profiles } = useCrewProfiles();
   const { data: assignments } = useCrewAssignments({ upcoming: true });
   const { data: projectsData } = useProjects({ status: 'active' });
+  const createCrewInvite = useCreateCrewInvite();
 
   const crewList = profiles?.results || profiles || [];
   const upcomingList = assignments?.results || assignments || [];
@@ -27,7 +32,17 @@ export default function CrewPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Production Crew</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Production Crew</h1>
+        <button
+          type="button"
+          onClick={() => setShowInviteModal(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-sky-700"
+        >
+          <PlusIcon className="h-4 w-4" />
+          Add Crew
+        </button>
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -149,6 +164,15 @@ export default function CrewPage() {
           </div>
         </div>
       </div>
+
+      {showInviteModal && (
+        <ProfileInviteModal
+          kindLabel="Crew"
+          createMutation={createCrewInvite}
+          successMessage="Crew profile created and invitation email sent."
+          onClose={() => setShowInviteModal(false)}
+        />
+      )}
     </div>
   );
 }

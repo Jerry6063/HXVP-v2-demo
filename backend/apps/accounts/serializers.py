@@ -1,4 +1,5 @@
 import secrets
+from django.db import transaction
 from rest_framework import serializers
 from .models import User
 
@@ -79,3 +80,61 @@ class AdminCreateClientSerializer(serializers.Serializer):
             password=password,
             role=User.Role.CLIENT,
         )
+
+
+class _AdminInvitePortalUserSerializer(serializers.Serializer):
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150)
+    email = serializers.EmailField()
+
+    role = None
+    duplicate_error = "This email is already registered in HXVP Studio."
+
+    def validate_email(self, value):
+        email = User.objects.normalize_email(value.strip())
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError(self.duplicate_error)
+        return email
+
+    def create_profile(self, user):
+        raise NotImplementedError
+
+    def create(self, validated_data):
+        with transaction.atomic():
+            user = User(
+                email=validated_data["email"],
+                first_name=validated_data["first_name"].strip(),
+                last_name=validated_data["last_name"].strip(),
+                role=self.role,
+                is_active=False,
+            )
+            user.set_unusable_password()
+            user.save()
+            self.create_profile(user)
+        return user
+
+
+class AdminInviteTalentSerializer(_AdminInvitePortalUserSerializer):
+    role = User.Role.TALENT
+    duplicate_error = (
+        "This email is already registered in HXVP Studio. "
+        "Use a different email address for this talent profile."
+    )
+
+    def create_profile(self, user):
+        from apps.talent.models import TalentProfile
+
+        TalentProfile.objects.get_or_create(user=user)
+
+
+class AdminInviteCrewSerializer(_AdminInvitePortalUserSerializer):
+    role = User.Role.CREW
+    duplicate_error = (
+        "This email is already registered in HXVP Studio. "
+        "Use a different email address for this crew profile."
+    )
+
+    def create_profile(self, user):
+        from apps.crew.models import CrewProfile
+
+        CrewProfile.objects.get_or_create(user=user)

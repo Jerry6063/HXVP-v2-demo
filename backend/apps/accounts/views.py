@@ -2,13 +2,19 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import authenticate
+from django.db import transaction
 from rest_framework import status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .emails import send_welcome_email, send_password_reset_email, send_email_verification
+from .emails import (
+    send_welcome_email,
+    send_password_reset_email,
+    send_email_verification,
+    send_portal_invitation_email,
+)
 from .models import User
 from .permissions import IsProductionAdmin
 from .serializers import (
@@ -19,6 +25,8 @@ from .serializers import (
     PasswordResetConfirmSerializer,
     AdminCreateClientSerializer,
     EmailVerifyConfirmSerializer,
+    AdminInviteTalentSerializer,
+    AdminInviteCrewSerializer,
 )
 from .utils import make_reset_token, read_reset_token, make_email_verify_token, read_email_verify_token
 
@@ -300,6 +308,52 @@ class AdminCreateClientView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class _AdminInvitePortalUserView(generics.CreateAPIView):
+    permission_classes = [IsProductionAdmin]
+    portal = None
+    success_message = "Invitation email sent."
+
+    def _build_verify_url(self, user):
+        token = make_email_verify_token(user.id)
+        frontend_url = getattr(settings, "FRONTEND_URL", "").rstrip("/")
+        return f"{frontend_url}/verify-email?token={token}"
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            user = serializer.save()
+            verify_url = self._build_verify_url(user)
+            email_sent = send_portal_invitation_email(user, verify_url, self.portal)
+            if not email_sent:
+                transaction.set_rollback(True)
+                return Response(
+                    {"detail": "Failed to send invitation email. Please try again later."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
+        return Response(
+            {
+                "detail": self.success_message,
+                "user": UserSerializer(user).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AdminInviteTalentView(_AdminInvitePortalUserView):
+    serializer_class = AdminInviteTalentSerializer
+    portal = "talent"
+    success_message = "Talent profile created and invitation email sent."
+
+
+class AdminInviteCrewView(_AdminInvitePortalUserView):
+    serializer_class = AdminInviteCrewSerializer
+    portal = "crew"
+    success_message = "Crew profile created and invitation email sent."
 
 
 class MeView(generics.RetrieveUpdateAPIView):
