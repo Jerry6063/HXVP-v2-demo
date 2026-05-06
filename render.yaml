@@ -6,9 +6,11 @@ services:
   - type: web
     name: hxvp-backend
     runtime: python
+    plan: starter
     rootDir: backend
     buildCommand: bash build.sh
-    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    startCommand: bash start.sh
+    healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
@@ -107,4 +109,4 @@ databases:
   - name: hxvp-db
     databaseName: studio_portal
     user: studio
-    plan: free                       # Upgrade to starter ($7/mo) for production persistence
+    plan: starter
