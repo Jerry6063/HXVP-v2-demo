@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'motion/react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import LoginPage from './components/LoginPage';
@@ -58,10 +59,15 @@ import CrewPayments from './portals/crew/Payments';
 import CrewDocuments from './portals/crew/Documents';
 
 export default function App() {
+  const location = useLocation();
   return (
     <>
     <ToastContainer position="top-right" autoClose={4000} hideProgressBar={false} newestOnTop closeOnClick pauseOnHover />
-    <Routes>
+    {/* AnimatePresence mode="sync" keeps both exiting and entering routes mounted
+        briefly so motion.div with shared layoutId can perform cross-route morph
+        (Apple app-launch style). location.pathname as key triggers transitions. */}
+    <AnimatePresence mode="sync">
+    <Routes location={location} key={location.pathname}>
       <Route path="/" element={<HomePage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
 
@@ -99,6 +105,7 @@ export default function App() {
         <Route path="messages" element={<ProductionMessages />} />
         <Route path="archive" element={<Navigate to="/production/projects?tab=archived" replace />} />
       </Route>
+      {/* AnimatePresence close moved below — keeping route definitions clean */}
 
       {/* Client Portal */}
       <Route path="/client/login" element={<LoginPage portal="client" />} />
@@ -172,6 +179,7 @@ export default function App() {
         <Route path="documents" element={<CrewDocuments />} />
       </Route>
     </Routes>
+    </AnimatePresence>
     </>
   );
 }

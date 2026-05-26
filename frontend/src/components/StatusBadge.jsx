@@ -1,50 +1,65 @@
-const colorMap = {
-  active: 'bg-green-100 text-green-700',
-  completed: 'bg-blue-100 text-blue-700',
-  archived: 'bg-gray-100 text-gray-600',
-  on_hold: 'bg-yellow-100 text-yellow-700',
-  scheduled: 'bg-blue-100 text-blue-700',
-  in_progress: 'bg-amber-100 text-amber-700',
-  cancelled: 'bg-red-100 text-red-700',
-  pending: 'bg-yellow-100 text-yellow-700',
-  accepted: 'bg-green-100 text-green-700',
-  declined: 'bg-red-100 text-red-700',
-  available: 'bg-green-100 text-green-700',
-  booked: 'bg-blue-100 text-blue-700',
-  unavailable: 'bg-gray-100 text-gray-500',
-  review: 'bg-purple-100 text-purple-700',
-  approved: 'bg-green-100 text-green-700',
-  delivered: 'bg-indigo-100 text-indigo-700',
-  draft: 'bg-gray-100 text-gray-600',
-  sent: 'bg-blue-100 text-blue-700',
-  signed: 'bg-green-100 text-green-700',
-  expired: 'bg-red-100 text-red-600',
-  paid: 'bg-green-100 text-green-700',
-  checked_out: 'bg-orange-100 text-orange-700',
-  submitted: 'bg-yellow-100 text-yellow-700',
-  under_review: 'bg-amber-100 text-amber-700',
-  contract_sent: 'bg-blue-100 text-blue-700',
-  contract_signed: 'bg-green-100 text-green-700',
-  in_production: 'bg-indigo-100 text-indigo-700',
-  rejected: 'bg-red-100 text-red-600',
-  client_commented: 'bg-orange-100 text-orange-700',
-  revised: 'bg-purple-100 text-purple-700',
-  revision_requested: 'bg-orange-100 text-orange-700',
-  verified: 'bg-green-100 text-green-700',
-  overdue: 'bg-red-100 text-red-700',
-  unpaid: 'bg-gray-100 text-gray-500',
-  awaiting_hours_confirmation: 'bg-gray-100 text-gray-600',
-  awaiting_admin_approval: 'bg-amber-100 text-amber-700',
-  awaiting_payment: 'bg-blue-100 text-blue-700',
+/**
+ * StatusBadge — v2 editorial style.
+ *
+ * 把原来 40+ 状态色映射归为 5 个语义档:
+ *   success   (绿调 → 用 brand 黄替代,因为 brand 是积极色)
+ *   warning   (黄褐 → 用 brand 黄做强 outline)
+ *   info      (蓝调 → 用白色 outline)
+ *   danger    (红/橙 → 用 coral)
+ *   neutral   (灰)
+ *
+ * 保留 API:<StatusBadge status="..." />
+ */
+
+const STATUS_GROUPS = {
+  success: [
+    'active', 'accepted', 'available', 'approved', 'signed', 'paid',
+    'verified', 'contract_signed', 'completed',
+  ],
+  warning: [
+    'pending', 'on_hold', 'in_progress', 'submitted', 'under_review',
+    'awaiting_admin_approval', 'review', 'in_production', 'revised',
+    'checked_out', 'client_commented', 'revision_requested',
+  ],
+  info: [
+    'scheduled', 'sent', 'delivered', 'booked', 'contract_sent',
+    'awaiting_payment',
+  ],
+  danger: [
+    'cancelled', 'declined', 'expired', 'overdue', 'rejected',
+  ],
+  neutral: [
+    'archived', 'draft', 'unavailable', 'unpaid',
+    'awaiting_hours_confirmation',
+  ],
 };
+
+/*
+   样式为浅色主背景 (paper-soft) 设计 —— 内部页面 main content 是亮底。
+   如果将来要在暗底卡片中使用,需要传入额外 tone prop 覆盖。
+*/
+const STYLES = {
+  success: 'bg-[var(--color-brand)] text-[var(--color-ink)]',
+  warning: 'bg-transparent text-[var(--color-ink)] border border-[var(--color-brand)]',
+  info:    'bg-transparent text-[var(--color-ink)] border border-[var(--color-ink)]/40',
+  danger:  'bg-[var(--color-accent-2)] text-[var(--color-paper)]',
+  neutral: 'bg-transparent text-[var(--color-ink-muted)] border border-[var(--color-rule)]',
+};
+
+function groupOf(status) {
+  for (const [group, list] of Object.entries(STATUS_GROUPS)) {
+    if (list.includes(status)) return group;
+  }
+  return 'neutral';
+}
 
 export default function StatusBadge({ status }) {
   const label = status?.replace(/_/g, ' ');
+  const group = groupOf(status);
+
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${
-        colorMap[status] || 'bg-gray-100 text-gray-600'
-      }`}
+      className={`inline-flex items-center px-2.5 py-1 text-[10px] uppercase tracking-[0.2em] font-medium ${STYLES[group]}`}
     >
       {label}
     </span>

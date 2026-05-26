@@ -1,77 +1,56 @@
-# Photography Studio Web Portal
+# HXVP Studio — v2 (独立重制版)
 
-A full-stack photography studio management platform with four role-based portals.
+> ⚠️ **这是一个独立的本地重制项目,不会影响原线上版本**
+> 原版站点 https://hxvp-studio-frontend.onrender.com/production 由原仓库
+> [`nbzxy1993/HXVP-Studio`](https://github.com/nbzxy1993/HXVP-Studio) 自动部署,**与本目录无任何关联**。
+>
+> 本目录已做以下隔离:
+> - 已删除 git `origin` 远程(不会误推回原仓库)
+> - `render.yaml` → `render.yaml.legacy`(禁用 Render Blueprint 自动部署)
+> - `backend/` → `backend.legacy/`(仅供参考,不参与构建)
+> - 当前阶段 **不带后端**,先纯静态前端迭代
 
-## Tech Stack
+---
 
-- **Frontend:** React 18, Vite, Tailwind CSS, React Router v6, TanStack Query, Axios
-- **Backend:** Django 5, Django REST Framework, SimpleJWT
-- **Database:** PostgreSQL (managed by Render)
+## 当前阶段:纯静态前端
 
-> **Note:** This project is configured for deployment on [Render](https://render.com) and is not intended for local hosting. The backend requires Render-managed environment variables (`DATABASE_URL`, `DJANGO_SECRET_KEY`, etc.) and the frontend requires `VITE_API_BASE_URL` to be set to the deployed backend URL.
+技术栈保留:React 19 + Vite + Tailwind CSS v4 + React Router v7 + TanStack Query。
 
-## Deployment (Render Blueprint)
+API 层(`src/api/client.js`)在没有 `VITE_API_BASE_URL` 时会请求 `/api`,但本阶段没有后端,
+请求会失败 —— 这是预期行为,后续会逐页改成 mock 数据或新接口。
 
-The entire stack — backend API, frontend static site, and PostgreSQL database — is defined in `render.yaml` and deployed as a Render Blueprint.
+### 本地启动
 
-1. Fork or push this repository to GitHub.
-2. In the Render dashboard, go to **New → Blueprint** and connect the repository.
-3. Render will automatically create:
-   - `hxvp-backend` — Django/Gunicorn web service
-   - `hxvp-frontend` — Vite static site
-   - `hxvp-db` — Managed PostgreSQL database
-4. After the initial deploy, set the following environment variables in the Render dashboard:
-   - On **hxvp-backend**: `CORS_ALLOWED_ORIGINS` → the deployed frontend URL (e.g. `https://hxvp-frontend.onrender.com`)
-   - On **hxvp-frontend**: `VITE_API_BASE_URL` → the deployed backend URL + `/api` (e.g. `https://hxvp-backend.onrender.com/api`)
-5. Optionally configure email (Gmail SMTP) on the backend service: `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL`, `ADMIN_NOTIFICATION_EMAIL`.
-6. Trigger a redeploy of both services after setting the env vars.
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-The `backend/build.sh` script runs automatically on each deploy: it installs dependencies, collects static files, and applies database migrations.
+打开 http://localhost:5173 即可。
 
-## Demo Credentials
+### 构建静态产物
 
-All passwords: `password123`
+```bash
+cd frontend
+npm run build
+# 产物在 frontend/dist/
+```
 
-| Portal     | Email               |
-|------------|---------------------|
-| Production | admin@studio.com    |
-| Client     | client@brandco.com  |
-| Talent     | talent1@studio.com  |
-| Crew       | crew1@studio.com    |
+---
 
-## Portals
+## 原版相关资料(只读参考)
 
-### Production Portal (`/production/`)
-- **Dashboard** — Active projects, revenue, upcoming shoots, model roster
-- **Active Projects** — Tabbed project detail (workflow, team, assets, budget, contracts, activity log)
-- **Models & Talent** — Grid view with type/availability filters
-- **Production Crew** — Stats, roster table, upcoming assignments
-- **Archived** — Past projects
+- `backend.legacy/` —— 原 Django 后端代码
+- `render.yaml.legacy` —— 原 Render Blueprint
+- `docker-compose.yml` —— 原 Docker 配置
+- `doc_ref/` —— 设计参考文档
+- `production/` —— 设计素材(需求 Excel、截图、word 资料)
+- `test-accounts.txt` —— 原演示账号(v2 暂未使用)
 
-### Client Portal (`/client/`)
-- Project status, shoot schedule, talent selection
-- Deliverable review and approval
-- Project timeline
+## 四个角色门户(沿用结构)
 
-### Talent Portal (`/talent/`)
-- Accept/decline bookings
-- Call sheet details (location, time, wardrobe, hair/makeup)
-- Contracts and earnings sidebar
-
-### Crew Portal (`/crew/`)
-- Accept/decline assignments
-- Call sheet details
-- Contracts and earnings sidebar
-
-## API Endpoints
-
-| Prefix              | Description            |
-|---------------------|------------------------|
-| `/api/auth/`        | Login, register, JWT   |
-| `/api/projects/`    | Projects and shoots    |
-| `/api/talent/`      | Talent profiles/bookings |
-| `/api/crew/`        | Crew profiles/assignments/equipment |
-| `/api/deliverables/`| Deliverables/contracts |
-| `/api/finance/`     | Expenses and earnings  |
-
-
+- Production `/production/` —— 工作室管理后台
+- Client `/client/` —— 客户端项目查看
+- Talent `/talent/` —— 模特/演员预约管理
+- Crew `/crew/` —— 制作组档期管理

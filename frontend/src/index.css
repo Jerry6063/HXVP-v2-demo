@@ -1,5 +1,61 @@
 @import "tailwindcss";
 
+/* ────────────────────────────────────────────────────────────────────────────
+   HXVP Brand Design Tokens
+   提取自 https://hxvp.us/  ——  editorial / minimal / photography-forward
+   黑白底色 + coral 强调 + League Gothic 大写显示字体
+   ──────────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Brand palette ----------------------------------------------------------
+     主品牌色 = electric lime yellow,来自 hxvp.us hero "WHERE CREATIVITY
+     MEETS CONVERSION" 巨字本色 —— 这是站点最强烈的视觉锚点。 */
+  --color-brand: #d8ff00;          /* 主强调色 — 电光黄,贯穿整站的视觉中心 */
+  --color-brand-hover: #c2e600;    /* hover 稍深 */
+  --color-accent-2: #f0523d;       /* 次强调色 — coral (原 CSS 提取出) */
+
+  --color-ink: #000000;            /* 主文字 / 描边 */
+  --color-ink-soft: #272727;       /* 次级深 (site.css 高频) */
+  --color-ink-muted: #737373;      /* 中灰文字 */
+  --color-ink-subtle: #a9a9a9;     /* 浅灰提示文字 */
+
+  --color-paper: #ffffff;          /* 主背景 */
+  --color-paper-soft: #fafafa;     /* 次级背景 (卡片底) */
+  --color-paper-dark: #0a0a0a;     /* 深色 hero 块底 */
+  --color-rule: #e7e7e7;           /* 分割线 / 边框 */
+
+  /* Type ------------------------------------------------------------------- */
+  --font-display: "League Gothic", "Bebas Neue", "Arial Narrow", sans-serif;
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /* Radii / motion --------------------------------------------------------- */
+  --radius-card: 2px;              /* editorial 风格几乎无圆角 */
+  --radius-pill: 9999px;
+}
+
+/* Global base ------------------------------------------------------------- */
+html, body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Display headings — League Gothic 自带 condensed + 全大写味道 */
+.font-display,
+.display {
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  line-height: 0.95;
+}
+
+/* Selection */
+::selection {
+  background: var(--color-brand);
+  color: var(--color-paper);
+}
+
 /* Normalize <select> to render at the same height as <input> / <textarea>.
    The browser's native select chrome adds its own internal sizing on macOS,
    so we strip it with appearance-none and add a custom chevron arrow. */

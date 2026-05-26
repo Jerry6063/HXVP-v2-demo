@@ -1,40 +1,58 @@
-export default function StatCard({ label, value, sub, icon: Icon, color = 'indigo', onClick, active = false }) {
-  const colorMap = {
-    indigo: 'bg-indigo-50 text-indigo-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
-    amber: 'bg-amber-50 text-amber-600',
-    sky: 'bg-sky-50 text-sky-600',
-    red: 'bg-red-50 text-red-600',
-    purple: 'bg-purple-50 text-purple-600',
-  };
+/**
+ * StatCard — v2 editorial dark style.
+ *
+ * 保留原 API(label / value / sub / icon / color / onClick / active),
+ * 内部全部改用新视觉。color prop 现在仅控制 icon accent,默认黄色。
+ */
 
-  const ringMap = {
-    indigo: 'ring-2 ring-indigo-400',
-    emerald: 'ring-2 ring-emerald-400',
-    amber: 'ring-2 ring-amber-400',
-    sky: 'ring-2 ring-sky-400',
-    red: 'ring-2 ring-red-400',
-    purple: 'ring-2 ring-purple-400',
-  };
+const accentMap = {
+  indigo: 'var(--color-brand)',
+  emerald: 'var(--color-brand)',
+  amber: 'var(--color-brand)',
+  sky: 'var(--color-brand)',
+  red: 'var(--color-accent-2)',
+  purple: 'var(--color-accent-2)',
+  yellow: 'var(--color-brand)',
+  coral: 'var(--color-accent-2)',
+};
 
+export default function StatCard({ label, value, sub, icon: Icon, color = 'yellow', onClick, active = false }) {
+  const accent = accentMap[color] || 'var(--color-brand)';
   const Wrapper = onClick ? 'button' : 'div';
 
   return (
     <Wrapper
       onClick={onClick}
-      className={`w-full text-left bg-white rounded-xl shadow-sm border border-gray-100 p-5 transition-all
-        ${onClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5' : ''}
-        ${active ? ringMap[color] : ''}`}
+      className={`w-full text-left bg-[var(--color-paper-dark)] border p-5 transition-all
+        ${onClick ? 'cursor-pointer hover:-translate-y-0.5' : ''}
+        ${active ? '' : ''}`}
+      style={{
+        borderColor: active ? accent : 'rgba(255,255,255,0.15)',
+      }}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-500">{label}</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
-          {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--color-paper)]/50 mb-2">
+            {label}
+          </p>
+          <p
+            className="font-display text-3xl md:text-4xl leading-none text-[var(--color-paper)]"
+            style={{ color: active ? accent : 'var(--color-paper)' }}
+          >
+            {value}
+          </p>
+          {sub && (
+            <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-[var(--color-paper)]/40">
+              {sub}
+            </p>
+          )}
         </div>
         {Icon && (
-          <div className={`p-3 rounded-lg ${colorMap[color]}`}>
-            <Icon className="h-6 w-6" />
+          <div
+            className="p-2.5 border border-[var(--color-paper)]/20"
+            style={{ color: accent }}
+          >
+            <Icon className="h-5 w-5" />
           </div>
         )}
       </div>
