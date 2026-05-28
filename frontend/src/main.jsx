@@ -22,11 +22,17 @@ const queryClient = new QueryClient({
   },
 });
 
+// Vite 通过 BASE_URL 注入 vite.config.js 里的 `base` 值,例如:
+//   - dev:    BASE_URL = '/'
+//   - build:  BASE_URL = '/HXVP-v2-demo/'
+// BrowserRouter 的 basename 不要尾部斜杠.
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
+        <BrowserRouter basename={basename || undefined}>
           <AuthProvider>
             <App />
           </AuthProvider>
