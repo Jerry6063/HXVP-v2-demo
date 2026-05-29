@@ -29,6 +29,7 @@ backend/media/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+docs/builder/node_modules/
 
 # OS
 .DS_Store

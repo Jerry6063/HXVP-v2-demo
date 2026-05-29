@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HXVP Studio v2 — Product Requirements Document</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=League+Gothic:wght@400&family=Inter:wght@300;400;500;600;700&display=swap"
+  />
+  <style>
+    /* ════════════════════════════════════════════════════════════════════
+       HXVP v2 PRD — Brand-aligned editorial style
+       Screen reads dark, print outputs white-paper-friendly.
+       ════════════════════════════════════════════════════════════════════ */
+    :root {
+      --brand:        #d8ff00;
+      --brand-hover:  #c2e600;
+      --accent-2:     #f0523d;
+      --ink:          #0a0a0a;
+      --ink-soft:     #272727;
+      --ink-muted:    #6e6e6e;
+      --ink-subtle:   #a0a0a0;
+      --paper:        #ffffff;
+      --paper-soft:   #fafafa;
+      --paper-tint:   #f4f4f1;     /* warm subtle for table stripes */
+      --rule:         #e6e6e6;
+      --rule-strong:  #1a1a1a;
+
+      --font-display: "League Gothic", "Bebas Neue", "Arial Narrow", sans-serif;
+      --font-sans:    "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --font-mono:    "SF Mono", "Menlo", Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-size: 11pt;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ── Document container ─────────────────────────────────────────────── */
+    .prd {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 56px 64px 80px;
+    }
+
+    /* ── Title block ────────────────────────────────────────────────────── */
+    .prd > h1:first-of-type {
+      font-family: var(--font-display);
+      font-size: 56pt;
+      letter-spacing: -0.01em;
+      line-height: 0.9;
+      margin: 0 0 8px;
+      padding-bottom: 24px;
+      border-bottom: 3px solid var(--ink);
+      text-transform: uppercase;
+    }
+
+    /* ── Headings ───────────────────────────────────────────────────────── */
+    h1, h2, h3, h4, h5 {
+      font-family: var(--font-display);
+      font-weight: 400;
+      letter-spacing: 0.005em;
+      color: var(--ink);
+      page-break-after: avoid;
+    }
+    h2 {
+      font-size: 28pt;
+      line-height: 1;
+      margin: 44px 0 14px;
+      padding-top: 28px;
+      border-top: 1px solid var(--rule);
+      text-transform: uppercase;
+    }
+    h3 {
+      font-size: 18pt;
+      line-height: 1.1;
+      margin: 28px 0 10px;
+      text-transform: uppercase;
+    }
+    h4 {
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: 11pt;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      margin: 22px 0 8px;
+    }
+
+    /* Highlight the H1 heading immediately before §1 TL;DR */
+    h1 + p { font-size: 12pt; }
+
+    /* ── Paragraphs / text ──────────────────────────────────────────────── */
+    p {
+      margin: 0 0 12px;
+      max-width: 72ch;
+    }
+    p > em { color: var(--ink-soft); }
+    strong { font-weight: 600; color: var(--ink); }
+    em { font-style: italic; }
+
+    /* Inline emphasised words in 'one-liner' / TL;DR */
+    p em strong, p strong em { color: var(--ink); }
+
+    /* ── Links ──────────────────────────────────────────────────────────── */
+    a {
+      color: var(--ink);
+      text-decoration: underline;
+      text-decoration-color: var(--brand);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 3px;
+      transition: color 120ms;
+    }
+    a:hover { color: var(--accent-2); }
+
+    /* ── Lists ──────────────────────────────────────────────────────────── */
+    ul, ol {
+      padding-left: 22px;
+      margin: 0 0 14px;
+    }
+    li { margin: 4px 0; max-width: 70ch; }
+    ul li::marker { color: var(--brand-hover); }
+    ol li::marker { color: var(--ink-muted); font-weight: 600; }
+
+    /* ── Blockquote (used for callouts) ─────────────────────────────────── */
+    blockquote {
+      margin: 18px 0;
+      padding: 14px 18px;
+      background: var(--paper-tint);
+      border-left: 3px solid var(--brand);
+      color: var(--ink-soft);
+      font-size: 10.5pt;
+    }
+    blockquote p:last-child { margin-bottom: 0; }
+    blockquote strong { color: var(--ink); }
+
+    /* ── Code (inline + block) ──────────────────────────────────────────── */
+    code {
+      font-family: var(--font-mono);
+      font-size: 9.5pt;
+      background: var(--paper-tint);
+      border: 1px solid var(--rule);
+      padding: 1px 5px;
+      border-radius: 0;
+    }
+    pre {
+      background: var(--ink);
+      color: #f8f8f2;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-size: 9pt;
+      line-height: 1.55;
+      margin: 12px 0 18px;
+      page-break-inside: avoid;
+    }
+    pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    /* ── Tables ─────────────────────────────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10pt;
+      margin: 12px 0 22px;
+      page-break-inside: avoid;
+    }
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--rule);
+    }
+    th {
+      background: var(--ink);
+      color: var(--paper);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 8.5pt;
+      border-bottom: 2px solid var(--brand);
+    }
+    tbody tr:nth-child(odd) td {
+      background: var(--paper-tint);
+    }
+    td code { font-size: 9pt; }
+
+    /* ── Horizontal rule ────────────────────────────────────────────────── */
+    hr {
+      border: none;
+      border-top: 1px solid var(--rule);
+      margin: 36px 0;
+    }
+
+    /* ── Cover block (top metadata table) ───────────────────────────────── */
+    .prd > p:first-of-type + table {
+      font-size: 10pt;
+    }
+    .prd > p:first-of-type + table th {
+      display: none;
+    }
+    .prd > p:first-of-type + table td:first-child {
+      width: 30%;
+      font-weight: 600;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 8.5pt;
+      background: var(--paper);
+    }
+    .prd > p:first-of-type + table tr td { background: var(--paper); }
+
+    /* ── Status emoji visual nudge ──────────────────────────────────────── */
+    h1 + table td, h2 + table td, p code:first-child { white-space: nowrap; }
+
+    /* ── First "Reading guide" blockquote special framing ───────────────── */
+    h2:first-of-type + blockquote {
+      background: var(--ink);
+      color: var(--paper);
+      border-left-color: var(--brand);
+    }
+    h2:first-of-type + blockquote strong { color: var(--brand); }
+
+    /* ── PRINT styles (PDF rendering) ───────────────────────────────────── */
+    @page {
+      size: A4;
+      margin: 18mm 16mm 22mm;
+    }
+    @media print {
+      html, body { background: var(--paper); }
+      .prd {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+      }
+      h2 { page-break-before: auto; }
+      pre, table, blockquote { page-break-inside: avoid; }
+      a { color: var(--ink); text-decoration-color: var(--brand-hover); }
+      /* Footer with page numbers via CSS (some renderers honor this) */
+    }
+
+    /* ── Footer on cover page ───────────────────────────────────────────── */
+    .footer-meta {
+      margin-top: 64px;
+      padding-top: 18px;
+      border-top: 1px solid var(--rule);
+      font-size: 9pt;
+      color: var(--ink-subtle);
+      text-align: center;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="prd">
+<h1>HXVP Studio v2 — Product Requirements Document</h1>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Version</strong></td>
+<td>0.3 (timeline compressed + user-flow inventory added)</td>
+</tr>
+<tr>
+<td><strong>DRI</strong></td>
+<td>Jerry Zheng</td>
+</tr>
+<tr>
+<td><strong>Stakeholders</strong></td>
+<td>Director (boss) · Original engineer (legacy context) · <code>yinadong-design</code> (design partner)</td>
+</tr>
+<tr>
+<td><strong>Last updated</strong></td>
+<td>2026-05-28</td>
+</tr>
+<tr>
+<td><strong>Status</strong></td>
+<td>🟡 Draft v0.3 · pending director sign-off on §12 (User Flows) before any further build</td>
+</tr>
+<tr>
+<td><strong>Key dates</strong></td>
+<td><strong>6/15 internal milestone</strong> · <strong>early July production launch</strong></td>
+</tr>
+<tr>
+<td><strong>Demo URL</strong></td>
+<td><a href="https://jerry6063.github.io/HXVP-v2-demo/">https://jerry6063.github.io/HXVP-v2-demo/</a></td>
+</tr>
+<tr>
+<td><strong>Private repo</strong></td>
+<td><a href="https://github.com/Jerry6063/HXVP-v2">https://github.com/Jerry6063/HXVP-v2</a> (branch: <code>v2-redesign</code>)</td>
+</tr>
+<tr>
+<td><strong>Public demo repo (MIT)</strong></td>
+<td><a href="https://github.com/Jerry6063/HXVP-v2-demo">https://github.com/Jerry6063/HXVP-v2-demo</a></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Reading guide</h2>
+<blockquote>
+<p><strong>Boss / non-tech reviewers</strong>: read §1, §3, §5, §11 only (≈ 5 min).
+<strong>Engineers / designers</strong>: read everything plus appendices.
+<strong>Discussion</strong>: leave comments on the exported Google Doc; the canonical version lives in git.</p>
+</blockquote>
+<hr>
+<h1>Part I — Strategic Overview (for Boss)</h1>
+<h2>1. TL;DR</h2>
+<p>HXVP Studio v2 is a <strong>focus refinement</strong> of the existing studio operations portal. v1 (the version built by the previous engineer in collaboration with the director) is functionally complete but, per the director&#39;s 2026-05-28 review, feels unfocused, complex, and feature-bloated. v2 preserves the <strong>4-portal architecture</strong> (Production · Client · Talent · Crew) the director affirms is core to the workflow, but aggressively narrows each portal&#39;s purpose.</p>
+<p><strong>One sentence</strong>: <em>Fewer features, clearer paths, faster comprehension.</em></p>
+<h3>Timeline (compressed)</h3>
+<table>
+<thead>
+<tr>
+<th>Milestone</th>
+<th>Date</th>
+<th>Scope</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Sprint 0</strong> ✅</td>
+<td>done by 5/28</td>
+<td>Visual baseline + Apple-style transitions + Production Dashboard Status Board + public demo</td>
+</tr>
+<tr>
+<td><strong>Sprint 0.5</strong></td>
+<td>5/29 → 6/4</td>
+<td>Model-merge revert (4 portals restored) · Feature audit with director · <strong>User-flow sign-off (§12)</strong></td>
+</tr>
+<tr>
+<td><strong>Sprint 1 — 6/15 Internal Milestone</strong></td>
+<td>6/5 → 6/15</td>
+<td>All 4 portals&#39; landing pages reflect &quot;the one job&quot; sentence · ⌘K global search · Tier-3 features hidden · <strong>demo to boss</strong></td>
+</tr>
+<tr>
+<td><strong>Sprint 2 — Early-July Launch</strong></td>
+<td>6/16 → 7/6</td>
+<td>Top user flows (§12) work end-to-end with v2 UI · Talent/Crew mobile-friendly · Activity Feed wired to real data · backend hookup if applicable · bug squash</td>
+</tr>
+<tr>
+<td>Post-launch (v1.5)</td>
+<td>7/7 onward</td>
+<td>Remaining ~50 deep detail pages · Shoot Command Center · Cascade prompts · Bulk operations</td>
+</tr>
+</tbody></table>
+<h3>Why this version (v0.3) exists</h3>
+<p>Two changes since v0.2:</p>
+<ol>
+<li><strong>Boss confirmed deadlines: 6/15 (internal milestone) + early July (launch).</strong> The previous 6-sprint plan ending 8/10 was too loose. Reduced to <strong>2 sprints + a 0.5 prep week</strong>.</li>
+<li><strong>Boss directive</strong>: <em>&quot;重点是 user flow 和 workflow,要列出来现在的让 boss 看看是不是对的.&quot;</em> — Section §12 below is the single most important deliverable of this week. <strong>No further build proceeds until §12 flows are signed off.</strong></li>
+</ol>
+<h2>2. Background</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>What was inherited</strong></td>
+<td>Full-stack platform: React 19 + Vite + Django REST + PostgreSQL, deployed on Render. ~74 frontend files, ~26 700 LOC, 55 portal pages, 150+ API endpoints, 4 user roles.</td>
+</tr>
+<tr>
+<td><strong>Built by</strong></td>
+<td>Previous engineer in collaboration with the director (boss). Functionally complete, in production at <code>hxvp-studio-frontend.onrender.com/production</code>.</td>
+</tr>
+<tr>
+<td><strong>Why v2 now</strong></td>
+<td>Director took the system to feature-completeness, then handed it to current owner (Jerry) for usability and quality polish.</td>
+</tr>
+<tr>
+<td><strong>2026-05-28 director review</strong></td>
+<td>Director reviewed v1 (main branch) and reaffirmed the 4-portal structure as core. Critique: &quot;重点不突出 / 看起来很复杂 / 有些功能不是必要&quot; — translated and analysed in §3.</td>
+</tr>
+<tr>
+<td><strong>Constraint from boss</strong></td>
+<td>&quot;Don&#39;t break what works&quot; + &quot;Keep all 4 portals&quot; + &quot;Cut the fat.&quot;</td>
+</tr>
+</tbody></table>
+<h2>3. Problem Statement</h2>
+<p><strong>Director&#39;s verbatim feedback</strong> (2026-05-28, on v1 main):</p>
+<blockquote>
+<ol>
+<li><em>重点不突出</em> — &quot;The focus / what&#39;s important isn&#39;t obvious.&quot;</li>
+<li><em>看起来很复杂</em> — &quot;It looks complex.&quot;</li>
+<li><em>有些功能不是必要</em> — &quot;Some features aren&#39;t necessary.&quot;</li>
+</ol>
+</blockquote>
+<p><strong>Reinterpretation</strong> — three distinct problems hiding behind one complaint:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Director&#39;s word</th>
+<th>Concrete pain</th>
+<th>Hypothesis</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P1</td>
+<td>重点不突出</td>
+<td>After login, the user can&#39;t tell what THE most important thing on this screen is</td>
+<td>Dashboard treats all KPIs/lists as equal-weight; no visual hierarchy</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>看起来很复杂</td>
+<td>Sidebar with 10+ flat items, pages with 5+ tabs, modals nested in modals</td>
+<td>No progressive disclosure; everything visible at all times</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>有些功能不是必要</td>
+<td>~20–30 % of features are likely rarely used but always visible</td>
+<td>No usage data; feature audit never performed</td>
+</tr>
+</tbody></table>
+<p>These three together cause one user feeling: <strong>&quot;I don&#39;t know where to start, and I&#39;m overwhelmed.&quot;</strong></p>
+<blockquote>
+<p><strong>❗ Open question for Boss</strong>: of P1 / P2 / P3, which is most important to address first? (My recommendation: P1, because it&#39;s a 1-week visual hierarchy fix, not a feature-deprecation political minefield.)</p>
+</blockquote>
+<h2>4. Users &amp; Jobs To Be Done</h2>
+<p>Per director affirmation, the 4-portal architecture is preserved. Each portal has its own persona and its own primary job:</p>
+<table>
+<thead>
+<tr>
+<th>Portal</th>
+<th>Persona</th>
+<th>THE one job (proposed — needs director confirmation)</th>
+<th>Daily usage</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Production</strong></td>
+<td>Studio admin / boss</td>
+<td><em>&quot;See what&#39;s blocking today and unblock it.&quot;</em></td>
+<td>Multiple times daily</td>
+</tr>
+<tr>
+<td><strong>Client</strong></td>
+<td>Brand / agency contact</td>
+<td><em>&quot;Check my project and approve what needs approving.&quot;</em></td>
+<td>Weekly bursts</td>
+</tr>
+<tr>
+<td><strong>Talent</strong></td>
+<td>Cast, model, actor</td>
+<td><em>&quot;Accept bookings, read call sheets, get paid.&quot;</em></td>
+<td>On demand, mobile</td>
+</tr>
+<tr>
+<td><strong>Crew</strong></td>
+<td>DOP, gaffer, AC, runner, etc.</td>
+<td><em>&quot;Accept assignments, read call sheets, get reimbursed.&quot;</em></td>
+<td>On demand, mobile</td>
+</tr>
+</tbody></table>
+<p>The &quot;THE one job&quot; is the single most important sentence in this PRD — it determines what each portal&#39;s landing screen looks like.</p>
+<blockquote>
+<p><strong>❗ Open question for Boss</strong>: are these 4 sentences correct? If not, what&#39;s the real one-sentence job for each?</p>
+</blockquote>
+<h2>5. Goals &amp; Non-Goals</h2>
+<p><strong>Goals (v1 ship target Q3 2026)</strong></p>
+<ul>
+<li>🎯 <strong>NEW North Star</strong> — <em>3-second comprehension</em>: an outsider who has never seen the system can correctly state what each portal is for within 3 seconds of opening it.</li>
+<li>🔪 <strong>Subtract</strong> — identify and deprecate / progressively-hide <strong>≥ 20 %</strong> of features (by count of sidebar items + tabs + buttons).</li>
+<li>⚡ <strong>Compress</strong> — top-10 highest-frequency tasks have an avg path length of <strong>≤ 3 clicks</strong> (down from estimated 5–7).</li>
+<li>🎨 <strong>Hierarchy</strong> — every main screen has <strong>1 primary action + ≤ 3 secondary actions</strong> above the fold.</li>
+<li>🧭 <strong>Preserve</strong> — 4-portal structure (Production · Client · Talent · Crew) stays exactly as today.</li>
+<li>📱 Talent + Crew portals usable on phone, on-set.</li>
+<li>🛠 Boss can demo the system to a new client without explaining where things are.</li>
+</ul>
+<p><strong>Non-Goals (explicit, v1 will NOT do)</strong></p>
+<ul>
+<li>❌ Merge or rename portals (director explicitly vetoed)</li>
+<li>❌ Backend / data-model changes</li>
+<li>❌ New functional modules</li>
+<li>❌ Delete features outright without director sign-off (hide first, delete later)</li>
+<li>❌ Native iOS / Android app (PWA only if scope allows)</li>
+<li>❌ Multi-tenant, i18n, realtime co-edit</li>
+</ul>
+<h2>6. Success Metrics</h2>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Metric</th>
+<th>Baseline</th>
+<th>Target (v1)</th>
+<th>Measurement</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>North Star</strong></td>
+<td>3-second comprehension test pass rate (outsider correctly guesses portal purpose)</td>
+<td>~30 % (v1 colorful cards)</td>
+<td><strong>≥ 90 %</strong></td>
+<td>Show 3 outsiders the login + dashboard; ask &quot;what is this for?&quot;</td>
+</tr>
+<tr>
+<td>Subtract</td>
+<td>Visible feature count per portal</td>
+<td>TBD (audit pending)</td>
+<td><strong>−20 %</strong></td>
+<td>Sidebar items + visible buttons + tabs</td>
+</tr>
+<tr>
+<td>Compress</td>
+<td>Avg clicks on top-10 tasks</td>
+<td>5.5 (estimated)</td>
+<td><strong>≤ 3.0</strong></td>
+<td>Manual flow walkthrough</td>
+</tr>
+<tr>
+<td>Quality</td>
+<td>Lighthouse mobile (Talent/Crew)</td>
+<td>unknown</td>
+<td>≥ 90</td>
+<td>Lighthouse</td>
+</tr>
+<tr>
+<td>Quality</td>
+<td>Feature regression count</td>
+<td>n/a</td>
+<td><strong>0</strong></td>
+<td>Test matrix vs v1</td>
+</tr>
+<tr>
+<td>Adoption</td>
+<td>Director &quot;would recommend&quot; score</td>
+<td>n/a</td>
+<td>≥ 9 / 10</td>
+<td>Direct ask</td>
+</tr>
+<tr>
+<td>Adoption</td>
+<td>Talent/Crew weekly logins</td>
+<td>unknown</td>
+<td>+50 % within 4 weeks of launch</td>
+<td>Auth logs</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>❗ Open question for Boss</strong>: are the targets realistic, especially −20 % feature deprecation? Need to align on tolerance.</p>
+</blockquote>
+<h2>7. Solution Overview — Design Philosophy</h2>
+<p>Four principles, in priority order:</p>
+<ol>
+<li><p><strong>Subtract before you add.</strong> Every Sprint reviews what to remove before what to build. If we can&#39;t justify a feature, it goes behind progressive disclosure first (collapsed by default), then a future Sprint deletes it.</p>
+</li>
+<li><p><strong>Each portal screams its purpose.</strong> First-time visitor knows in 3 seconds what this portal is for. Implementation: each portal&#39;s landing page leads with one declarative headline (&quot;Manage today&#39;s productions&quot; / &quot;Review and approve&quot; / &quot;Your next booking&quot; / &quot;Your next assignment&quot;) rather than a generic &quot;Dashboard&quot; title.</p>
+</li>
+<li><p><strong>Status Board, not Action Center.</strong> The director&#39;s approved Dashboard demo organises chronologically and by domain — Active Projects table + Activity Feed. We follow that mental model across all 4 portals (each has a Board appropriate to its job).</p>
+</li>
+<li><p><strong>Brand carries through everything.</strong> Visual tokens (<code>#D8FF00</code> brand, <code>#000</code> ink, League Gothic display) live in CSS variables. New components consume tokens, not local hex.</p>
+</li>
+</ol>
+<blockquote>
+<p>See Appendix C for the exhaustive component / token inventory.</p>
+</blockquote>
+<h2>11. Milestones (next 6 weeks)</h2>
+<p>The compressed plan. Detailed scope per sprint mirrors §1 timeline table.</p>
+<table>
+<thead>
+<tr>
+<th>Sprint</th>
+<th>Dates</th>
+<th>Demo / Gate</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Sprint 0</strong> ✅</td>
+<td>5/20 → 5/28</td>
+<td>Live at <a href="https://jerry6063.github.io/HXVP-v2-demo/">https://jerry6063.github.io/HXVP-v2-demo/</a></td>
+</tr>
+<tr>
+<td><strong>Sprint 0.5</strong></td>
+<td>5/29 → 6/4</td>
+<td><strong>End-of-week gate</strong>: director signs §12 user flows. No code past this point without sign-off.</td>
+</tr>
+<tr>
+<td><strong>Sprint 1 — 6/15 Milestone</strong></td>
+<td>6/5 → 6/15</td>
+<td><strong>Live demo to director on 6/15</strong>: all 4 portals reveal &quot;the one job&quot; within 3 seconds; ⌘K works; Tier-3 features collapsed.</td>
+</tr>
+<tr>
+<td><strong>Sprint 2 — 7/6 Launch</strong></td>
+<td>6/16 → 7/6</td>
+<td><strong>Production rollout to real users on 7/6</strong> (or earliest weekday). Top user flows in §12 work end-to-end.</td>
+</tr>
+<tr>
+<td>Post-launch (v1.5)</td>
+<td>7/7+</td>
+<td>Deep detail page rollout · Shoot Command Center · Cascade prompts · Bulk ops</td>
+</tr>
+</tbody></table>
+<p><strong>Implication</strong>: the existing Phase 2 / 3 / 4 / 5 spec in §8 is now <strong>partially post-launch (v1.5+)</strong>. v1 ships with:</p>
+<ul>
+<li>4 redesigned portal landing pages (the first screen each persona sees)</li>
+<li>⌘K search</li>
+<li>The visual system applied to all routable pages&#39; shells (sidebar + header)</li>
+<li>Deep detail pages may retain v1 visual styling internally — acceptable because primary persona&#39;s main flows don&#39;t visit them daily</li>
+</ul>
+<p>This is honest about scope. Director should know what will and won&#39;t be polished by launch.</p>
+<hr>
+<h1>Part II — Detailed Specification (for Engineers)</h1>
+<h2>8. Phased Requirements</h2>
+<h3>Phase 0 — Visual Baseline ✅ DONE</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Brand CSS tokens (<code>--color-brand</code> etc.)</td>
+<td>✅</td>
+<td><code>frontend/src/index.css</code></td>
+</tr>
+<tr>
+<td><code>Button</code> / <code>Input</code> / <code>Card</code> primitives</td>
+<td>✅</td>
+<td><code>frontend/src/components/ui/</code></td>
+</tr>
+<tr>
+<td><code>StatCard</code> / <code>StatusBadge</code> / <code>LoadingSpinner</code> restyled</td>
+<td>✅</td>
+<td><code>frontend/src/components/</code></td>
+</tr>
+<tr>
+<td><code>PortalLayout</code> dark + grouped sidebar</td>
+<td>✅</td>
+<td><code>frontend/src/components/PortalLayout.jsx</code></td>
+</tr>
+<tr>
+<td><code>HomePage</code> skewed portal grid</td>
+<td>✅ (but currently shows 3 — needs revert to 4)</td>
+<td><code>frontend/src/components/HomePage.jsx</code></td>
+</tr>
+<tr>
+<td><code>LoginPage</code> Apple-style entry transition</td>
+<td>✅</td>
+<td><code>frontend/src/components/LoginPage.jsx</code> + <code>portalTransition.js</code></td>
+</tr>
+<tr>
+<td>Production Dashboard Status Board</td>
+<td>✅</td>
+<td><code>frontend/src/portals/production/Dashboard.jsx</code></td>
+</tr>
+<tr>
+<td>Mock auth (no backend required)</td>
+<td>✅</td>
+<td><code>frontend/src/contexts/AuthContext.jsx</code></td>
+</tr>
+</tbody></table>
+<h3>Phase 0.5 — Course-correction (Sprint 0.5) 🆕</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Spec</th>
+<th>Acceptance</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Revert Model merge — HomePage</strong></td>
+<td>3 portal cards → 4 (add Crew back); grid <code>lg:grid-cols-3</code> → <code>lg:grid-cols-4</code>; &quot;3 Portals&quot; → &quot;4 Roles&quot;</td>
+<td><code>/</code> shows 4 cards; Crew card animates to <code>/crew/login</code> with same Apple-style transition</td>
+</tr>
+<tr>
+<td><strong>Revert Model merge — LoginPage</strong></td>
+<td><code>portalMeta.talent.title</code> → &quot;Talent&quot;; <code>portalMeta.crew.title</code> → &quot;Crew&quot;; restore separate subtitles</td>
+<td>Crew login page shows &quot;CREW&quot; hero, not &quot;MODEL&quot;</td>
+</tr>
+<tr>
+<td><strong>Revert sidebar copy</strong></td>
+<td><code>PortalLayout</code> <code>portalConfigs.talent.title</code> → &quot;Talent&quot;; <code>portalConfigs.crew.title</code> → &quot;Crew&quot;; PORTALS section in production sidebar lists &quot;Client Portal · Talent Portal · Crew Portal&quot; (3 cross-links)</td>
+<td>Production admin can jump to all 3 other portals from sidebar</td>
+</tr>
+<tr>
+<td><strong>Feature audit doc</strong></td>
+<td>Walk each portal&#39;s sidebar + each page&#39;s tabs + each modal with director; tag each as Essential / Secondary / Deprecate. Output: <code>docs/feature-audit.md</code></td>
+<td>Director signs off on the tags</td>
+</tr>
+<tr>
+<td><strong>Portal purpose sentences</strong></td>
+<td>One declarative sentence per portal, written by director (or proposed by Jerry and confirmed).</td>
+<td>Sentence visible in <code>docs/PRD.md §4</code> and rendered as login-page subtitle in code</td>
+</tr>
+</tbody></table>
+<h3>Phase 1 — Highlight What Matters (Sprint 1)</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Spec</th>
+<th>Acceptance</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Portal landing page hierarchy</strong></td>
+<td>Each portal&#39;s landing replaces generic &quot;Dashboard&quot; header with: (a) one declarative sentence (the portal&#39;s purpose), (b) the one primary CTA / panel, (c) at most 3 secondary panels. Tier-3 (deprecate) features hidden behind a &quot;More&quot; toggle or moved to a Settings page.</td>
+<td>3-second comprehension test passes ≥ 90 % with 3 outsiders</td>
+</tr>
+<tr>
+<td><strong>Sidebar consolidation</strong></td>
+<td>Each section max 5 items visible; Tier-3 items moved to a collapsed &quot;Advanced&quot; subsection or removed</td>
+<td>Sidebar visible item count per portal − 20 %</td>
+</tr>
+<tr>
+<td><strong>⌘K Global Search</strong></td>
+<td>Portal at top-right of every layout; opens overlay; fuzzy matches projects / talent / crew / contracts / invoices / shoots; arrow + Enter navigates</td>
+<td>TTI ≤ 200 ms; ≤ 2 keystrokes from any page</td>
+</tr>
+</tbody></table>
+<h3>Phase 2 — Workflow Compression (Sprint 2)</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Spec</th>
+<th>Acceptance</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Shoot Command Center</strong></td>
+<td>Single <code>/production/shoots/:id</code> page consolidating shoot meta, talent bookings, crew assignments, call sheet generator, production logs, comments. No nested modal trees.</td>
+<td>Editing shoot date in this page updates dependents (see cascade)</td>
+</tr>
+<tr>
+<td><strong>Cascade Prompts</strong></td>
+<td>Changing a shoot date triggers &quot;<em>This will affect N bookings + M assignments. Notify everyone?</em> [Yes / Just this one]&quot;</td>
+<td>One click cascade vs current manual 10+ updates</td>
+</tr>
+<tr>
+<td><strong>Bulk Actions on Bookings</strong></td>
+<td>Multi-select rows + bulk: confirm / decline / re-send call sheet / mark paid</td>
+<td>10× speedup on month-end ops</td>
+</tr>
+<tr>
+<td><strong>Activity Feed → real data</strong></td>
+<td>Replace mock array with API hook; group by day; mobile-friendly</td>
+<td>Same data on Dashboard as the events that actually happened</td>
+</tr>
+</tbody></table>
+<h3>Phase 3 — Visual Rollout (Sprints 3–5)</h3>
+<p>Pages still on v1 visual (≈ 50). Roll out in priority order:</p>
+<table>
+<thead>
+<tr>
+<th>Page Group</th>
+<th>Pages</th>
+<th>Sprint</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Production deep</td>
+<td>Projects (list + detail), Talent module, Crew page, Invoices</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Client</td>
+<td>Dashboard, Production timeline, Deliverable center, Talent roster, Invoices</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Talent</td>
+<td>Profile, Bookings, Calendar, Records, Payments, Documents</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Crew</td>
+<td>Profile, Assignments, Calendar, Records, Payments, Documents, Reimbursements</td>
+<td>5</td>
+</tr>
+</tbody></table>
+<p>Each rolled-out page must:</p>
+<ul>
+<li>Consume only <code>src/components/ui/*</code> and the design tokens</li>
+<li>Use <code>StatusBadge</code>, <code>StatCard</code>, <code>LoadingSpinner</code> (already styled)</li>
+<li>Match Dashboard&#39;s dark + bordered + League-Gothic-headings pattern</li>
+<li>Visible action count ≤ 4 per main screen</li>
+</ul>
+<h2>9. Information Architecture (4 portals restored)</h2>
+<pre><code>HXVP Studio v2
+│
+├── /  (Public landing — 4 portal cards)
+│      Production · Client · Talent · Crew
+│
+├── /production  (role: production_admin)
+│   ├── /dashboard         Status Board (Stats + Active Projects + Activity Feed)
+│   ├── /projects[*]       Productions Module
+│   ├── /calendar          Shoot Day Tracker
+│   ├── /talent[*]         Models &amp; Talent
+│   ├── /crew[*]           Production Crew
+│   ├── /documents         Documents (call sheets / contracts / checklists / budgets)
+│   ├── /invoices[*]       Client Payments
+│   ├── /talent-payments   Payroll (Talent + Crew + Time Logs)
+│   ├── /revenue           Revenue &amp; Expenses
+│   └── /messages
+│
+├── /client  (role: client)
+│   ├── /dashboard, /request, /production, /deliverables,
+│   ├── /payments, /talent, /messages
+│
+├── /talent  (role: talent)
+│   ├── /dashboard, /profile, /bookings, /calendar,
+│   ├── /records, /payments, /documents
+│
+└── /crew  (role: crew)
+    ├── /dashboard, /profile, /calendar, /assignments,
+    ├── /records, /payments, /reimbursements, /documents
+</code></pre>
+<p>Sidebar grouping (consistent across all 4 portals):</p>
+<pre><code>OVERVIEW   → Dashboard · Quick action
+WORK       → Work-related nav items with item-count badges (max 5 visible)
+PORTALS    → Cross-portal links (production admin → other 3 portals)
+FINANCE    → Payments, invoices, payroll (where applicable)
+</code></pre>
+<h2>10. Out of Scope (v1)</h2>
+<ul>
+<li>Portal merging or renaming (director vetoed)</li>
+<li>Outright feature deletion without director sign-off (hide first, delete in v1.5)</li>
+<li>Backend / API / data-model changes</li>
+<li>New features (AI, smart scheduling, etc.)</li>
+<li>Native mobile apps</li>
+<li>Multi-tenant, i18n, realtime co-edit</li>
+<li>Public marketing site (lives at hxvp.us, not in this scope)</li>
+</ul>
+<h2>11. Risks &amp; Open Questions</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Risk</th>
+<th>Likelihood</th>
+<th>Impact</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>R1</td>
+<td>Director&#39;s intuition about &quot;non-essential&quot; features ≠ actual user usage data</td>
+<td>M</td>
+<td>M</td>
+<td>Sprint 0.5 audit captures director&#39;s tagging; instrument deprecated features for 4 weeks before deleting in v1.5</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>&quot;3-second comprehension&quot; target is qualitative and subjective</td>
+<td>M</td>
+<td>L</td>
+<td>Run test with 3 outsiders per portal; document with screen recordings</td>
+</tr>
+<tr>
+<td>R3</td>
+<td>Sidebar consolidation may hide a feature the boss actually uses daily</td>
+<td>M</td>
+<td>M</td>
+<td>Each &quot;hide&quot; needs director acknowledgment in Sprint 0.5 audit</td>
+</tr>
+<tr>
+<td>R4</td>
+<td>Visual rollout to 50 pages within Sprints 3–5 may slip</td>
+<td>H</td>
+<td>L</td>
+<td>Tagged pages can defer to v1.5 without blocking launch</td>
+</tr>
+<tr>
+<td>R5</td>
+<td>Public demo URL may leak competitive info</td>
+<td>L</td>
+<td>L</td>
+<td>Demo data is fake; legacy backend isolated to <code>backend.legacy/</code>; license MIT is intentional</td>
+</tr>
+</tbody></table>
+<p><strong>Open Questions awaiting Director / Stakeholder decisions</strong></p>
+<p><strong>Highest priority — blocks Sprint 1 build:</strong></p>
+<ul>
+<li><strong>Q1</strong> — §12 flow inventory: for each of the 25 flows F-P / F-C / F-T / F-X, mark ✓ correct · ⚠ partial · ✗ wrong. Add missing flows we forgot. <strong>Sign-off needed by Wed 6/4.</strong></li>
+<li><strong>Q2</strong> — §4 portal one-sentence jobs: confirm or rewrite each of the 4 proposed sentences. These literally become the headline copy on each portal&#39;s landing page.</li>
+</ul>
+<p><strong>Medium priority — needed for Sprint 0.5 audit session:</strong></p>
+<ul>
+<li><strong>Q3</strong> — §3 — of the three pains (P1 lacks focus / P2 looks complex / P3 unnecessary features), which is <strong>#1</strong> to address first?</li>
+<li><strong>Q4</strong> — §5 — accept the −20 % feature count target, or prefer aggressive (−40 %) / conservative (−10 %)?</li>
+<li><strong>Q5</strong> — §7 — can we schedule a 90-minute session with director to walk through every sidebar item and tag each Essential / Secondary / Deprecate? Proposed date: 6/2 or 6/3.</li>
+</ul>
+<p><strong>Tactical:</strong></p>
+<ul>
+<li><strong>Q6</strong> — at 7/6 launch, is mock mode acceptable as a starting state for new users, or must real backend be hooked up day 1?</li>
+<li><strong>Q7</strong> — Model-merge revert public demo: re-deploy URL the same day as revert (auto via Actions), or wait?</li>
+</ul>
+<hr>
+<h2>12. User Flows (the section the director should read most carefully)</h2>
+<blockquote>
+<p><strong>❗ Director sign-off needed by 6/4.</strong> For each flow below, please mark: <strong>✓ correct as written</strong> · <strong>⚠ partially correct (note what&#39;s off)</strong> · <strong>✗ wrong or missing (note replacement)</strong>. The flows you confirm here drive all Sprint 1–2 design and build. <strong>No further engineering past this point happens without confirmation.</strong></p>
+</blockquote>
+<h3>How to read the tables</h3>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>ID</strong></td>
+<td>Stable reference, used in Sprint plans, audit, and tests</td>
+</tr>
+<tr>
+<td><strong>Flow</strong></td>
+<td>One-sentence user story: &quot;Persona does X so Y&quot;</td>
+</tr>
+<tr>
+<td><strong>Trigger</strong></td>
+<td>What initiates this flow today</td>
+</tr>
+<tr>
+<td><strong>Today (v1)</strong></td>
+<td>Approx clicks / pages traversed in current production system</td>
+</tr>
+<tr>
+<td><strong>v2 Target</strong></td>
+<td>Click goal in redesigned system</td>
+</tr>
+<tr>
+<td><strong>Freq</strong></td>
+<td>How often persona performs this — D(aily) / W(eekly) / M(onthly)</td>
+</tr>
+</tbody></table>
+<h3>12.1 Production Portal flows (Studio Admin)</h3>
+<p>Persona&#39;s one-sentence job: <em>&quot;See what&#39;s blocking today and unblock it.&quot;</em></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Flow</th>
+<th>Trigger</th>
+<th>Today</th>
+<th>v2 Target</th>
+<th>Freq</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>F-P-01</strong></td>
+<td>Glance at what&#39;s blocked or needs me right now</td>
+<td>Login</td>
+<td>5+ scroll across Dashboard panels</td>
+<td>2 (Status Board surfaces above the fold)</td>
+<td>D</td>
+</tr>
+<tr>
+<td><strong>F-P-02</strong></td>
+<td>Convert a new client request into a project</td>
+<td>New <code>Project Request</code> arrives</td>
+<td>6: Requests → open → &quot;Create Project&quot; → fill → save → confirm</td>
+<td>3 (one-click promote)</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-P-03</strong></td>
+<td>Plan a new shoot (date · location · requirements)</td>
+<td>Project needs shoot</td>
+<td>5: Project detail → Shoots tab → &quot;New Shoot&quot; → fill modal → save</td>
+<td>3 (inline within Project)</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-P-04</strong></td>
+<td>Build a talent shortlist + send availability inquiries</td>
+<td>Shoot needs talent</td>
+<td>8+: Talent module → filter → multi-select → &quot;Send Inquiry&quot; modal → fill → confirm</td>
+<td>4 (inline shortlist drawer on Shoot page)</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-P-05</strong></td>
+<td>Build crew assignment + send availability inquiries</td>
+<td>Shoot needs crew</td>
+<td>8+: Crew page → similar to F-P-04</td>
+<td>4 (mirror of F-P-04)</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-P-06</strong></td>
+<td>Send call sheet to confirmed people for tomorrow&#39;s shoot</td>
+<td>Day before shoot</td>
+<td>7: Shoot → Call sheets tab → &quot;New&quot; → fill / pre-fill → preview → send</td>
+<td>3 (one-click generate from confirmed bookings + assignments)</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-P-07</strong></td>
+<td>Approve time logs at month end</td>
+<td>Month-end</td>
+<td>10+ per person (open each log → review → approve)</td>
+<td>3 (bulk approve view, deferred to v1.5 — partial in v1)</td>
+<td>M</td>
+</tr>
+<tr>
+<td><strong>F-P-08</strong></td>
+<td>Issue invoice to client</td>
+<td>Project milestone reached</td>
+<td>6: Invoices → &quot;New&quot; → select project → line items → preview → send</td>
+<td>3 (one-click from Project / milestone)</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-P-09</strong></td>
+<td>Mark invoice as paid + record payment</td>
+<td>Client paid</td>
+<td>4: Invoice → &quot;Mark paid&quot; → confirm → record</td>
+<td>2</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-P-10</strong></td>
+<td>Move a shoot to a different date and notify everyone</td>
+<td>Schedule change</td>
+<td>12+ (edit shoot + manually notify each person)</td>
+<td>3 (cascade prompt — partial in v1, full in v1.5)</td>
+<td>W</td>
+</tr>
+</tbody></table>
+<h3>12.2 Client Portal flows</h3>
+<p>Persona&#39;s one-sentence job: <em>&quot;Check my project and approve what needs approving.&quot;</em></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Flow</th>
+<th>Trigger</th>
+<th>Today</th>
+<th>v2 Target</th>
+<th>Freq</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>F-C-01</strong></td>
+<td>Submit a new project request</td>
+<td>Need shoot</td>
+<td>5: Login → New Request → fill → upload refs → submit</td>
+<td>3</td>
+<td>M</td>
+</tr>
+<tr>
+<td><strong>F-C-02</strong></td>
+<td>Check progress of my active project</td>
+<td>Curious / due-date approaching</td>
+<td>4: Login → Production → my project → scroll</td>
+<td>2 (Dashboard surfaces it)</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-C-03</strong></td>
+<td>Review and approve deliverables</td>
+<td>Deliverables ready</td>
+<td>6: Login → Deliverables → open shoot folder → review each → approve each</td>
+<td>3 (inline approve, grid view)</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-C-04</strong></td>
+<td>Sign a contract</td>
+<td>Contract sent</td>
+<td>5: Login → Notifications → contract → review → sign</td>
+<td>3</td>
+<td>M</td>
+</tr>
+<tr>
+<td><strong>F-C-05</strong></td>
+<td>Pay an invoice</td>
+<td>Invoice received</td>
+<td>4: Login → Payments → invoice → pay</td>
+<td>3</td>
+<td>M</td>
+</tr>
+</tbody></table>
+<h3>12.3 Talent Portal flows (Model · Actor · Cast)</h3>
+<p>Persona&#39;s one-sentence job: <em>&quot;Accept bookings, read call sheets, get paid.&quot;</em></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Flow</th>
+<th>Trigger</th>
+<th>Today</th>
+<th>v2 Target</th>
+<th>Freq</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>F-T-01</strong></td>
+<td>Respond to availability inquiry (Accept / Decline)</td>
+<td>Inquiry pushed</td>
+<td>4 (web): Login → Bookings → inquiry → respond. On mobile: even more</td>
+<td><strong>1 tap</strong> (mobile-first home card with inline Accept / Decline)</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-T-02</strong></td>
+<td>Read tomorrow&#39;s call sheet (location · time · wardrobe)</td>
+<td>Day before shoot</td>
+<td>4: Login → Bookings → upcoming → call sheet</td>
+<td>1 (home shows next call sheet at top)</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-T-03</strong></td>
+<td>Update profile / availability calendar</td>
+<td>Schedule change</td>
+<td>6: Profile → calendar → click date → mark → save</td>
+<td>3</td>
+<td>M</td>
+</tr>
+<tr>
+<td><strong>F-T-04</strong></td>
+<td>Submit time log after a shoot</td>
+<td>Wrap</td>
+<td>5: Login → Records → log → fill → submit</td>
+<td>2 (one-tap from shoot detail)</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-T-05</strong></td>
+<td>Check earnings / payment status</td>
+<td>Payday curiosity</td>
+<td>3: Login → Payments → view</td>
+<td>2 (home shows next payout)</td>
+<td>W</td>
+</tr>
+</tbody></table>
+<h3>12.4 Crew Portal flows (DP · Gaffer · AC · Runner etc.)</h3>
+<p>Persona&#39;s one-sentence job: <em>&quot;Accept assignments, read call sheets, get reimbursed.&quot;</em></p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Flow</th>
+<th>Trigger</th>
+<th>Today</th>
+<th>v2 Target</th>
+<th>Freq</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>F-X-01</strong></td>
+<td>Respond to availability inquiry</td>
+<td>Inquiry pushed</td>
+<td>4 (web), worse on mobile</td>
+<td><strong>1 tap</strong> mobile</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-X-02</strong></td>
+<td>Read tomorrow&#39;s call sheet</td>
+<td>Day before shoot</td>
+<td>4</td>
+<td>1</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-X-03</strong></td>
+<td>Submit time log after a shoot</td>
+<td>Wrap</td>
+<td>5</td>
+<td>2</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-X-04</strong></td>
+<td>Submit a reimbursement (gas · meals · gear rental)</td>
+<td>Expense incurred</td>
+<td>6: Reimbursements → New → fill → upload receipt → save → submit</td>
+<td>3 (mobile-friendly photo upload)</td>
+<td>W</td>
+</tr>
+<tr>
+<td><strong>F-X-05</strong></td>
+<td>Check earnings / payment status</td>
+<td>Payday curiosity</td>
+<td>3</td>
+<td>2</td>
+<td>W</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Notes for director review</strong></p>
+<ul>
+<li>Frequencies (D/W/M) are best-guesses — please correct any that feel wrong.</li>
+<li>&quot;Today&quot; click counts are estimates; actual numbers will be measured during Sprint 0.5 audit.</li>
+<li>Many &quot;v2 Target = 1 tap&quot; flows for Talent / Crew depend on the <strong>mobile-first home redesign</strong> in Sprint 2.</li>
+</ul>
+</blockquote>
+<h2>13. Workflows (multi-step processes spanning multiple sessions or personas)</h2>
+<p>These are end-to-end business processes that string the §12 flows together. v2 doesn&#39;t change the workflow shapes — only how smoothly each step connects.</p>
+<h3>W-1 · Project Lifecycle (Client request → invoice paid)</h3>
+<pre><code>Client                Production                              Talent/Crew
+──────                ──────────                              ──────────
+F-C-01  ───→  F-P-02 promote to project
+                │
+                ├─→  F-P-03  plan shoots
+                ├─→  F-P-04  shortlist talent  ───────→  F-T-01 respond
+                ├─→  F-P-05  shortlist crew   ───────→  F-X-01 respond
+                │
+                ├─→  F-P-06  send call sheets ──────→  F-T-02 read / F-X-02 read
+                │
+                │     [SHOOT DAY happens off-system]
+                │
+                ├─→  F-P-07  approve time logs ←─── F-T-04 submit / F-X-03 submit
+                ├─→ deliverables uploaded ────────→  F-C-03 review/approve
+                │
+                ├─→  F-P-08  issue invoice ─────────→  F-C-05 pay
+                └─→  F-P-09  record payment
+</code></pre>
+<p><strong>v2 stress points</strong> (where boss reported most friction):</p>
+<ul>
+<li>F-P-04 / F-P-05 (shortlist + inquiries) — currently 8+ clicks each, the most expensive step</li>
+<li>F-P-06 (call sheets) — should auto-fill from confirmed bookings, not require re-typing</li>
+<li>F-P-10 (date change) — currently zero cascade, manual re-notify chain</li>
+</ul>
+<h3>W-2 · Shoot Day Lifecycle (Plan → wrap → settle)</h3>
+<pre><code>T-7 days   F-P-03 plan shoot
+T-5 days   F-P-04 shortlist talent
+T-5 days   F-P-05 shortlist crew
+T-2 days   ⏳ Final confirmations received
+T-1 day    F-P-06 send call sheets  ─→  F-T-02 / F-X-02 read &amp; confirm
+T-0        SHOOT DAY                  (out of system)
+T+0 evening F-T-04 / F-X-03 submit time logs
+T+1 day    F-P-07 approve time logs
+</code></pre>
+<p><strong>v2 simplification</strong>: the entire shoot day flow ideally collapses into a single Shoot Command Center page (planned v1.5) — but for launch, T-7 → T+1 should at least feel like a coherent vertical narrative inside the Project page, not 7 disconnected pages.</p>
+<h3>W-3 · Talent / Crew Onboarding</h3>
+<pre><code>F-P  invite (Production sends invite link)
+  ↓
+F-T-03 / F-X (new model fills profile, calendar, uploads photos)
+  ↓
+F-P  approves profile (Talent Admin)
+  ↓
+Eligible for F-P-04 / F-P-05 shortlists
+</code></pre>
+<p><strong>v2</strong>: profile completeness % progress bar on home so models know what&#39;s left.</p>
+<h3>W-4 · Month-end Payroll</h3>
+<pre><code>1st of month  F-P-07 admin reviews all time logs of prior month
+              ↓
+              bulk approve where possible (v1.5 capability)
+              ↓
+              talent/crew payments queued
+              ↓
+              F-T-05 / F-X-05 see &quot;paid&quot; status update
+</code></pre>
+<p><strong>v2 stress point</strong>: 30+ time logs per month per studio is currently 30 × ~5 clicks = 150+ clicks. Bulk operations (v1.5) are critical here, but partial bulk in v1 acceptable.</p>
+<hr>
+<h1>Appendix A — Glossary</h1>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Portal</strong></td>
+<td>One of four top-level role-based UI shells: Production, Client, Talent, Crew</td>
+</tr>
+<tr>
+<td><strong>Shoot</strong></td>
+<td>A single day of filming/photographing, belongs to a Project</td>
+</tr>
+<tr>
+<td><strong>Call Sheet</strong></td>
+<td>Document sent to talent + crew the day before a shoot with location, call time, wardrobe</td>
+</tr>
+<tr>
+<td><strong>Booking</strong></td>
+<td>A talent&#39;s confirmed participation in a Shoot</td>
+</tr>
+<tr>
+<td><strong>Assignment</strong></td>
+<td>A crew member&#39;s confirmed participation in a Shoot</td>
+</tr>
+<tr>
+<td><strong>Time Log</strong></td>
+<td>Hourly record submitted by talent/crew for payment</td>
+</tr>
+<tr>
+<td><strong>Feature tag</strong></td>
+<td>Essential (always-visible) · Secondary (one-click reveal) · Deprecate (hidden / removed)</td>
+</tr>
+<tr>
+<td><strong>DRI</strong></td>
+<td>Directly Responsible Individual (Apple PM convention)</td>
+</tr>
+<tr>
+<td><strong>3-second comprehension</strong></td>
+<td>Outsider correctly states portal purpose within 3 seconds of opening</td>
+</tr>
+</tbody></table>
+<h1>Appendix B — References</h1>
+<ul>
+<li><strong>Public brand site (visual reference)</strong>: <a href="https://hxvp.us/">https://hxvp.us/</a></li>
+<li><strong>SetHero (functional reference for call-sheet workflow)</strong>: <a href="https://sethero.com/">https://sethero.com/</a></li>
+<li><strong>Director-approved Dashboard demo screenshot</strong>: see Sprint 0 commit <code>ad6ad68</code></li>
+<li><strong>Director feedback screenshot (2026-05-28, v1 main 4-portal grid)</strong>: attached to chat</li>
+<li><strong>Original engineer&#39;s deploy (legacy v1)</strong>: <a href="https://hxvp-studio-frontend.onrender.com/production">https://hxvp-studio-frontend.onrender.com/production</a></li>
+<li><strong>v2 public demo</strong>: <a href="https://jerry6063.github.io/HXVP-v2-demo/">https://jerry6063.github.io/HXVP-v2-demo/</a></li>
+</ul>
+<h1>Appendix C — Component &amp; Token Inventory</h1>
+<h3>Design tokens (CSS variables, defined in <code>frontend/src/index.css</code>)</h3>
+<pre><code>--color-brand        #D8FF00   electric lime (primary CTA / accent)
+--color-brand-hover  #C2E600
+--color-accent-2     #F0523D   coral (secondary / warning)
+
+--color-ink          #000000   primary text
+--color-ink-soft     #272727
+--color-ink-muted    #737373
+--color-ink-subtle   #A9A9A9
+
+--color-paper        #FFFFFF
+--color-paper-soft   #FAFAFA
+--color-paper-dark   #0A0A0A   main app background
+--color-rule         #E7E7E7
+
+--font-display       &quot;League Gothic&quot;  (uppercase, condensed, large)
+--font-sans          &quot;Helvetica Neue&quot; / Helvetica / Arial
+
+--radius-card        2px       (editorial — almost no rounding)
+</code></pre>
+<h3>UI primitives (<code>frontend/src/components/ui/</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Variants</th>
+<th>Sizes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Button</code></td>
+<td>primary · secondary · ghost · danger</td>
+<td>sm · md · lg</td>
+</tr>
+<tr>
+<td><code>Input</code></td>
+<td>input · textarea · select (via <code>as</code> prop)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>Card</code></td>
+<td>default · paper · emphasis (+ <code>Card.Header</code> / <code>.Body</code> / <code>.Footer</code>)</td>
+<td>—</td>
+</tr>
+</tbody></table>
+<h3>Stateful components (preserve existing API, restyled)</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>StatCard</code></td>
+<td><code>color</code> prop accepts legacy <code>indigo/emerald/amber/sky</code> for back-compat, all map to brand yellow</td>
+</tr>
+<tr>
+<td><code>StatusBadge</code></td>
+<td>40+ legacy statuses bucketed into 5 semantic tones (success · warning · info · danger · neutral) tuned for light backgrounds</td>
+</tr>
+<tr>
+<td><code>LoadingSpinner</code></td>
+<td>Yellow ring on dark backgrounds</td>
+</tr>
+</tbody></table>
+<h3>Transition utilities</h3>
+<p><code>frontend/src/components/portalTransition.js</code> — shared <code>motion</code> config:</p>
+<ul>
+<li><code>PORTAL_TRANSITION</code> — 800 ms ease-in-out-quart for layoutId-driven cross-page morph</li>
+<li><code>portalLayoutId(key)</code> — naming factory keeping HomePage and LoginPage in sync</li>
+</ul>
+<h1>Appendix D — Proposed Top-10 Tasks (for click-count + comprehension baselines)</h1>
+<ol>
+<li>View today&#39;s pending bookings (Production admin)</li>
+<li>Send a call sheet for tomorrow&#39;s shoot</li>
+<li>Approve a Time Log</li>
+<li>Issue an invoice</li>
+<li>Mark an invoice paid</li>
+<li>Move a shoot to a different date (incl. notifications)</li>
+<li>Add a new model to the roster</li>
+<li>Client approves a deliverable</li>
+<li>Client signs a contract</li>
+<li>Talent / Crew accepts a booking on mobile</li>
+</ol>
+<h1>Appendix E — File Inventory &amp; LOC</h1>
+<p>(Generated 2026-05-28 from <code>v2-redesign</code> branch.)</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Files</th>
+<th>LOC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Total <code>frontend/src/**/*.jsx</code></td>
+<td>74</td>
+<td>26 712</td>
+</tr>
+<tr>
+<td><code>portals/production/**</code></td>
+<td>27</td>
+<td>13 350</td>
+</tr>
+<tr>
+<td><code>portals/client/**</code></td>
+<td>7</td>
+<td>2 320</td>
+</tr>
+<tr>
+<td><code>portals/talent/**</code></td>
+<td>8</td>
+<td>2 985</td>
+</tr>
+<tr>
+<td><code>portals/crew/**</code></td>
+<td>8</td>
+<td>2 690</td>
+</tr>
+<tr>
+<td><code>components/**</code> (shared)</td>
+<td>17</td>
+<td>2 900</td>
+</tr>
+<tr>
+<td><code>api/**</code> (hooks + client)</td>
+<td>2</td>
+<td>1 950</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>Pages over 500 LOC (&quot;heavy detail pages&quot;) are listed in <code>appendix-e-detail.md</code> (TBD) — these are high-priority Sprint 3 targets.</p>
+</blockquote>
+<h1>Appendix F 🆕 — Feature Audit Framework</h1>
+<p>The Sprint 0.5 audit answers the question: <em>for every feature in the system, is it Essential, Secondary, or Deprecate?</em></p>
+<h3>Tagging rubric</h3>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Criteria</th>
+<th>UI implication</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>🟢 Essential</strong></td>
+<td>(a) Used ≥ once per day by primary persona, OR (b) blocks a core workflow if missing</td>
+<td>Always visible, top of sidebar / page hierarchy</td>
+</tr>
+<tr>
+<td><strong>🟡 Secondary</strong></td>
+<td>(a) Used 1–4× per month, OR (b) used by a small subset of users daily, OR (c) supporting/admin function</td>
+<td>Hidden behind one click (e.g. &quot;Advanced&quot; section, settings menu, contextual modal)</td>
+</tr>
+<tr>
+<td><strong>🔴 Deprecate</strong></td>
+<td>(a) Used &lt; 1×/month by anyone, OR (b) overlaps with another feature that&#39;s better, OR (c) director explicitly says &quot;I never use this&quot;</td>
+<td>Removed from sidebar in v1; soft-hidden in code (kept routable for transition); deleted in v1.5</td>
+</tr>
+</tbody></table>
+<h3>Audit process (Sprint 0.5)</h3>
+<ol>
+<li><strong>Inventory</strong> (Jerry, 1 day before director meeting): generate a flat list of every sidebar item, every page tab, every modal action across the 4 portals. Format: <code>docs/feature-audit.md</code> with rows = features, columns = [Portal · Path · Description · Tag · Director note].</li>
+<li><strong>Walkthrough</strong> (Director + Jerry, 90 min session): step through the list, director tags each row. Where unclear, log in &quot;Director note&quot; column for follow-up.</li>
+<li><strong>Decision</strong> (Jerry, same day): close the list, commit <code>docs/feature-audit.md</code>.</li>
+<li><strong>Apply</strong> (Sprint 1): UI changes per the rubric above. No feature is <em>deleted</em> in Sprint 1 — only hidden / collapsed.</li>
+<li><strong>Instrument</strong> (Sprint 1 onward): add usage analytics on deprecated features. If anything unexpectedly used &gt; 1×/month for 4 weeks, promote it back to Secondary.</li>
+<li><strong>Delete</strong> (v1.5, post-launch): items still cold after 4 weeks of instrumentation get deleted from code.</li>
+</ol>
+<h3>Example audit row format</h3>
+<pre><code>| Portal     | Path                       | Feature                  | Tag          | Note                                  |
+|------------|----------------------------|--------------------------|--------------|---------------------------------------|
+| Production | /production/messages       | In-app messaging         | 🟡 Secondary | &quot;Most ppl use WeChat, but useful log&quot; |
+| Production | /production/revenue        | Revenue analysis charts  | 🟢 Essential | &quot;I look at this every Monday&quot;         |
+| Production | /production/talent-payments| Stripe payout integration| 🟡 Secondary | &quot;Used 2-3x/month at month-end&quot;        |
+| Client     | /client/talent             | Talent roster sharing    | 🔴 Deprecate | &quot;Client never logs in to see this&quot;    |
+</code></pre>
+<hr>
+<h2>Change log</h2>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Date</th>
+<th>Author</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0.1</td>
+<td>2026-05-28</td>
+<td>Jerry Zheng</td>
+<td>Initial draft post-Sprint 0; assumed Talent+Crew merge into Model</td>
+</tr>
+<tr>
+<td>0.2</td>
+<td>2026-05-28</td>
+<td>Jerry Zheng</td>
+<td><strong>Director feedback received.</strong> Reverted Model merge (4 portals stay). Reframed problem from &quot;too many clicks&quot; to &quot;lacks focus + complex + feature bloat.&quot; Added Phase 0.5 (Feature Audit). New North Star: 3-second comprehension.</td>
+</tr>
+<tr>
+<td>0.3</td>
+<td>2026-05-28</td>
+<td>Jerry Zheng</td>
+<td><strong>Deadlines locked: 6/15 internal + early-July launch.</strong> Compressed roadmap from 6 sprints to 2 + 0.5 prep. Added §12 User Flow inventory (25 flows across 4 portals) and §13 Workflow diagrams — <strong>the single most important deliverable this week; blocks all Sprint 1 build until director signs off.</strong> Open Questions Q1 / Q2 reordered to flow validation.</td>
+</tr>
+</tbody></table>
+<hr>
+<blockquote>
+<p><strong>Next action (boss)</strong>: read §1 → §12 (the flows tables) → §11. Mark each flow ✓ ⚠ ✗ by 6/4. Once §12 lands and Q1–Q5 are answered, Sprint 0.5 spec freezes and Sprint 1 build begins 6/5.</p>
+</blockquote>
+
+    <div class="footer-meta">
+      HXVP Studio v2 · Product Requirements Document · v0.2 · Confidential
+    </div>
+  </div>
+</body>
+</html>
