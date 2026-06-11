@@ -58,6 +58,12 @@ import CrewReimbursements from './portals/crew/Reimbursements';
 import CrewPayments from './portals/crew/Payments';
 import CrewDocuments from './portals/crew/Documents';
 
+// ── v2 preview (additive, public, light theme) ──────────────────────────────
+import DashboardV2 from './v2/DashboardV2';
+import NewProjectV2 from './v2/NewProjectV2';
+import TalentsV2 from './v2/TalentsV2';
+import ShortlistV2 from './v2/ShortlistV2';
+
 export default function App() {
   const location = useLocation();
   return (
@@ -70,6 +76,12 @@ export default function App() {
     <Routes location={location} key={location.pathname}>
       <Route path="/" element={<HomePage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+
+      {/* v2 preview — public, no auth guard, light shadcn theme */}
+      <Route path="/production-v2" element={<DashboardV2 />} />
+      <Route path="/production-v2/new-project" element={<NewProjectV2 />} />
+      <Route path="/production-v2/talents" element={<TalentsV2 />} />
+      <Route path="/production-v2/shortlist" element={<ShortlistV2 />} />
 
       {/* Production Portal */}
       <Route path="/production/login" element={<LoginPage portal="production" />} />
