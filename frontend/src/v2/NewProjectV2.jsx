@@ -62,6 +62,11 @@ export default function NewProjectV2() {
     }, 1200);
   };
 
+  const handleSaveDraft = () => {
+    toast.success("Draft saved");
+    navigate("/production-v2");
+  };
+
   return (
     <>
       {/* Dashboard stays mounted as the dimmed background */}
@@ -196,28 +201,21 @@ export default function NewProjectV2() {
                 No crew requirements added yet
               </p>
             </div>
-
-            {/* Other Requirements */}
-            <div className="space-y-1.5">
-              <Label>Other Requirements</Label>
-              <Textarea
-                className="bg-white"
-                rows={3}
-                placeholder="Props, permits, special equipment, client preference..."
-              />
-            </div>
           </div>
 
-          <DialogFooter className="border-t border-neutral-100 pt-4">
-            <Button variant="outline" onClick={close} disabled={submitting}>
-              Cancel
-            </Button>
+          <DialogFooter className="border-t border-neutral-100 pt-4 sm:justify-end">
             <Button
               onClick={handleCreate}
               disabled={submitting}
               className="bg-[#D8FF00] text-neutral-900 hover:bg-[#c2e600] shadow-none"
             >
-              Create Production
+              Create new project
+            </Button>
+            <Button variant="outline" onClick={handleSaveDraft} disabled={submitting}>
+              Save draft
+            </Button>
+            <Button variant="outline" onClick={close} disabled={submitting}>
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>

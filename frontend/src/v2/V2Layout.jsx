@@ -37,7 +37,7 @@ const NAV_GROUPS = [
   {
     label: "Production",
     items: [
-      { to: "#", label: "Active Projects", icon: Briefcase },
+      { to: "/production-v2/project", label: "Active Projects", icon: Briefcase },
       { to: "/production-v2/talents", label: "Talents", icon: Star },
       { to: "#", label: "Production Crew", icon: Users },
     ],

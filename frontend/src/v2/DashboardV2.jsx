@@ -1,5 +1,5 @@
 /** DashboardV2 — Production Dashboard (light). Mirrors /tmp/hxvp_desktop.png. */
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Search, PlusCircle, ClipboardList, ArrowRight } from "lucide-react";
 
 import V2Layout from "./V2Layout";
@@ -98,8 +98,9 @@ export default function DashboardV2() {
             </div>
             <div className="divide-y divide-neutral-100">
               {PROJECTS.map((p, i) => (
-                <div
+                <Link
                   key={i}
+                  to="/production-v2/project"
                   className="grid grid-cols-12 items-center gap-3 px-5 py-3.5 hover:bg-neutral-50"
                 >
                   <div className="col-span-4 min-w-0">
@@ -126,7 +127,7 @@ export default function DashboardV2() {
                   <div className="col-span-2 flex justify-end">
                     <ProgressBar value={p.progress} />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </Card>

@@ -1,8 +1,8 @@
 /** TalentsV2 — talent pool with multi-select + create-shortlist dialog. */
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Search, PlusCircle } from "lucide-react";
+import { Search, PlusCircle, Star, ChevronRight } from "lucide-react";
 
 import V2Layout from "./V2Layout";
 import TalentCard from "./TalentCard";
@@ -138,9 +138,23 @@ export default function TalentsV2() {
           </TabsContent>
 
           <TabsContent value="saved" className="mt-4">
-            <div className="rounded-xl border border-dashed border-neutral-300 p-10 text-center text-sm text-neutral-400">
-              No saved shortlists yet
-            </div>
+            <Link
+              to="/production-v2/saved-shortlist"
+              className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-4 transition-colors hover:bg-neutral-50"
+            >
+              <span className="flex size-9 items-center justify-center rounded-md bg-[#eaffae] text-neutral-900">
+                <Star className="size-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium">
+                  Spring Lifestyle Talent Shortlist
+                </div>
+                <div className="text-xs text-neutral-500">
+                  4 talents · Spring Lifestyle Collection
+                </div>
+              </div>
+              <ChevronRight className="size-4 text-neutral-400" />
+            </Link>
           </TabsContent>
         </Tabs>
       </div>

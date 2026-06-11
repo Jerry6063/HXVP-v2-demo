@@ -233,3 +233,40 @@ export const CLIENTS = [
   "GE Consumer",
   "PepsiCo",
 ];
+
+/** Default assignee for project-workflow tasks. */
+export const DEFAULT_ASSIGNEE = { initials: "YD", name: "Yina Dong" };
+export const DEFAULT_DUE = "9/18/2026";
+
+/** Prefilled description for a known task; everything else gets a generic one. */
+export const TASK_DESCRIPTIONS = {
+  "Confirm model and talent bookings":
+    "Confirm availability, booking terms, contact information, wardrobe requirements, and call times for all assigned models and talent. Ensure contracts and release forms are completed before production day.",
+};
+export const GENERIC_DESCRIPTION =
+  "Coordinate and complete this task with the assigned team members, and confirm all details before the production day.";
+
+/** Phased task list for the E-Bike Launch Campaign project workflow. */
+export const PROJECT_PHASES = [
+  {
+    id: "pre-production",
+    title: "Pre-production Phase",
+    tasks: [
+      "Confirm model and talent bookings",
+      "Scout and lock shoot location",
+      "Assemble and brief crew",
+      "Sign contract with client and confirm deposit",
+      "Confirm art and props",
+    ],
+  },
+  {
+    id: "production",
+    title: "Production Phase",
+    tasks: ["Prepare and send call sheet", "Art/props checklist"],
+  },
+  {
+    id: "post-production",
+    title: "Post Production Phase",
+    tasks: ["Rough Edit", "Color adjustments"],
+  },
+];
