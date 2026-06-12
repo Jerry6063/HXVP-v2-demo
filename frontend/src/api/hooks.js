@@ -50,6 +50,15 @@ export const useProductionStats = () =>
     queryFn: () => api.get('/projects/stats/').then((r) => r.data),
   });
 
+// Production Dashboard: Activity Log
+// 后端暂未提供该端点,接真后端后直接消费返回数据即可(组件侧仍会在无数据时回退到 demo)。
+export const useActivityLog = (params = {}) =>
+  useQuery({
+    queryKey: ['activity-log', params],
+    queryFn: () => api.get('/projects/activity-log/', { params }).then((r) => r.data),
+    retry: false,
+  });
+
 // Projects
 export const useProjects = (params = {}) =>
   useQuery({

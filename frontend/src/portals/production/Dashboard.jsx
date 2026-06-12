@@ -5,6 +5,7 @@ import {
   useShoots,
   useTalentProfiles,
   useBookings,
+  useActivityLog,
 } from '../../api/hooks';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -319,8 +320,10 @@ const DEMO_ACTIVITY = [
 ];
 
 function RecentActivityFeed() {
-  // TODO: 接真后端时换成 useActivityLog hook
-  const items = DEMO_ACTIVITY;
+  // 接真后端后消费 useActivityLog 的数据;无数据时回退到 demo,保证 mock 模式照常展示。
+  const { data } = useActivityLog();
+  const fetched = Array.isArray(data) ? data : data?.results;
+  const items = fetched?.length ? fetched : DEMO_ACTIVITY;
 
   return (
     <div className="bg-[var(--color-paper-dark)] border border-white/15 flex flex-col">
