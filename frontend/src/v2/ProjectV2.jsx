@@ -23,10 +23,12 @@ import {
   Maximize2,
   Minimize2,
   Calendar as CalendarIcon,
+  PanelRight,
   X,
 } from "lucide-react";
 
 import V2Layout from "./V2Layout";
+import TalentCard from "./TalentCard";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
@@ -39,11 +41,19 @@ import {
   DropdownMenuItem,
 } from "@/components/shadcn/dropdown-menu";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/shadcn/select";
+import {
   PROJECT_PHASES,
   DEFAULT_ASSIGNEE,
   DEFAULT_DUE,
   TASK_DESCRIPTIONS,
   GENERIC_DESCRIPTION,
+  TALENTS,
 } from "./mockData";
 
 const PROJECT_TITLE = "E-Bike Launch Campaign";
@@ -55,6 +65,18 @@ const TABS = [
   "Contract",
   "Shoot Schedule",
 ];
+
+const TALENT_FILTERS = [
+  { ph: "All types", opts: ["Actor", "Model", "Dancer", "Hand Model"] },
+  { ph: "All Genders", opts: ["Man", "Woman", "Non-binary"] },
+  { ph: "All Ethnicities", opts: ["White", "Black", "Asian", "Mixed", "Indian"] },
+  { ph: "All Ages", opts: ["18-25", "26-35", "36-45", "46+"] },
+  { ph: "All Heights", opts: ["< 5ft 6in", "5ft 6in - 6ft", "> 6ft"] },
+  { ph: "Available time", opts: ["This week", "This month", "Custom"] },
+];
+
+const SHORTLIST_DEFAULT_NAME =
+  "E-Bike Launch Campaign Photoshoot Talent Shortlist";
 
 const slugify = (s) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -106,6 +128,19 @@ export default function ProjectV2() {
   // selected task detail: { phaseId, taskId } | null, plus full-page flag
   const [openTask, setOpenTask] = useState(null);
   const [fullPage, setFullPage] = useState(false);
+
+  // Talents tab flow: 'create' | 'pick' | 'shortlist'
+  const [talentStep, setTalentStep] = useState("create");
+  const [shortlistName, setShortlistName] = useState(SHORTLIST_DEFAULT_NAME);
+  const [picked, setPicked] = useState(() => new Set());
+  const [talentPanel, setTalentPanel] = useState(null); // 'confirm' | 'share' | null
+
+  const togglePicked = (id) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   // simulate a brief load before showing content (/tmp/wf2)
   useEffect(() => {
@@ -279,7 +314,18 @@ export default function ProjectV2() {
           </div>
 
           {/* Body */}
-          {activeTab !== "Production Workflow" ? (
+          {activeTab === "Talents" ? (
+            <TalentsTab
+              step={talentStep}
+              setStep={setTalentStep}
+              name={shortlistName}
+              setName={setShortlistName}
+              picked={picked}
+              togglePicked={togglePicked}
+              onSaveShortlist={() => setTalentStep("shortlist")}
+              onOpenPanel={setTalentPanel}
+            />
+          ) : activeTab !== "Production Workflow" ? (
             <div className="flex flex-1 items-center justify-center px-6 py-20 text-sm text-neutral-400">
               Coming soon in this preview
             </div>
@@ -499,6 +545,16 @@ export default function ProjectV2() {
             }}
           />
         )}
+
+        {/* Talents tab right-side overlay panels (confirm / share) */}
+        {talentPanel && (
+          <TalentSharePanel
+            mode={talentPanel}
+            shortlistName={shortlistName}
+            talents={TALENTS.filter((t) => picked.has(t.id))}
+            onClose={() => setTalentPanel(null)}
+          />
+        )}
       </div>
 
       {/* Full-page task detail overlay (covers content, sidebar stays) */}
@@ -543,10 +599,27 @@ function TaskDetail({
 }) {
   const [hasAssignee, setHasAssignee] = useState(true);
   const [hasDate, setHasDate] = useState(true);
-  const [messageOpen, setMessageOpen] = useState(true);
   const [toChip, setToChip] = useState(true);
-  const [subject, setSubject] = useState(task.title);
-  const [comment, setComment] = useState("");
+
+  // Bottom Comments | Email tabbed section
+  const [bottomTab, setBottomTab] = useState("comments"); // 'comments' | 'email'
+  const [bottomOpen, setBottomOpen] = useState(true);
+  const [comments, setComments] = useState([
+    { id: "c-seed", author: "Yina Dong", initials: "YD", when: "just now", text: "This is a comment test." },
+  ]);
+  const [newComment, setNewComment] = useState("");
+  const [subject, setSubject] = useState("Confirm Talents Booking Task");
+
+  const submitComment = () => {
+    const text = newComment.trim();
+    if (!text) return;
+    setComments((prev) => [
+      ...prev,
+      { id: `c-${Date.now()}-${prev.length}`, author: "Yina Dong", initials: "YD", when: "just now", text },
+    ]);
+    setNewComment("");
+    toast.success("Comment added");
+  };
 
   const Wrapper = fullPage
     ? ({ children }) => (
@@ -694,65 +767,123 @@ function TaskDetail({
           </div>
         </div>
 
-        {/* New Message section */}
+        {/* Comments | Email tabbed section */}
         <div className="border-t border-neutral-200 bg-neutral-50/60">
-          <button
-            onClick={() => setMessageOpen((v) => !v)}
-            className="flex w-full items-center justify-between px-5 py-3 text-left"
-          >
-            <span className="text-sm font-semibold">New Message</span>
-            <ChevronDown
-              className={`size-4 text-neutral-500 transition-transform ${
-                messageOpen ? "" : "-rotate-90"
-              }`}
-            />
-          </button>
+          {/* Header: segmented control + collapse chevron */}
+          <div className="flex items-center justify-between px-5 py-3">
+            <div className="inline-flex items-center gap-1 rounded-lg bg-neutral-100 p-0.5">
+              {[
+                { key: "comments", label: "Comments" },
+                { key: "email", label: "Email" },
+              ].map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setBottomTab(t.key)}
+                  className={`rounded-md px-3 py-1 text-sm transition-colors ${
+                    bottomTab === t.key
+                      ? "border border-neutral-200 bg-white font-medium text-neutral-900 shadow-sm"
+                      : "border border-transparent text-neutral-500 hover:text-neutral-800"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setBottomOpen((v) => !v)}
+              className="rounded p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700"
+              title={bottomOpen ? "Collapse" : "Expand"}
+            >
+              <ChevronDown
+                className={`size-4 transition-transform ${
+                  bottomOpen ? "" : "rotate-180"
+                }`}
+              />
+            </button>
+          </div>
 
-          {messageOpen && (
+          {/* Comments tab body */}
+          {bottomOpen && bottomTab === "comments" && (
             <div className="space-y-4 px-5 pb-5">
-              {/* To */}
-              <div className="space-y-1.5">
-                <Label>
-                  To<span className="text-rose-500"> *</span>
-                </Label>
-                <div className="flex flex-wrap items-center gap-2 rounded-md border border-neutral-200 bg-white px-2 py-1.5">
-                  {toChip && (
-                    <span className="inline-flex items-center gap-1 rounded bg-[#eaffae] px-1.5 py-0.5 text-xs text-neutral-800">
-                      Zhengrui Hao
-                      <button
-                        onClick={() => setToChip(false)}
-                        className="text-neutral-500 hover:text-neutral-800"
-                      >
-                        <X className="size-3" />
-                      </button>
+              <div className="space-y-4">
+                {comments.map((c) => (
+                  <div key={c.id} className="flex gap-2.5">
+                    <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-orange-200 text-[10px] font-semibold text-orange-800">
+                      {c.initials}
                     </span>
-                  )}
-                  <input
-                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-neutral-400"
-                    placeholder="Type to search people"
-                  />
-                </div>
+                    <div className="min-w-0 text-sm">
+                      <div>
+                        <span className="font-medium text-neutral-900">
+                          {c.author}
+                        </span>
+                        <span className="text-neutral-400"> · {c.when}</span>
+                      </div>
+                      <p className="mt-0.5 text-neutral-700">{c.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Textarea
+                rows={3}
+                className="bg-white"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Add a comment"
+              />
+
+              <div className="flex items-center justify-end gap-2">
+                <Button variant="outline" onClick={() => setNewComment("")}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={submitComment}
+                  className="bg-[#D8FF00] text-neutral-900 hover:bg-[#c2e600] shadow-none"
+                >
+                  Submit
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Email tab body */}
+          {bottomOpen && bottomTab === "email" && (
+            <div className="space-y-3 px-5 pb-5">
+              {/* To */}
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-sm">
+                <span className="text-neutral-500">To:</span>
+                {toChip && (
+                  <span className="inline-flex items-center gap-1 rounded bg-[#eaffae] px-1.5 py-0.5 text-xs text-neutral-800">
+                    Zhengrui Hao
+                    <button
+                      onClick={() => setToChip(false)}
+                      className="text-neutral-500 hover:text-neutral-800"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </span>
+                )}
+                <input
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-neutral-400"
+                  placeholder="Type to search people"
+                />
               </div>
 
               {/* Subject */}
-              <div className="space-y-1.5">
-                <Label>
-                  Subject<span className="text-rose-500"> *</span>
-                </Label>
-                <Input
-                  className="bg-white"
+              <div className="flex items-center gap-2 rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-sm">
+                <span className="shrink-0 text-neutral-500">Subject:</span>
+                <input
+                  className="flex-1 bg-transparent text-sm font-medium text-neutral-900 outline-none placeholder:text-neutral-400"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                 />
               </div>
 
-              {/* Comment */}
+              {/* Body */}
               <Textarea
                 rows={4}
                 className="bg-white"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Add any additional comments"
+                defaultValue="Please confirm the talent availability."
               />
 
               <p className="text-xs text-neutral-400">
@@ -777,4 +908,282 @@ function TaskDetail({
       </div>
     </Wrapper>
   );
+}
+
+/* ── Talents tab flow (create → pick → shortlist) ───────────────────────── */
+
+function TalentsTab({
+  step,
+  setStep,
+  name,
+  setName,
+  picked,
+  togglePicked,
+  onSaveShortlist,
+  onOpenPanel,
+}) {
+  const selectedTalents = TALENTS.filter((t) => picked.has(t.id));
+
+  // Step 1: create a new talent shortlist
+  if (step === "create") {
+    return (
+      <div className="flex-1 px-6 lg:px-8 py-6">
+        <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Create a new talent shortlist</h2>
+          <div className="mt-5 space-y-1.5">
+            <Label>Name</Label>
+            <Input
+              className="bg-white"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setName(SHORTLIST_DEFAULT_NAME)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => setStep("pick")}
+              className="bg-[#D8FF00] text-neutral-900 hover:bg-[#c2e600] shadow-none"
+            >
+              <Plus className="size-4" />
+              Add talents
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 2: pick talents from the pool
+  if (step === "pick") {
+    return (
+      <div className="flex-1 px-6 lg:px-8 py-6">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="truncate text-lg font-semibold">{name}</h2>
+          <Button
+            disabled={picked.size === 0}
+            onClick={onSaveShortlist}
+            className="bg-[#D8FF00] text-neutral-900 hover:bg-[#c2e600] shadow-none disabled:opacity-50"
+          >
+            Save shortlist{picked.size > 0 ? ` (${picked.size})` : ""}
+          </Button>
+        </div>
+
+        {/* Filter row */}
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {TALENT_FILTERS.map((f) => (
+            <Select key={f.ph}>
+              <SelectTrigger className="h-8 bg-white text-xs">
+                <SelectValue placeholder={f.ph} />
+              </SelectTrigger>
+              <SelectContent>
+                {f.opts.map((o) => (
+                  <SelectItem key={o} value={o}>
+                    {o}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-neutral-500"
+            onClick={() => TALENTS.forEach((t) => picked.has(t.id) && togglePicked(t.id))}
+          >
+            reset
+          </Button>
+        </div>
+
+        {/* Grid */}
+        <div className="mt-5 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,300px))]">
+          {TALENTS.map((t) => (
+            <TalentCard
+              key={t.id}
+              t={t}
+              selectable
+              selected={picked.has(t.id)}
+              onToggle={() => togglePicked(t.id)}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Step 3: review shortlist + share / confirm
+  return (
+    <div className="flex-1 px-6 lg:px-8 py-6">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="truncate text-lg font-semibold">{name}</h2>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button variant="outline" onClick={() => onOpenPanel("share")}>
+            Share with Client
+          </Button>
+          <Button
+            onClick={() => onOpenPanel("confirm")}
+            className="bg-[#D8FF00] text-neutral-900 hover:bg-[#c2e600] shadow-none"
+          >
+            Confirm Availability
+          </Button>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,300px))]">
+        {selectedTalents.map((t) => (
+          <TalentCard key={t.id} t={t} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Talents share / confirm right-side overlay panel ───────────────────── */
+
+function TalentSharePanel({ mode, shortlistName, talents, onClose }) {
+  const isConfirm = mode === "confirm";
+  const title = isConfirm ? "Please confirm your availability" : shortlistName;
+
+  // Confirm → assignee chips are the shortlisted talents; Share → client contacts.
+  const seedRecipients = isConfirm
+    ? talents.map((t) => ({ id: t.id, name: t.name, initials: initialsOf(t.name) }))
+    : [
+        { id: "kaleb", name: "Kaleb Jensen", initials: "KJ" },
+        { id: "tim", name: "Tim Wang", initials: "TW" },
+      ];
+
+  const [recipients, setRecipients] = useState(seedRecipients);
+  const [hasDate, setHasDate] = useState(true);
+  const [message, setMessage] = useState(
+    isConfirm
+      ? "This project is a sport commercial photo shooting project, please confirm your availability before 06/20/2026."
+      : "Here is the talent shortlist to be confirmed for this project. Please let us know if you have any questions."
+  );
+
+  const removeRecipient = (id) =>
+    setRecipients((prev) => prev.filter((r) => r.id !== id));
+
+  const handleSend = () => {
+    toast.success(
+      isConfirm ? "Availability request sent." : "Shortlist shared with client."
+    );
+    onClose();
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-30 bg-black/10" onClick={onClose} />
+      <aside className="fixed inset-y-0 right-0 z-40 flex w-[700px] max-w-full flex-col overflow-y-auto border-l border-neutral-200 bg-white shadow-2xl">
+        {/* Top bar */}
+        <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-3">
+          <h2 className="truncate pr-3 text-lg font-semibold tracking-tight">
+            {title}
+          </h2>
+          <div className="flex shrink-0 items-center gap-1 text-neutral-400">
+            <Maximize2 className="size-4" />
+            <Link2 className="size-4" />
+            <button
+              onClick={onClose}
+              className="rounded p-1.5 hover:bg-neutral-100 hover:text-neutral-700"
+              title="Close"
+            >
+              <PanelRight className="size-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
+          {/* To / Assignee */}
+          <div className="flex items-start gap-3 text-sm">
+            <span className="mt-1 w-16 shrink-0 text-neutral-500">To</span>
+            <div className="flex flex-wrap gap-2">
+              {recipients.map((r) => (
+                <span
+                  key={r.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white py-0.5 pl-1 pr-2 text-xs"
+                >
+                  <span className="flex size-5 items-center justify-center rounded-full bg-orange-200 text-[10px] font-semibold text-orange-800">
+                    {r.initials}
+                  </span>
+                  {r.name}
+                  <button
+                    onClick={() => removeRecipient(r.id)}
+                    className="text-neutral-400 hover:text-neutral-700"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Due Date */}
+          <div className="flex items-center gap-3 text-sm">
+            <span className="w-16 shrink-0 text-neutral-500">Due Date</span>
+            {hasDate && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-xs">
+                <CalendarIcon className="size-3.5 text-neutral-500" />
+                07/26/2026
+                <button
+                  onClick={() => setHasDate(false)}
+                  className="text-neutral-400 hover:text-neutral-700"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </span>
+            )}
+          </div>
+
+          {/* Message */}
+          <div className="space-y-2">
+            <Label className="text-neutral-500">Message</Label>
+            <Textarea
+              rows={4}
+              className="bg-white"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+          </div>
+
+          {/* Attachments */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-neutral-500">Attachments</Label>
+              <button className="text-xs font-medium text-lime-600 hover:underline">
+                + Add Document
+              </button>
+            </div>
+            <p className="text-sm text-neutral-400">No attachment added yet</p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 border-t border-neutral-200 px-5 py-4">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSend}
+            className="bg-[#D8FF00] text-neutral-900 hover:bg-[#c2e600] shadow-none"
+          >
+            Send
+          </Button>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function initialsOf(name) {
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
