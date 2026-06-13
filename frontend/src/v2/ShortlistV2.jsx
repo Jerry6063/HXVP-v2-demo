@@ -63,7 +63,7 @@ export default function ShortlistV2() {
         {/* Left: title + grid */}
         <div className="flex-1 min-w-0 px-6 lg:px-8 py-6">
           <h1 className="text-2xl font-semibold tracking-tight">{TITLE}</h1>
-          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3">
+          <div className="mt-6 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,300px))]">
             {shortlisted.map((t) => (
               <TalentCard key={t.id} t={t} />
             ))}

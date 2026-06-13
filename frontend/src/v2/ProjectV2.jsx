@@ -553,9 +553,13 @@ function TaskDetail({
         <div className="flex min-h-screen flex-col">{children}</div>
       )
     : ({ children }) => (
-        <aside className="hidden lg:flex w-[440px] shrink-0 flex-col border-l border-neutral-200 bg-white">
-          {children}
-        </aside>
+        <>
+          {/* light backdrop — keeps the list visible, click to close */}
+          <div className="fixed inset-0 z-30 bg-black/10" onClick={onClose} />
+          <aside className="fixed inset-y-0 right-0 z-40 flex w-[700px] max-w-full flex-col overflow-y-auto border-l border-neutral-200 bg-white shadow-2xl">
+            {children}
+          </aside>
+        </>
       );
 
   return (
