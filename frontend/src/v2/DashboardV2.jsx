@@ -20,7 +20,7 @@ function ProgressBar({ value }) {
     <div className="h-1.5 w-24 rounded-full bg-neutral-200">
       <div
         className="h-full rounded-full"
-        style={{ width: `${value}%`, backgroundColor: "#D8FF00" }}
+        style={{ width: `${value}%`, backgroundColor: "#22c55e" }}
       />
     </div>
   );

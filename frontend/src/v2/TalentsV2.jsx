@@ -132,6 +132,7 @@ export default function TalentsV2() {
                   selectable
                   selected={selected.has(t.id)}
                   onToggle={() => toggle(t.id)}
+                  onOpen={() => navigate("/production-v2/talent-profile")}
                 />
               ))}
             </div>

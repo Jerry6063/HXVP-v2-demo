@@ -65,6 +65,9 @@ import ProjectV2 from './v2/ProjectV2';
 import TalentsV2 from './v2/TalentsV2';
 import ShortlistV2 from './v2/ShortlistV2';
 import SavedShortlistV2 from './v2/SavedShortlistV2';
+import ClientsMessagesV2 from './v2/ClientsMessagesV2';
+import TalentsMessagesV2 from './v2/TalentsMessagesV2';
+import TalentProfileV2 from './v2/TalentProfileV2';
 
 export default function App() {
   const location = useLocation();
@@ -86,6 +89,9 @@ export default function App() {
       <Route path="/production-v2/talents" element={<TalentsV2 />} />
       <Route path="/production-v2/shortlist" element={<ShortlistV2 />} />
       <Route path="/production-v2/saved-shortlist" element={<SavedShortlistV2 />} />
+      <Route path="/production-v2/messages/clients" element={<ClientsMessagesV2 />} />
+      <Route path="/production-v2/messages/talents" element={<TalentsMessagesV2 />} />
+      <Route path="/production-v2/talent-profile" element={<TalentProfileV2 />} />
 
       {/* Production Portal */}
       <Route path="/production/login" element={<LoginPage portal="production" />} />

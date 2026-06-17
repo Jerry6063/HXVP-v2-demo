@@ -9,7 +9,8 @@ function Chip({ children }) {
   );
 }
 
-export default function TalentCard({ t, selectable = false, selected = false, onToggle }) {
+export default function TalentCard({ t, selectable = false, selected = false, onToggle, onOpen }) {
+  const clickable = typeof onOpen === "function";
   return (
     <div
       className={`overflow-hidden rounded-xl border bg-white transition-colors ${
@@ -20,7 +21,10 @@ export default function TalentCard({ t, selectable = false, selected = false, on
         <img
           src={`https://i.pravatar.cc/300?img=${t.img}`}
           alt={t.name}
-          className="h-44 w-full bg-neutral-100 object-cover"
+          onClick={clickable ? onOpen : undefined}
+          className={`h-44 w-full bg-neutral-100 object-cover ${
+            clickable ? "cursor-pointer" : ""
+          }`}
           loading="lazy"
         />
         <span className="absolute left-2 top-2 rounded-md bg-[#D8FF00] px-2 py-0.5 text-[11px] font-medium text-neutral-900">
@@ -40,7 +44,14 @@ export default function TalentCard({ t, selectable = false, selected = false, on
         )}
       </div>
       <div className="p-3">
-        <div className="text-sm font-semibold">{t.name}</div>
+        <div
+          onClick={clickable ? onOpen : undefined}
+          className={`text-sm font-semibold ${
+            clickable ? "cursor-pointer hover:underline" : ""
+          }`}
+        >
+          {t.name}
+        </div>
         <div className="text-xs text-neutral-500">
           {t.role} · {t.city}
         </div>

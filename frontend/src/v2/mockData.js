@@ -234,6 +234,143 @@ export const CLIENTS = [
   "PepsiCo",
 ];
 
+/** Inbox messages for the Messages screens. tag ∈ "Replied" | "Pending" | "Important" */
+const REPLY_TO = "alicesmith@yourmail.com";
+
+export const CLIENT_MESSAGES = [
+  {
+    id: "c1",
+    sender: "Michael Wilson",
+    subject: "Important Announcement",
+    preview:
+      "I have an important announcement to make during our team meeting. It pertains to a strategic shift in our approach for the upcoming project...",
+    time: "10:42 AM",
+    tag: "Important",
+    body: "Hi, I have an important announcement to make during our team meeting. It pertains to a strategic shift in our approach for the upcoming project.\n\nPlease come prepared with any questions or insights you may have. Looking forward to our meeting!\n\nBest regards,\nMichael Wilson",
+  },
+  {
+    id: "c2",
+    sender: "William Smith",
+    subject: "Meeting Tomorrow",
+    preview:
+      "Hi, let's have a meeting tomorrow to discuss the project. I've been reviewing the project details and have some ideas I'd like to share...",
+    time: "Jun 15, 2026 9:30 AM",
+    tag: "Replied",
+    body: "Hi, let's have a meeting tomorrow to discuss the project. I've been reviewing the project details and have some ideas I'd like to share. It's crucial that we align on our next steps to ensure the project's success.\n\nPlease come prepared with any questions or insights you may have. Looking forward to our meeting!\n\nBest regards,\nWilliam Smith",
+  },
+  {
+    id: "c3",
+    sender: "Alice Smith",
+    subject: "Re: Project Update",
+    preview:
+      "Thank you for the project update. It looks great! I've gone through the report and the progress is impressive...",
+    time: "Jun 14, 2026",
+    tag: "Replied",
+    body: "Thank you for the project update. It looks great! I've gone through the report and the progress is impressive. We are on track to hit every milestone for this quarter.\n\nLet me know if there is anything you need from my side.\n\nBest,\nAlice Smith",
+  },
+  {
+    id: "c4",
+    sender: "Bob Johnson",
+    subject: "Weekend Plans",
+    preview:
+      "Any plans for the weekend? I was thinking of going hiking in the nearby mountains. It's been a while since we've...",
+    time: "Jun 13, 2026",
+    tag: "Pending",
+    body: "Any plans for the weekend? I was thinking of going hiking in the nearby mountains. It's been a while since we've taken a break, and a change of scenery would do us good.\n\nLet me know if you're interested!\n\nBob",
+  },
+  {
+    id: "c5",
+    sender: "Emily Davis",
+    subject: "Re: Question about Budget",
+    preview:
+      "I have a question about the budget for the upcoming project. There seems to be a discrepancy in the allocation of resources...",
+    time: "Jun 12, 2026",
+    tag: "Pending",
+    body: "I have a question about the budget for the upcoming project. There seems to be a discrepancy in the allocation of resources for the production phase.\n\nCould we set up a quick call to clarify the numbers before I sign off?\n\nThanks,\nEmily Davis",
+  },
+  {
+    id: "c6",
+    sender: "Emily Davis",
+    subject: "Re: Question about Budget",
+    preview:
+      "Following up on my previous note — I've attached the revised spreadsheet with the updated figures for your review...",
+    time: "Jun 11, 2026",
+    tag: "Replied",
+    body: "Following up on my previous note — I've attached the revised spreadsheet with the updated figures for your review. The totals now reconcile with the master budget.\n\nLet me know if it looks good.\n\nThanks,\nEmily Davis",
+  },
+];
+
+export const TALENT_MESSAGES = [
+  {
+    id: "t1",
+    sender: "Andre Miller",
+    subject: "Availability Confirmed",
+    preview:
+      "Just confirming I'm available for the Povison shoot next week. Looking forward to it — let me know the call time...",
+    time: "11:05 AM",
+    tag: "Replied",
+    body: "Hi, just confirming I'm available for the Povison shoot next week. Looking forward to it — let me know the final call time and wardrobe details when you have them.\n\nBest,\nAndre Miller",
+  },
+  {
+    id: "t2",
+    sender: "Sofia Lin",
+    subject: "Meeting Tomorrow",
+    preview:
+      "Hi, can we have a quick chat tomorrow about the lifestyle campaign? I have a couple of scheduling questions...",
+    time: "Jun 15, 2026 9:30 AM",
+    tag: "Pending",
+    body: "Hi, can we have a quick chat tomorrow about the lifestyle campaign? I have a couple of scheduling questions and want to make sure I block the right dates.\n\nLet me know what works for you.\n\nThanks,\nSofia Lin",
+  },
+  {
+    id: "t3",
+    sender: "Liu Mei",
+    subject: "Re: Product Photography Rates",
+    preview:
+      "Thanks for reaching out. My hand-modeling rate for product photography is $180/hr. Happy to discuss the scope...",
+    time: "Jun 14, 2026",
+    tag: "Replied",
+    body: "Thanks for reaching out. My hand-modeling rate for product photography is $180/hr. Happy to discuss the scope and any multi-day discounts for the commercial.\n\nLooking forward to working together.\n\nLiu Mei",
+  },
+  {
+    id: "t4",
+    sender: "Maya Patel",
+    subject: "Wardrobe Question",
+    preview:
+      "Quick question about the wardrobe for the dance segment — should I bring my own shoes or will they be provided?",
+    time: "Jun 13, 2026",
+    tag: "Pending",
+    body: "Quick question about the wardrobe for the dance segment — should I bring my own shoes or will they be provided on set? Also, is there a specific color palette I should stick to?\n\nThanks,\nMaya Patel",
+  },
+  {
+    id: "t5",
+    sender: "David Smith",
+    subject: "Portfolio Update",
+    preview:
+      "I've refreshed my portfolio with the latest editorial work. Sending it over in case it's useful for upcoming casting...",
+    time: "Jun 12, 2026",
+    tag: "Replied",
+    body: "Hi, I've refreshed my portfolio with the latest editorial and runway work. Sending it over in case it's useful for upcoming casting decisions.\n\nLet me know if you need anything else.\n\nBest,\nDavid Smith",
+  },
+  {
+    id: "t6",
+    sender: "Sam Lee",
+    subject: "Re: Tech Ad Booking",
+    preview:
+      "Got the booking details, thanks! I'm all set for the shoot. One note — I'll need to leave by 5pm on the second day...",
+    time: "Jun 11, 2026",
+    tag: "Important",
+    body: "Got the booking details, thanks! I'm all set for the shoot. One note — I'll need to leave by 5pm on the second day for a prior commitment, so let's plan my scenes accordingly.\n\nAppreciate it,\nSam Lee",
+  },
+];
+
+export const MESSAGE_TAG_STYLES = {
+  Replied: "border-emerald-300 text-emerald-700 bg-emerald-50",
+  Pending: "border-amber-300 text-amber-700 bg-amber-50",
+  Important: "border-rose-300 text-rose-700 bg-rose-50",
+};
+
+export const MESSAGE_REPLY_TO = REPLY_TO;
+
 /** Default assignee for project-workflow tasks. */
 export const DEFAULT_ASSIGNEE = { initials: "YD", name: "Yina Dong" };
 export const DEFAULT_DUE = "9/18/2026";
