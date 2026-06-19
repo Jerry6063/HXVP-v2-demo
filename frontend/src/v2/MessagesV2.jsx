@@ -13,6 +13,7 @@ import {
   Tag,
   Mail,
   CornerUpLeft,
+  SquarePen,
 } from "lucide-react";
 
 import V2Layout from "./V2Layout";
@@ -21,6 +22,14 @@ import { Button } from "@/components/shadcn/button";
 import { Badge } from "@/components/shadcn/badge";
 import { Textarea } from "@/components/shadcn/textarea";
 import { Checkbox } from "@/components/shadcn/checkbox";
+import { Label } from "@/components/shadcn/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/shadcn/dialog";
 import { MESSAGE_TAG_STYLES, MESSAGE_REPLY_TO } from "./mockData";
 
 function ToolbarButton({ icon: Icon }) {
@@ -35,6 +44,7 @@ export default function MessagesV2({ title, messages }) {
   const [filter, setFilter] = useState("all"); // "all" | "unread"
   const [query, setQuery] = useState("");
   const [activeId, setActiveId] = useState(messages[0]?.id);
+  const [composeOpen, setComposeOpen] = useState(false);
 
   const filtered = messages.filter((m) => {
     const matchesQuery =
@@ -53,9 +63,18 @@ export default function MessagesV2({ title, messages }) {
   return (
     <V2Layout>
       <div className="px-6 lg:px-8 py-6">
-        <h1 className="font-display text-4xl lg:text-5xl uppercase tracking-tight leading-none">
-          {title}
-        </h1>
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="font-display text-4xl lg:text-5xl uppercase tracking-tight leading-none">
+            {title}
+          </h1>
+          <Button
+            onClick={() => setComposeOpen(true)}
+            className="shrink-0 bg-[#D8FF00] text-neutral-900 hover:bg-[#c2e600] shadow-none"
+          >
+            <SquarePen className="size-4" />
+            New Message
+          </Button>
+        </div>
 
         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[360px_1fr]">
           {/* LEFT — message list */}
@@ -205,6 +224,47 @@ export default function MessagesV2({ title, messages }) {
           </div>
         </div>
       </div>
+
+      {/* New Message — compose dialog */}
+      <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>New Message</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            <div className="space-y-1.5">
+              <Label>To</Label>
+              <Input className="bg-white" placeholder="Type a name or email" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Subject</Label>
+              <Input className="bg-white" placeholder="Subject" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Message</Label>
+              <Textarea
+                rows={5}
+                className="bg-white"
+                placeholder="Write your message..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setComposeOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setComposeOpen(false);
+                toast.success("Message sent");
+              }}
+              className="bg-[#D8FF00] text-neutral-900 hover:bg-[#c2e600] shadow-none"
+            >
+              Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </V2Layout>
   );
 }
