@@ -363,6 +363,69 @@ export const TALENT_MESSAGES = [
   },
 ];
 
+export const CREW_MESSAGES = [
+  {
+    id: "cr1",
+    sender: "Marcus Reed",
+    subject: "Camera Package Confirmed",
+    preview:
+      "Locked in the camera package for the Troxus shoot — Alexa Mini LF with the full Signature Prime set. Let me know if we need a B-cam...",
+    time: "10:18 AM",
+    tag: "Replied",
+    body: "Hi, locked in the camera package for the Troxus shoot — Alexa Mini LF with the full Signature Prime set. Let me know if we need a B-cam for the driving scenes and I'll add it to the order.\n\nHappy to walk through the lens choices on a call if helpful.\n\nBest,\nMarcus Reed\nDirector of Photography",
+  },
+  {
+    id: "cr2",
+    sender: "Tina Alvarez",
+    subject: "Lighting Plan + Power",
+    preview:
+      "Sending over the lighting plan for stage 2. We'll need a generator for the exteriors — can you confirm the location has power on tap?",
+    time: "Jun 15, 2026 9:30 AM",
+    tag: "Pending",
+    body: "Hi, sending over the lighting plan for stage 2. We'll need a generator for the exteriors — can you confirm the location has power on tap, or should I book a tow plant?\n\nAlso flagging that the night scene will need extra HMIs. Let me know the budget and I'll size accordingly.\n\nThanks,\nTina Alvarez\nGaffer",
+  },
+  {
+    id: "cr3",
+    sender: "Devon Park",
+    subject: "Re: Call Time Day 1",
+    preview:
+      "Got the call sheet, thanks. I'll be on set by 6:30 to prep the carts and pull focus marks before first team arrives...",
+    time: "Jun 14, 2026",
+    tag: "Replied",
+    body: "Got the call sheet, thanks. I'll be on set by 6:30 to prep the carts and pull focus marks before first team arrives. The follow focus and monitors are all charged and tested.\n\nLet me know if the schedule shifts.\n\nDevon Park\n1st AC",
+  },
+  {
+    id: "cr4",
+    sender: "Priya Shah",
+    subject: "Sound Kit Question",
+    preview:
+      "Quick question about the dialogue scenes — will we have time for a separate ADR pass, or should I plan to capture everything clean on set?",
+    time: "Jun 13, 2026",
+    tag: "Pending",
+    body: "Quick question about the dialogue scenes — will we have time for a separate ADR pass, or should I plan to capture everything clean on set? The warehouse location has a lot of reverb, so I'd like to bring extra blankets and a second boom op.\n\nLet me know how you'd like to handle it.\n\nThanks,\nPriya Shah\nSound Mixer",
+  },
+  {
+    id: "cr5",
+    sender: "Carlos Mendez",
+    subject: "Grip Gear Availability",
+    preview:
+      "I'm available for the full three-day block. I can supply the dolly and track, plus a 12x12 frame for the diffusion you wanted...",
+    time: "Jun 12, 2026",
+    tag: "Replied",
+    body: "Hi, I'm available for the full three-day block. I can supply the dolly and track, plus a 12x12 frame for the diffusion you wanted on the product close-ups.\n\nSend the location details and I'll plan the rigging.\n\nBest,\nCarlos Mendez\nKey Grip",
+  },
+  {
+    id: "cr6",
+    sender: "Hannah Lee",
+    subject: "Re: PA Assignment",
+    preview:
+      "Confirmed for the shoot — I'll handle lockups and runs. One note: I'll need to leave by 4pm on the last day for a class...",
+    time: "Jun 11, 2026",
+    tag: "Important",
+    body: "Confirmed for the shoot — I'll handle lockups and runs. One note: I'll need to leave by 4pm on the last day for a class, so let's make sure the late-day runs are covered.\n\nSee you on set!\n\nHannah Lee\nProduction Assistant",
+  },
+];
+
 export const MESSAGE_TAG_STYLES = {
   Replied: "border-emerald-300 text-emerald-700 bg-emerald-50",
   Pending: "border-amber-300 text-amber-700 bg-amber-50",
