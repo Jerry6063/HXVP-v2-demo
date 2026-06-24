@@ -8,18 +8,22 @@
  * wrapped by V2Layout so shadcn tokens + light bg stay scoped to `.v2-root`.
  */
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   ChevronDown,
   ChevronRight,
   Share2,
   Plus,
+  PlusCircle,
   ChevronsUpDown,
   MoreHorizontal,
   Copy,
   Link2,
   Trash2,
   Check,
+  Eye,
+  CheckCircle2,
   Maximize2,
   Minimize2,
   Calendar as CalendarIcon,
@@ -54,6 +58,10 @@ import {
   TASK_DESCRIPTIONS,
   GENERIC_DESCRIPTION,
   TALENTS,
+  CALL_SHEETS,
+  CALL_SHEET_STATUS_STYLES,
+  SAVED_SHORTLISTS,
+  SHORTLIST_STATUS_STYLES,
 } from "./mockData";
 
 const PROJECT_TITLE = "E-Bike Launch Campaign";
@@ -63,7 +71,7 @@ const TABS = [
   "Talents",
   "Crew",
   "Contract",
-  "Shoot Schedule",
+  "Call Sheet",
 ];
 
 const TALENT_FILTERS = [
@@ -104,6 +112,48 @@ function descriptionFor(title) {
   return TASK_DESCRIPTIONS[title] || GENERIC_DESCRIPTION;
 }
 
+/**
+ * Small circular progress ring (Call Sheet Views / Confirmed columns).
+ * Lime/green stroke fills proportional to n/total; "{n}" centered with
+ * a muted "of {total}" beneath. Full rings (n === total) read as solid green.
+ */
+function CircularProgress({ value, total, size = 52 }) {
+  const pct = total > 0 ? Math.min(value / total, 1) : 0;
+  const stroke = 4;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const filled = pct >= 1;
+  return (
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="#e5e5e5"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={filled ? "#65a30d" : "#84cc16"}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - pct)}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+        <span className="text-sm font-semibold text-neutral-800">{value}</span>
+        <span className="text-[9px] text-neutral-400">of {total}</span>
+      </div>
+    </div>
+  );
+}
+
 function AssigneeChip({ assignee }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-sm text-neutral-700">
@@ -116,6 +166,7 @@ function AssigneeChip({ assignee }) {
 }
 
 export default function ProjectV2() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [phases, setPhases] = useState(buildInitialPhases);
   const [activeTab, setActiveTab] = useState("Production Workflow");
@@ -129,8 +180,8 @@ export default function ProjectV2() {
   const [openTask, setOpenTask] = useState(null);
   const [fullPage, setFullPage] = useState(false);
 
-  // Talents tab flow: 'create' | 'pick' | 'shortlist'
-  const [talentStep, setTalentStep] = useState("create");
+  // Talents tab flow: 'list' (new landing) | 'create' | 'pick' | 'shortlist'
+  const [talentStep, setTalentStep] = useState("list");
   const [shortlistName, setShortlistName] = useState(SHORTLIST_DEFAULT_NAME);
   const [picked, setPicked] = useState(() => new Set());
   const [talentPanel, setTalentPanel] = useState(null); // 'confirm' | 'share' | null
@@ -293,7 +344,7 @@ export default function ProjectV2() {
                   </button>
                 ))}
               </div>
-              {activeTab === "Production Workflow" && (
+              {activeTab === "Production Workflow" ? (
                 <div className="flex shrink-0 items-center gap-3 pb-2">
                   <Input
                     value={filter}
@@ -309,7 +360,16 @@ export default function ProjectV2() {
                     Share
                   </Button>
                 </div>
-              )}
+              ) : activeTab === "Call Sheet" || activeTab === "Talents" ? (
+                <div className="flex shrink-0 items-center pb-2">
+                  <Input
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    className="h-8 w-44 bg-white text-sm"
+                    placeholder="Filter tasks"
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -324,6 +384,12 @@ export default function ProjectV2() {
               togglePicked={togglePicked}
               onSaveShortlist={() => setTalentStep("shortlist")}
               onOpenPanel={setTalentPanel}
+            />
+          ) : activeTab === "Call Sheet" ? (
+            <CallSheetTab
+              onNew={() =>
+                navigate("/production-v2/project/call-sheet/new")
+              }
             />
           ) : activeTab !== "Production Workflow" ? (
             <div className="flex flex-1 items-center justify-center px-6 py-20 text-sm text-neutral-400">
@@ -910,7 +976,134 @@ function TaskDetail({
   );
 }
 
-/* ── Talents tab flow (create → pick → shortlist) ───────────────────────── */
+/* ── Call Sheet tab (/tmp/cs_list.png) ──────────────────────────────────── */
+
+function CallSheetRow({ cs }) {
+  const isDraft = cs.status === "Editing";
+  return (
+    <div className="flex items-center border-t border-neutral-100 px-6 py-4">
+      {/* Name + subtitle */}
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-semibold text-neutral-900">
+          {cs.title}
+        </div>
+        <div className="truncate text-xs text-neutral-400">{cs.subtitle}</div>
+      </div>
+
+      {/* Date */}
+      <div className="hidden w-32 shrink-0 text-sm font-medium text-neutral-700 md:block">
+        {cs.date}
+      </div>
+
+      {/* Status badge */}
+      <div className="hidden w-28 shrink-0 md:block">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${CALL_SHEET_STATUS_STYLES[cs.status]}`}
+        >
+          <span className="size-1.5 rounded-full bg-current opacity-70" />
+          {cs.status}
+        </span>
+      </div>
+
+      {/* Views */}
+      <div className="flex w-24 shrink-0 justify-center">
+        {isDraft ? (
+          <span className="rounded-full border border-neutral-300 px-3 py-1 text-xs text-neutral-500">
+            Draft unsent
+          </span>
+        ) : (
+          <CircularProgress value={cs.views} total={cs.total} />
+        )}
+      </div>
+
+      {/* Confirmed */}
+      <div className="flex w-24 shrink-0 justify-center">
+        {isDraft ? (
+          <span className="rounded-full border border-neutral-300 px-3 py-1 text-xs text-neutral-500">
+            Draft unsent
+          </span>
+        ) : (
+          <CircularProgress value={cs.confirmed} total={cs.total} />
+        )}
+      </div>
+
+      {/* "..." menu */}
+      <div className="flex w-10 shrink-0 justify-center">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700">
+              <MoreHorizontal className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={() => toast.success("Opening call sheet")}>
+              <Eye className="size-4" />
+              View
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => toast.success("Call sheet duplicated")}>
+              <Copy className="size-4" />
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => toast.success("Call sheet deleted")}
+            >
+              <Trash2 className="size-4" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
+function CallSheetSection({ title, rows }) {
+  return (
+    <div>
+      <h2 className="mb-3 text-base font-semibold text-neutral-900">{title}</h2>
+      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+        {/* Column header */}
+        <div className="flex items-center px-6 py-3 text-xs font-medium text-neutral-500">
+          <div className="min-w-0 flex-1">Name</div>
+          <div className="hidden w-32 shrink-0 md:block" />
+          <div className="hidden w-28 shrink-0 md:block" />
+          <div className="flex w-24 shrink-0 items-center justify-center gap-1">
+            Views
+            <Eye className="size-3.5 text-neutral-400" />
+          </div>
+          <div className="flex w-24 shrink-0 items-center justify-center gap-1">
+            Confirmed
+            <CheckCircle2 className="size-3.5 text-neutral-400" />
+          </div>
+          <div className="w-10 shrink-0" />
+        </div>
+        {rows.map((cs) => (
+          <CallSheetRow key={cs.id} cs={cs} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CallSheetTab({ onNew }) {
+  return (
+    <div className="flex-1 space-y-7 px-6 lg:px-8 py-6">
+      <Button
+        onClick={onNew}
+        className="bg-[#D8FF00] text-neutral-900 hover:bg-[#c2e600] shadow-none"
+      >
+        <PlusCircle className="size-4" />
+        New Call Sheet
+      </Button>
+
+      <CallSheetSection title="Upcoming Callsheets" rows={CALL_SHEETS.upcoming} />
+      <CallSheetSection title="Archived Callsheets" rows={CALL_SHEETS.archived} />
+    </div>
+  );
+}
+
+/* ── Talents tab flow (list → create → pick → shortlist) ─────────────────── */
 
 function TalentsTab({
   step,
@@ -924,7 +1117,109 @@ function TalentsTab({
 }) {
   const selectedTalents = TALENTS.filter((t) => picked.has(t.id));
 
-  // Step 1: create a new talent shortlist
+  // The "Create a new talent shortlist" card — shown standalone in `create`
+  // and beneath the saved-shortlist list in `list`.
+  const createCard = (
+    <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold">Create a new talent shortlist</h2>
+      <div className="mt-5 space-y-1.5">
+        <Label>Name</Label>
+        <Input
+          className="bg-white"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+      <div className="mt-5 flex items-center justify-end gap-2">
+        <Button variant="outline" onClick={() => setName(SHORTLIST_DEFAULT_NAME)}>
+          Cancel
+        </Button>
+        <Button
+          onClick={() => setStep("pick")}
+          className="bg-[#D8FF00] text-neutral-900 hover:bg-[#c2e600] shadow-none"
+        >
+          <Plus className="size-4" />
+          Add talents
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Step 0 (new landing): list of saved shortlists + the create card below.
+  if (step === "list") {
+    return (
+      <div className="flex-1 space-y-4 px-6 lg:px-8 py-6">
+        {/* Sort + reset row */}
+        <div className="flex items-center gap-2">
+          <Select defaultValue="time">
+            <SelectTrigger className="h-9 w-40 bg-white text-sm">
+              <SelectValue placeholder="By time" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="time">By time</SelectItem>
+              <SelectItem value="name">By name</SelectItem>
+              <SelectItem value="status">By status</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" className="h-9">
+            reset
+          </Button>
+        </div>
+
+        {/* Saved shortlist rows */}
+        <div className="space-y-3">
+          {SAVED_SHORTLISTS.map((sl) => (
+            <div
+              key={sl.id}
+              className="flex items-center gap-4 rounded-xl border border-neutral-200 bg-white px-6 py-5 shadow-sm"
+            >
+              <div className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900">
+                {sl.name}
+              </div>
+              <div className="hidden shrink-0 text-sm font-medium text-neutral-700 sm:block">
+                {sl.date}
+              </div>
+              <span
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${SHORTLIST_STATUS_STYLES[sl.status]}`}
+              >
+                <span className="size-1.5 rounded-full bg-current opacity-70" />
+                {sl.status}
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="shrink-0 rounded p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700">
+                    <MoreHorizontal className="size-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem onClick={() => setStep("shortlist")}>
+                    <Eye className="size-4" />
+                    View
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => toast.success("Shortlist duplicated")}>
+                    <Copy className="size-4" />
+                    Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => toast.success("Shortlist deleted")}
+                  >
+                    <Trash2 className="size-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ))}
+        </div>
+
+        {/* Create-new card */}
+        {createCard}
+      </div>
+    );
+  }
+
+  // Step 1: create a new talent shortlist (standalone card)
   if (step === "create") {
     return (
       <div className="flex-1 px-6 lg:px-8 py-6">

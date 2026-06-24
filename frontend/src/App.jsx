@@ -62,6 +62,7 @@ import CrewDocuments from './portals/crew/Documents';
 import DashboardV2 from './v2/DashboardV2';
 import NewProjectV2 from './v2/NewProjectV2';
 import ProjectV2 from './v2/ProjectV2';
+import CallSheetCreateV2 from './v2/CallSheetCreateV2';
 import TalentsV2 from './v2/TalentsV2';
 import ShortlistV2 from './v2/ShortlistV2';
 import SavedShortlistV2 from './v2/SavedShortlistV2';
@@ -69,6 +70,7 @@ import ClientsMessagesV2 from './v2/ClientsMessagesV2';
 import TalentsMessagesV2 from './v2/TalentsMessagesV2';
 import CrewMessagesV2 from './v2/CrewMessagesV2';
 import TalentProfileV2 from './v2/TalentProfileV2';
+import TimeLogV2 from './v2/TimeLogV2';
 
 export default function App() {
   const location = useLocation();
@@ -87,6 +89,7 @@ export default function App() {
       <Route path="/production-v2" element={<DashboardV2 />} />
       <Route path="/production-v2/new-project" element={<NewProjectV2 />} />
       <Route path="/production-v2/project" element={<ProjectV2 />} />
+      <Route path="/production-v2/project/call-sheet/new" element={<CallSheetCreateV2 />} />
       <Route path="/production-v2/talents" element={<TalentsV2 />} />
       <Route path="/production-v2/shortlist" element={<ShortlistV2 />} />
       <Route path="/production-v2/saved-shortlist" element={<SavedShortlistV2 />} />
@@ -94,6 +97,7 @@ export default function App() {
       <Route path="/production-v2/messages/talents" element={<TalentsMessagesV2 />} />
       <Route path="/production-v2/messages/crew" element={<CrewMessagesV2 />} />
       <Route path="/production-v2/talent-profile" element={<TalentProfileV2 />} />
+      <Route path="/production-v2/time-log" element={<TimeLogV2 />} />
 
       {/* Production Portal */}
       <Route path="/production/login" element={<LoginPage portal="production" />} />

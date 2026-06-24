@@ -446,6 +446,286 @@ export const TASK_DESCRIPTIONS = {
 export const GENERIC_DESCRIPTION =
   "Coordinate and complete this task with the assigned team members, and confirm all details before the production day.";
 
+/**
+ * Saved talent shortlists for the Talents-tab LIST VIEW (/tmp/sl_listview.png).
+ * status ∈ "Confirmed" | "Pending Approval" | "Needs Revision".
+ */
+export const SAVED_SHORTLISTS = [
+  {
+    id: "sl-0622",
+    name: "E-Bike Launch Campaign Photoshoot Talent Shortlist 06/22/2026",
+    date: "June 22,2026",
+    status: "Confirmed",
+  },
+  {
+    id: "sl-0601",
+    name: "E-Bike Launch Campaign Photoshoot Talent Shortlist 06/01/2026",
+    date: "June 1,2026",
+    status: "Pending Approval",
+  },
+  {
+    id: "sl-0520",
+    name: "E-Bike Launch Campaign Photoshoot Talent Shortlist 05/20/2026",
+    date: "May 20,2026",
+    status: "Needs Revision",
+  },
+];
+
+/** Badge styles for the saved-shortlist status pills. */
+export const SHORTLIST_STATUS_STYLES = {
+  Confirmed: "border-emerald-300 text-emerald-700 bg-emerald-50",
+  "Pending Approval": "border-amber-300 text-amber-700 bg-amber-50",
+  "Needs Revision": "border-rose-300 text-rose-700 bg-rose-50",
+};
+
+/**
+ * Call sheets for the Call Sheet tab (/tmp/cs_list.png).
+ * status ∈ "Sent" | "Editing". An "Editing" row is a draft → shows
+ * "Draft unsent" pills instead of the Views/Confirmed progress rings.
+ * total = recipient count; views / confirmed = how many of them acted.
+ */
+export const CALL_SHEET_TOTAL = 19;
+
+export const CALL_SHEETS = {
+  upcoming: [
+    {
+      id: "cs-0622-sent",
+      title: "Photoshoot Call sheet 06/22/2026",
+      subtitle: "Sent Tuesday, June 22 2026 @1:40pm",
+      date: "June 22,2026",
+      status: "Sent",
+      views: 4,
+      confirmed: 1,
+      total: CALL_SHEET_TOTAL,
+    },
+    {
+      id: "cs-0622-draft",
+      title: "Photoshoot Call sheet 06/22/2026",
+      subtitle: "Sent Tuesday, June 22 2026 @1:40pm",
+      date: "June 22,2026",
+      status: "Editing",
+      views: 0,
+      confirmed: 0,
+      total: CALL_SHEET_TOTAL,
+    },
+  ],
+  archived: [
+    {
+      id: "cs-0514",
+      title: "Photoshoot Call sheet 05/14/2026",
+      subtitle: "Sent Tuesday, June 22 2026 @1:40pm",
+      date: "June 22,2026",
+      status: "Sent",
+      views: 19,
+      confirmed: 6,
+      total: CALL_SHEET_TOTAL,
+    },
+    {
+      id: "cs-0509",
+      title: "Photoshoot Call sheet 05/09/2026",
+      subtitle: "Sent Tuesday, June 22 2026 @1:40pm",
+      date: "June 22,2026",
+      status: "Sent",
+      views: 19,
+      confirmed: 19,
+      total: CALL_SHEET_TOTAL,
+    },
+  ],
+};
+
+export const CALL_SHEET_STATUS_STYLES = {
+  Sent: "border-emerald-300 text-emerald-700 bg-emerald-50",
+  Editing: "border-amber-300 text-amber-700 bg-amber-50",
+};
+
+/** Production crew — recipient picker source for the Create Call Sheet wizard. */
+export const CREW = [
+  { id: "marcus", name: "Marcus Reed", role: "Director of Photography" },
+  { id: "tina", name: "Tina Alvarez", role: "Gaffer" },
+  { id: "devon", name: "Devon Park", role: "1st AC" },
+  { id: "priya", name: "Priya Shah", role: "Sound Mixer" },
+  { id: "carlos", name: "Carlos Mendez", role: "Key Grip" },
+  { id: "hannah", name: "Hannah Lee", role: "Production Assistant" },
+];
+
+/**
+ * Time logs for the Time Log Review screen (/tmp/timelog_hi.png).
+ * One shoot day ("TAFT Commercial — Day 1"). Each row carries the table
+ * fields plus the detail-pane data: clock events, a review note, and a
+ * payable breakdown. status drives the badge:
+ *   "Meal break · OT" (amber) | "Ready" (green) | "Late clock-out" (amber)
+ *   "Low clock-out" (amber) | "Missing time" (rose).
+ * bucket maps a row to a status tab: "pending" | "exception" | "approved".
+ */
+export const TIME_LOG_DAY = "TAFT Commercial — Day 1";
+
+export const TIME_LOGS = [
+  {
+    id: "TL-2026-0702-014",
+    name: "Xinyi Zhang",
+    role: "Model",
+    initials: "XZ",
+    project: "TART Commercial",
+    date: "JUL 02",
+    dateLong: "Jul 2",
+    scheduled: "7:00 AM – 5:00 PM",
+    scheduledHours: "10.0h",
+    actual: "6:54 AM – 6:24 PM",
+    actualHours: "11.5h",
+    ot: "1.5h",
+    total: "$575.00",
+    status: "Meal break · OT",
+    bucket: "exception",
+    exceptions: 2,
+    clockEvents: [
+      { label: "Clock in", time: "6:54 AM", note: "Location verified", tone: "ok" },
+      { label: "Meal out", time: "12:42 PM", note: "30 min break", tone: "ok" },
+      { label: "Meal in", time: "1:12 PM", note: "Manual correction", tone: "warn" },
+      { label: "Clock out", time: "6:24 PM", note: "1h 24m after wrap", tone: "warn" },
+    ],
+    reviewNote:
+      "Meal break was manually corrected. Clock-out exceeds estimated wrap by 1h 24m.",
+    workerNote:
+      "Client requested an additional product setup after scheduled wrap.",
+    payable: [
+      { label: "Regular", detail: "10.0 hrs × $50/hr", amount: "$500.00" },
+      { label: "Overtime", detail: "1.5 hrs × $50/hr × 1.0", amount: "$75.00" },
+    ],
+    totalPayable: "$575.00",
+  },
+  {
+    id: "TL-2026-0702-015",
+    name: "Maya Chen",
+    role: "Hair & Makeup",
+    initials: "MC",
+    project: "TART Commercial",
+    date: "JUL 02",
+    dateLong: "Jul 2",
+    scheduled: "8:00 AM – 6:00 PM",
+    scheduledHours: "10.0h",
+    actual: "7:58 AM – 6:01 PM",
+    actualHours: "10.0h",
+    ot: "—",
+    total: "$850.00",
+    status: "Ready",
+    bucket: "pending",
+    exceptions: 0,
+    clockEvents: [
+      { label: "Clock in", time: "7:58 AM", note: "Location verified", tone: "ok" },
+      { label: "Meal out", time: "12:30 PM", note: "30 min break", tone: "ok" },
+      { label: "Meal in", time: "1:00 PM", note: "On time", tone: "ok" },
+      { label: "Clock out", time: "6:01 PM", note: "On schedule", tone: "ok" },
+    ],
+    reviewNote: null,
+    workerNote: "All looks complete and on schedule.",
+    payable: [
+      { label: "Regular", detail: "10.0 hrs × $85/hr", amount: "$850.00" },
+    ],
+    totalPayable: "$850.00",
+  },
+  {
+    id: "TL-2026-0702-016",
+    name: "Andre Miller",
+    role: "Talent",
+    initials: "AM",
+    project: "TART Commercial",
+    date: "JUL 02",
+    dateLong: "Jul 2",
+    scheduled: "8:00 AM – 4:00 PM",
+    scheduledHours: "8.0h",
+    actual: "7:55 AM – 4:24 PM",
+    actualHours: "8.4h",
+    ot: "0.4h",
+    total: "$1,008.00",
+    status: "Late clock-out",
+    bucket: "exception",
+    exceptions: 1,
+    clockEvents: [
+      { label: "Clock in", time: "7:55 AM", note: "Location verified", tone: "ok" },
+      { label: "Meal out", time: "12:00 PM", note: "30 min break", tone: "ok" },
+      { label: "Meal in", time: "12:30 PM", note: "On time", tone: "ok" },
+      { label: "Clock out", time: "4:24 PM", note: "24m after wrap", tone: "warn" },
+    ],
+    reviewNote: "Clock-out occurred 24 minutes after the scheduled wrap.",
+    workerNote: "Stayed to finish the final hero shot.",
+    payable: [
+      { label: "Regular", detail: "8.0 hrs × $120/hr", amount: "$960.00" },
+      { label: "Overtime", detail: "0.4 hrs × $120/hr × 1.0", amount: "$48.00" },
+    ],
+    totalPayable: "$1,008.00",
+  },
+  {
+    id: "TL-2026-0702-017",
+    name: "Luis Romero",
+    role: "1st AC",
+    initials: "LR",
+    project: "TART Commercial",
+    date: "JUL 02",
+    dateLong: "Jul 2",
+    scheduled: "6:00 AM – 6:00 PM",
+    scheduledHours: "12.0h",
+    actual: "5:58 AM – 6:02 PM",
+    actualHours: "12.0h",
+    ot: "2.0h",
+    total: "$960.00",
+    status: "Ready",
+    bucket: "pending",
+    exceptions: 0,
+    clockEvents: [
+      { label: "Clock in", time: "5:58 AM", note: "Location verified", tone: "ok" },
+      { label: "Meal out", time: "11:30 AM", note: "30 min break", tone: "ok" },
+      { label: "Meal in", time: "12:00 PM", note: "On time", tone: "ok" },
+      { label: "Clock out", time: "6:02 PM", note: "On schedule", tone: "ok" },
+    ],
+    reviewNote: null,
+    workerNote: "Full 12-hour day, pre-approved overtime.",
+    payable: [
+      { label: "Regular", detail: "10.0 hrs × $60/hr", amount: "$600.00" },
+      { label: "Overtime", detail: "2.0 hrs × $60/hr × 3.0", amount: "$360.00" },
+    ],
+    totalPayable: "$960.00",
+  },
+  {
+    id: "TL-2026-0702-018",
+    name: "Nina Patel",
+    role: "Wardrobe",
+    initials: "NP",
+    project: "TART Commercial",
+    date: "JUL 02",
+    dateLong: "Jul 2",
+    scheduled: "8:00 AM – 6:00 PM",
+    scheduledHours: "10.0h",
+    actual: "8:02 AM – 5:30 PM",
+    actualHours: "9.5h",
+    ot: "—",
+    total: "$712.50",
+    status: "Missing time",
+    bucket: "exception",
+    exceptions: 1,
+    clockEvents: [
+      { label: "Clock in", time: "8:02 AM", note: "Location verified", tone: "ok" },
+      { label: "Meal out", time: "12:15 PM", note: "30 min break", tone: "ok" },
+      { label: "Meal in", time: "12:45 PM", note: "On time", tone: "ok" },
+      { label: "Clock out", time: "5:30 PM", note: "Early — no note", tone: "warn" },
+    ],
+    reviewNote: "Clock-out is 30 minutes early with no submitted reason.",
+    workerNote: "—",
+    payable: [
+      { label: "Regular", detail: "9.5 hrs × $75/hr", amount: "$712.50" },
+    ],
+    totalPayable: "$712.50",
+  },
+];
+
+/** Badge styles for the time-log status pills. */
+export const TIME_LOG_STATUS_STYLES = {
+  "Meal break · OT": "border-amber-300 text-amber-700 bg-amber-50",
+  Ready: "border-emerald-300 text-emerald-700 bg-emerald-50",
+  "Late clock-out": "border-amber-300 text-amber-700 bg-amber-50",
+  "Low clock-out": "border-amber-300 text-amber-700 bg-amber-50",
+  "Missing time": "border-rose-300 text-rose-700 bg-rose-50",
+};
+
 /** Phased task list for the E-Bike Launch Campaign project workflow. */
 export const PROJECT_PHASES = [
   {

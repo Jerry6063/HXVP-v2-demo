@@ -19,6 +19,7 @@ import {
   HardHat,
   DollarSign,
   CreditCard,
+  Clock,
   ChevronsUpDown,
 } from "lucide-react";
 
@@ -68,6 +69,7 @@ const NAV_GROUPS = [
     items: [
       { to: "#", label: "Revenue & Expenses", icon: DollarSign },
       { to: "#", label: "Payroll", icon: CreditCard },
+      { to: "/production-v2/time-log", label: "Time Logs", icon: Clock },
     ],
   },
 ];
