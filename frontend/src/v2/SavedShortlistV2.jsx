@@ -4,6 +4,7 @@
  * shortlisted talent grid (reuses TalentCard + mockData). Additive preview;
  * wrapped by V2Layout (Talents nav active via route).
  */
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Share, CheckCircle2, Trash2, X } from "lucide-react";
@@ -16,6 +17,10 @@ import { TALENTS, SHORTLIST_IDS } from "./mockData";
 export default function SavedShortlistV2() {
   const navigate = useNavigate();
   const shortlisted = TALENTS.filter((t) => SHORTLIST_IDS.includes(t.id));
+  const [preferences, setPreferences] = useState({}); // talentId -> 'forward' | 'pass' | null
+
+  const setPreference = (id, value) =>
+    setPreferences((prev) => ({ ...prev, [id]: value }));
 
   const handleDelete = () => {
     toast.success("Shortlist deleted");
@@ -71,7 +76,13 @@ export default function SavedShortlistV2() {
         {/* Talent grid */}
         <div className="mt-6 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,300px))]">
           {shortlisted.map((t) => (
-            <TalentCard key={t.id} t={t} />
+            <TalentCard
+              key={t.id}
+              t={t}
+              review
+              preference={preferences[t.id] ?? null}
+              onPreference={(value) => setPreference(t.id, value)}
+            />
           ))}
         </div>
       </div>

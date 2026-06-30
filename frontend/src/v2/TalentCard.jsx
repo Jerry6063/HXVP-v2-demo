@@ -9,7 +9,16 @@ function Chip({ children }) {
   );
 }
 
-export default function TalentCard({ t, selectable = false, selected = false, onToggle, onOpen }) {
+export default function TalentCard({
+  t,
+  selectable = false,
+  selected = false,
+  onToggle,
+  onOpen,
+  review = false,
+  preference = null,
+  onPreference,
+}) {
   const clickable = typeof onOpen === "function";
   return (
     <div
@@ -33,7 +42,7 @@ export default function TalentCard({ t, selectable = false, selected = false, on
         <span className="absolute bottom-2 right-2 rounded-md bg-neutral-900/85 px-2 py-0.5 text-[11px] font-medium text-white">
           ${t.rate}/hr
         </span>
-        {selectable && (
+        {selectable && !review && (
           <div className="absolute right-2 top-2">
             <Checkbox
               checked={selected}
@@ -64,6 +73,36 @@ export default function TalentCard({ t, selectable = false, selected = false, on
           <Chip>{t.gender}</Chip>
           <Chip>{t.ethnicity}</Chip>
         </div>
+        {review && (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                onPreference?.(preference === "forward" ? null : "forward")
+              }
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                preference === "forward"
+                  ? "bg-[#D8FF00] text-neutral-900"
+                  : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+              }`}
+            >
+              Move forward
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onPreference?.(preference === "pass" ? null : "pass")
+              }
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                preference === "pass"
+                  ? "bg-neutral-800 text-white"
+                  : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+              }`}
+            >
+              Pass for now
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

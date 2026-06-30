@@ -45,6 +45,10 @@ export default function ShortlistV2() {
   const [assignees, setAssignees] = useState(shortlisted);
   const [hasDate, setHasDate] = useState(true);
   const [message, setMessage] = useState(DEFAULT_MESSAGE);
+  const [preferences, setPreferences] = useState({}); // talentId -> 'forward' | 'pass' | null
+
+  const setPreference = (id, value) =>
+    setPreferences((prev) => ({ ...prev, [id]: value }));
 
   const removeAssignee = (id) =>
     setAssignees((prev) => prev.filter((a) => a.id !== id));
@@ -65,7 +69,13 @@ export default function ShortlistV2() {
           <h1 className="text-2xl font-semibold tracking-tight">{TITLE}</h1>
           <div className="mt-6 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,300px))]">
             {shortlisted.map((t) => (
-              <TalentCard key={t.id} t={t} />
+              <TalentCard
+                key={t.id}
+                t={t}
+                review
+                preference={preferences[t.id] ?? null}
+                onPreference={(value) => setPreference(t.id, value)}
+              />
             ))}
           </div>
         </div>

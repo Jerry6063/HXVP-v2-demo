@@ -183,6 +183,7 @@ export default function ProjectV2() {
   const [talentStep, setTalentStep] = useState("list");
   const [shortlistName, setShortlistName] = useState(SHORTLIST_DEFAULT_NAME);
   const [picked, setPicked] = useState(() => new Set());
+  const [preferences, setPreferences] = useState({}); // talentId -> 'forward' | 'pass' | null
   const [talentPanel, setTalentPanel] = useState(null); // 'confirm' | 'share' | null
 
   const togglePicked = (id) =>
@@ -191,6 +192,9 @@ export default function ProjectV2() {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+
+  const setPreference = (id, value) =>
+    setPreferences((prev) => ({ ...prev, [id]: value }));
 
   // simulate a brief load before showing content (/tmp/wf2)
   useEffect(() => {
@@ -381,6 +385,8 @@ export default function ProjectV2() {
               setName={setShortlistName}
               picked={picked}
               togglePicked={togglePicked}
+              preferences={preferences}
+              setPreference={setPreference}
               onSaveShortlist={() => setTalentStep("shortlist")}
               onOpenPanel={setTalentPanel}
             />
@@ -1111,6 +1117,8 @@ function TalentsTab({
   setName,
   picked,
   togglePicked,
+  preferences,
+  setPreference,
   onSaveShortlist,
   onOpenPanel,
 }) {
@@ -1329,7 +1337,13 @@ function TalentsTab({
 
       <div className="mt-5 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,300px))]">
         {selectedTalents.map((t) => (
-          <TalentCard key={t.id} t={t} />
+          <TalentCard
+            key={t.id}
+            t={t}
+            review
+            preference={preferences[t.id] ?? null}
+            onPreference={(value) => setPreference(t.id, value)}
+          />
         ))}
       </div>
     </div>
