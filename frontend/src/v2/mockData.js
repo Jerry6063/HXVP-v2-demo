@@ -732,6 +732,23 @@ export const TIME_LOG_STATUS_STYLES = {
   "Missing time": "border-rose-300 text-rose-700 bg-rose-50",
 };
 
+/**
+ * Per-task comment metadata for the Production Workflow table (Figma 6771:4667).
+ * Keyed by task title. unread true → red badge (amber pill); unread false but
+ * count>0 → gray badge (neutral pill); count 0 → "No comment".
+ */
+export const TASK_COMMENTS = {
+  "Confirm model and talent bookings": { count: 3, unread: true },
+  "Scout and lock shoot location": { count: 0, unread: false },
+  "Assemble and brief crew": { count: 3, unread: false },
+  "Sign contract with client and confirm deposit": { count: 3, unread: false },
+  "Confirm art and props": { count: 3, unread: true },
+  "Prepare and send call sheet": { count: 3, unread: false },
+  "Art/props checklist": { count: 3, unread: true },
+  "Rough Edit": { count: 3, unread: true },
+  "Color adjustments": { count: 0, unread: false },
+};
+
 /** Phased task list for the E-Bike Launch Campaign project workflow. */
 export const PROJECT_PHASES = [
   {

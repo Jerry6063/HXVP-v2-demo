@@ -28,6 +28,7 @@ import {
   Minimize2,
   Calendar as CalendarIcon,
   PanelRight,
+  MessageSquare,
   X,
 } from "lucide-react";
 
@@ -53,6 +54,7 @@ import {
 } from "@/components/shadcn/select";
 import {
   PROJECT_PHASES,
+  TASK_COMMENTS,
   DEFAULT_ASSIGNEE,
   DEFAULT_DUE,
   TASK_DESCRIPTIONS,
@@ -103,6 +105,8 @@ function buildInitialPhases() {
       done: false,
       assignee: DEFAULT_ASSIGNEE,
       due: DEFAULT_DUE,
+      comments: TASK_COMMENTS[title]?.count ?? 0,
+      unread: TASK_COMMENTS[title]?.unread ?? false,
     })),
   }));
 }
@@ -235,6 +239,20 @@ export default function ProjectV2() {
       )
     );
 
+  const markRead = (phaseId, taskId) =>
+    setPhases((prev) =>
+      prev.map((p) =>
+        p.id !== phaseId
+          ? p
+          : {
+              ...p,
+              tasks: p.tasks.map((t) =>
+                t.id === taskId ? { ...t, unread: false } : t
+              ),
+            }
+      )
+    );
+
   const addTask = (phaseId) => {
     const title = addTaskText.trim();
     if (!title) return;
@@ -252,6 +270,8 @@ export default function ProjectV2() {
                   done: false,
                   assignee: DEFAULT_ASSIGNEE,
                   due: DEFAULT_DUE,
+                  comments: 0,
+                  unread: false,
                 },
               ],
             }
@@ -420,6 +440,7 @@ export default function ProjectV2() {
                   Due Date
                   <ChevronsUpDown className="size-3.5 text-neutral-400" />
                 </div>
+                <div className="w-28 shrink-0">Comments</div>
                 <div className="flex w-10 shrink-0 justify-center text-neutral-400">
                   <Plus className="size-3.5" />
                 </div>
@@ -449,9 +470,10 @@ export default function ProjectV2() {
                         <div
                           key={task.id}
                           id={slugify(task.title)}
-                          onClick={() =>
-                            setOpenTask({ phaseId: phase.id, taskId: task.id })
-                          }
+                          onClick={() => {
+                            setOpenTask({ phaseId: phase.id, taskId: task.id });
+                            markRead(phase.id, task.id);
+                          }}
                           className={`group flex cursor-pointer items-center border-t border-neutral-100 px-6 lg:px-8 py-3 hover:bg-neutral-50 ${
                             openTask?.taskId === task.id ? "bg-neutral-50" : ""
                           }`}
@@ -480,6 +502,18 @@ export default function ProjectV2() {
                           </div>
                           <div className="w-28 shrink-0 text-sm text-neutral-600">
                             {task.due}
+                          </div>
+                          <div className="w-28 shrink-0">
+                            {task.comments > 0 ? (
+                              <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 ${task.unread ? "bg-amber-100" : "bg-neutral-100"}`}>
+                                <MessageSquare className={`size-3.5 ${task.unread ? "text-neutral-700" : "text-neutral-500"}`} />
+                                <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[11px] font-medium leading-none text-white ${task.unread ? "bg-[#ef4444]" : "bg-neutral-500"}`}>
+                                  {task.comments}
+                                </span>
+                              </span>
+                            ) : (
+                              <span className="text-sm text-neutral-400">No comment</span>
+                            )}
                           </div>
                           <div
                             className="flex w-10 shrink-0 justify-center"
