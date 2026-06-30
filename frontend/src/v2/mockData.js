@@ -135,6 +135,12 @@ export const TALENTS = [
 
 export const SHORTLIST_IDS = ["andre", "sofia", "liumei", "maya"];
 
+/** Client-side recipients for the "Share with Client" send panel. */
+export const CLIENT_RECIPIENTS = [
+  { id: "c1", name: "Kaleb Jensen", img: 12 },
+  { id: "c2", name: "Tim Wang", img: 33 },
+];
+
 export const PROJECTS = [
   {
     name: "Spring Lifestyle Collection",
