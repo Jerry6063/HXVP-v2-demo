@@ -66,7 +66,6 @@ import {
 
 const PROJECT_TITLE = "E-Bike Launch Campaign";
 const TABS = [
-  "Overview",
   "Production Workflow",
   "Talents",
   "Crew",
