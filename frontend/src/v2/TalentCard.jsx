@@ -22,7 +22,7 @@ export default function TalentCard({ t, selectable = false, selected = false, on
           src={`https://i.pravatar.cc/300?img=${t.img}`}
           alt={t.name}
           onClick={clickable ? onOpen : undefined}
-          className={`h-44 w-full bg-neutral-100 object-cover ${
+          className={`aspect-square w-full bg-neutral-100 object-cover object-top ${
             clickable ? "cursor-pointer" : ""
           }`}
           loading="lazy"
