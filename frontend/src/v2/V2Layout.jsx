@@ -18,8 +18,8 @@ import {
   UserRound,
   HardHat,
   DollarSign,
-  CreditCard,
   Clock,
+  ReceiptText,
   ChevronsUpDown,
 } from "lucide-react";
 
@@ -67,9 +67,9 @@ const NAV_GROUPS = [
   {
     label: "Finance",
     items: [
+      { to: "/production-v2/time-log", label: "Time Log", icon: Clock },
       { to: "#", label: "Revenue & Expenses", icon: DollarSign },
-      { to: "#", label: "Payroll", icon: CreditCard },
-      { to: "/production-v2/time-log", label: "Time Logs", icon: Clock },
+      { to: "/production-v2/invoices", label: "Invoices", icon: ReceiptText },
     ],
   },
 ];

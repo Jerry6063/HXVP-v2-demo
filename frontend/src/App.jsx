@@ -71,6 +71,11 @@ import TalentsMessagesV2 from './v2/TalentsMessagesV2';
 import CrewMessagesV2 from './v2/CrewMessagesV2';
 import TalentProfileV2 from './v2/TalentProfileV2';
 import TimeLogV2 from './v2/TimeLogV2';
+import InvoicesV2 from './v2/InvoicesV2';
+import InvoiceDetailV2 from './v2/InvoiceDetailV2';
+import InvoiceNewV2 from './v2/InvoiceNewV2';
+import InvoiceSendV2 from './v2/InvoiceSendV2';
+import ClientDetailV2 from './v2/ClientDetailV2';
 
 export default function App() {
   const location = useLocation();
@@ -98,6 +103,11 @@ export default function App() {
       <Route path="/production-v2/messages/crew" element={<CrewMessagesV2 />} />
       <Route path="/production-v2/talent-profile" element={<TalentProfileV2 />} />
       <Route path="/production-v2/time-log" element={<TimeLogV2 />} />
+      <Route path="/production-v2/invoices" element={<InvoicesV2 />} />
+      <Route path="/production-v2/invoices/new" element={<InvoiceNewV2 />} />
+      <Route path="/production-v2/invoices/:id" element={<InvoiceDetailV2 />} />
+      <Route path="/production-v2/invoices/:id/send" element={<InvoiceSendV2 />} />
+      <Route path="/production-v2/clients/:id" element={<ClientDetailV2 />} />
 
       {/* Production Portal */}
       <Route path="/production/login" element={<LoginPage portal="production" />} />

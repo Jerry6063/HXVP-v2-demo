@@ -563,8 +563,6 @@ export const CREW = [
  *   "Low clock-out" (amber) | "Missing time" (rose).
  * bucket maps a row to a status tab: "pending" | "exception" | "approved".
  */
-export const TIME_LOG_DAY = "TAFT Commercial — Day 1";
-
 export const TIME_LOGS = [
   {
     id: "TL-2026-0702-014",
@@ -748,6 +746,195 @@ export const TASK_COMMENTS = {
   "Rough Edit": { count: 3, unread: true },
   "Color adjustments": { count: 0, unread: false },
 };
+
+/**
+ * Invoices for the Invoices list + detail screens (Figma 7130:15928 / 7118:15039 /
+ * 7132:15937). Rows are verbatim from the list spec. status ∈ "Viewed" | "Not Viewed".
+ * `id` (slug) is the route param for /production-v2/invoices/:id — the first row
+ * (Invoice #2192) is the fully-specced detail record; the rest reuse its document
+ * shape as mock. `total` is the display string; the detail-only rows carry the
+ * document body (sender, billTo, dates, lineItems, totals, terms).
+ */
+export const INVOICE_SENDER = {
+  name: "HXVP Marketing Group",
+  addressLines: ["1761 International Parkway Suite 110", "Richardson, TX, 75081"],
+};
+
+export const INVOICE_TERMS = [
+  "Zelle:",
+  "project@hxvp.us",
+  "",
+  "ACH Transfer info:",
+  "Bank Of America",
+  "Swift Code: BOFAUS3N",
+  "Company name: HXVP Marketing Group LLC",
+  "Account number: 488104814345",
+  "Routing number: 026009593",
+];
+
+export const INVOICES = [
+  {
+    id: "2192",
+    reference: "Invoice #2192",
+    customer: "3W Management Inc",
+    date: "Jun 29, 2026",
+    dueDate: "Jul 3, 2026",
+    status: "Not Viewed",
+    total: "$3,000.00",
+    billTo: "3W Management Inc",
+    lineItems: [
+      {
+        item: "Social Media Content 50% Deposit",
+        quantity: "1",
+        rate: "$3,000.00",
+        amount: "$3,000.00",
+      },
+    ],
+    subtotal: "$3,000.00",
+    tax: "$0.00",
+    balanceDue: "$3,000.00",
+  },
+  {
+    id: "2191",
+    reference: "Invoice #2191",
+    customer: "Wolfbox Tech Inc",
+    date: "Jun 29, 2026",
+    dueDate: "Jul 3, 2026",
+    status: "Viewed",
+    total: "$2,700.00",
+  },
+  {
+    id: "2190",
+    reference: "Invoice #2190",
+    customer: "Hong Kong Security Group Ltd",
+    date: "Jun 28, 2026",
+    dueDate: "Jun 30, 2026",
+    status: "Viewed",
+    total: "$3,381.85",
+  },
+  {
+    id: "2189-a",
+    reference: "Invoice #2189",
+    customer: "Hong Kong Security Group Ltd",
+    date: "Jun 27, 2026",
+    dueDate: "Jun 30, 2026",
+    status: "Viewed",
+    total: "$747.53",
+  },
+  {
+    id: "2189-b",
+    reference: "Invoice #2189",
+    customer: "Multi-Gold International Ltd",
+    date: "Jun 27, 2026",
+    dueDate: "Jun 30, 2026",
+    status: "Viewed",
+    total: "$747.53",
+  },
+  {
+    id: "2189-c",
+    reference: "Invoice #2189",
+    customer: "Hong Kong Security Group Ltd",
+    date: "Jun 27, 2026",
+    dueDate: "Jun 30, 2026",
+    status: "Viewed",
+    total: "$17,200.00",
+  },
+  {
+    id: "2189-d",
+    reference: "Invoice #2189",
+    customer: "Hong Kong Security Group Ltd",
+    date: "Jun 27, 2026",
+    dueDate: "Jun 30, 2026",
+    status: "Viewed",
+    total: "$46,060.00",
+  },
+  {
+    id: "2189-e",
+    reference: "Invoice #2189",
+    customer: "Multi-Gold International Ltd",
+    date: "Jun 27, 2026",
+    dueDate: "Jun 30, 2026",
+    status: "Viewed",
+    total: "$30,250.00",
+  },
+  {
+    id: "2189-f",
+    reference: "Invoice #2189",
+    customer: "Zhuhai Taichuan Cloud Technology Co., Ltd",
+    date: "Jun 27, 2026",
+    dueDate: "Jun 30, 2026",
+    status: "Viewed",
+    total: "$3,250.00",
+  },
+  {
+    id: "2189-g",
+    reference: "Invoice #2189",
+    customer: "Kin Production Services LLC",
+    date: "Jun 27, 2026",
+    dueDate: "Jun 30, 2026",
+    status: "Viewed",
+    total: "$5,250.00",
+  },
+  {
+    id: "2189-h",
+    reference: "Invoice #2189",
+    customer: "HXVP Studios Internal",
+    date: "Jun 27, 2026",
+    dueDate: "Jun 30, 2026",
+    status: "Viewed",
+    total: "$9,840.00",
+  },
+];
+
+/**
+ * Badge styling for invoice statuses. Per the detail/listB specs the pill has a
+ * filled dot + label; "Viewed" reads lime-green (#d9f99d bg family) and
+ * "Not Viewed" amber (#fde68a). Kept as tailwind arbitrary values so both the
+ * list and detail pages can share one map.
+ */
+export const INVOICE_STATUS_STYLES = {
+  Viewed: {
+    dot: "#5b6f00",
+    badge: "border-transparent bg-[#d9f99d]/80 text-neutral-900",
+  },
+  "Not Viewed": {
+    dot: "#f59e0b",
+    badge: "border-transparent bg-[#fde68a]/80 text-neutral-900",
+  },
+};
+
+export const INVOICES_TOTAL_COUNT = 48;
+
+/**
+ * Client (company) records for the Client Details page (Figma 7153:16705).
+ * Keyed data drives the KPI row, Details/Bill To cards, and the Invoices table.
+ * `id` is the route param for /production-v2/clients/:id.
+ */
+export const CLIENT_RECORDS = [
+  {
+    id: "3w-management-inc",
+    name: "3W Management Inc",
+    initials: "3W",
+    created: "Jun 29, 2026, 8:57 AM",
+    billTo: "3W Management Inc",
+    metrics: {
+      invoices: "1",
+      payments: "0",
+      totalInvoiced: "$3,000.00",
+      totalPaid: "—",
+    },
+    invoices: [
+      {
+        invoiceId: "2192",
+        reference: "Invoice #2192",
+        date: "Jun 29, 2026",
+        status: "Viewed",
+        total: "$3,000.00",
+      },
+    ],
+    payments: [],
+  },
+];
 
 /** Phased task list for the E-Bike Launch Campaign project workflow. */
 export const PROJECT_PHASES = [
