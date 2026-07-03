@@ -34,6 +34,7 @@ import {
 
 import V2Layout from "./V2Layout";
 import TalentCard from "./TalentCard";
+import TimeLogReview from "./TimeLogReview";
 import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
@@ -64,6 +65,7 @@ import {
   CALL_SHEET_STATUS_STYLES,
   SAVED_SHORTLISTS,
   SHORTLIST_STATUS_STYLES,
+  TIME_LOGS,
 } from "./mockData";
 
 const PROJECT_TITLE = "E-Bike Launch Campaign";
@@ -73,6 +75,7 @@ const TABS = [
   "Crew",
   "Contract",
   "Call Sheet",
+  "Time Log",
 ];
 
 const TALENT_FILTERS = [
@@ -383,13 +386,17 @@ export default function ProjectV2() {
                     Share
                   </Button>
                 </div>
-              ) : activeTab === "Call Sheet" || activeTab === "Talents" ? (
+              ) : activeTab === "Call Sheet" ||
+                activeTab === "Talents" ||
+                activeTab === "Time Log" ? (
                 <div className="flex shrink-0 items-center pb-2">
                   <Input
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                     className="h-8 w-44 bg-white text-sm"
-                    placeholder="Filter tasks"
+                    placeholder={
+                      activeTab === "Time Log" ? "Filter logs" : "Filter tasks"
+                    }
                   />
                 </div>
               ) : null}
@@ -416,6 +423,14 @@ export default function ProjectV2() {
                 navigate("/production-v2/project/call-sheet/new")
               }
             />
+          ) : activeTab === "Time Log" ? (
+            <div className="flex-1 px-6 lg:px-8 py-6">
+              <TimeLogReview
+                logs={TIME_LOGS}
+                scopedProject="E-Bike Launch"
+                externalQuery={filter}
+              />
+            </div>
           ) : activeTab !== "Production Workflow" ? (
             <div className="flex flex-1 items-center justify-center px-6 py-20 text-sm text-neutral-400">
               Coming soon in this preview
