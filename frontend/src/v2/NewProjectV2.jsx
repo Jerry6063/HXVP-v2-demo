@@ -44,6 +44,8 @@ export default function NewProjectV2() {
   const [open, setOpen] = useState(true);
   const [date, setDate] = useState();
   const [submitting, setSubmitting] = useState(false);
+  const [talentReqOpen, setTalentReqOpen] = useState(false);
+  const [crewReqOpen, setCrewReqOpen] = useState(false);
 
   const close = () => {
     setOpen(false);
@@ -180,26 +182,44 @@ export default function NewProjectV2() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label>Talents Requirements</Label>
-                <button className="text-xs font-medium text-lime-600 hover:underline">
-                  + Add Row
-                </button>
+                {!talentReqOpen && (
+                  <button
+                    onClick={() => setTalentReqOpen(true)}
+                    className="text-xs font-medium text-lime-600 hover:underline"
+                  >
+                    + Add Row
+                  </button>
+                )}
               </div>
-              <p className="text-sm text-neutral-400">
-                No talent requirements added yet
-              </p>
+              {talentReqOpen ? (
+                <Textarea className="bg-white" rows={3} />
+              ) : (
+                <p className="text-sm text-neutral-400">
+                  No talent requirements added yet
+                </p>
+              )}
             </div>
 
             {/* Crew Requirements */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label>Crew Requirements</Label>
-                <button className="text-xs font-medium text-lime-600 hover:underline">
-                  + Add Row
-                </button>
+                {!crewReqOpen && (
+                  <button
+                    onClick={() => setCrewReqOpen(true)}
+                    className="text-xs font-medium text-lime-600 hover:underline"
+                  >
+                    + Add Row
+                  </button>
+                )}
               </div>
-              <p className="text-sm text-neutral-400">
-                No crew requirements added yet
-              </p>
+              {crewReqOpen ? (
+                <Textarea className="bg-white" rows={3} />
+              ) : (
+                <p className="text-sm text-neutral-400">
+                  No crew requirements added yet
+                </p>
+              )}
             </div>
           </div>
 
