@@ -11,7 +11,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutGrid,
   PlusCircle,
-  Briefcase,
+  ClipboardList,
   Star,
   Users,
   Mail,
@@ -39,7 +39,7 @@ const NAV_GROUPS = [
   {
     label: "Production",
     items: [
-      { to: "/production-v2/project", label: "Active Projects", icon: Briefcase },
+      { to: "/production-v2/active-projects", label: "Active Projects", icon: ClipboardList },
       { to: "/production-v2/talents", label: "Talents", icon: Star },
       { to: "#", label: "Production Crew", icon: Users },
     ],

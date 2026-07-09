@@ -60,8 +60,11 @@ import CrewDocuments from './portals/crew/Documents';
 
 // ── v2 preview (additive, public, light theme) ──────────────────────────────
 import DashboardV2 from './v2/DashboardV2';
+import ActiveProjectsV2 from './v2/ActiveProjectsV2';
 import NewProjectV2 from './v2/NewProjectV2';
 import ProjectV2 from './v2/ProjectV2';
+import SubmitTimeV2 from './v2/SubmitTimeV2';
+import WorkerInvoiceV2 from './v2/WorkerInvoiceV2';
 import CallSheetCreateV2 from './v2/CallSheetCreateV2';
 import TalentsV2 from './v2/TalentsV2';
 import ShortlistV2 from './v2/ShortlistV2';
@@ -92,8 +95,11 @@ export default function App() {
 
       {/* v2 preview — public, no auth guard, light shadcn theme */}
       <Route path="/production-v2" element={<DashboardV2 />} />
+      <Route path="/production-v2/active-projects" element={<ActiveProjectsV2 />} />
       <Route path="/production-v2/new-project" element={<NewProjectV2 />} />
       <Route path="/production-v2/project" element={<ProjectV2 />} />
+      <Route path="/production-v2/submit-time" element={<SubmitTimeV2 />} />
+      <Route path="/production-v2/build-invoice" element={<WorkerInvoiceV2 />} />
       <Route path="/production-v2/project/call-sheet/new" element={<CallSheetCreateV2 />} />
       <Route path="/production-v2/talents" element={<TalentsV2 />} />
       <Route path="/production-v2/shortlist" element={<ShortlistV2 />} />

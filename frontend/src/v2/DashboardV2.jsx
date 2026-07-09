@@ -92,9 +92,12 @@ export default function DashboardV2() {
               <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-700">
                 Active Projects
               </h2>
-              <button className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-900">
+              <Link
+                to="/production-v2/active-projects"
+                className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-900"
+              >
                 View all <ArrowRight className="size-3" />
-              </button>
+              </Link>
             </div>
             <div className="divide-y divide-neutral-100">
               {PROJECTS.map((p, i) => (

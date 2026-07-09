@@ -960,3 +960,177 @@ export const PROJECT_PHASES = [
     tasks: ["Rough Edit", "Color adjustments"],
   },
 ];
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * ROUND-3 (workflow-3 sync) additions
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * ACTIVE_PROJECTS — rows for the standalone Active Projects list page
+ * (ActiveProjectsV2, Figma 7193:27176). The spec shows 8 identical placeholder
+ * rows; we keep them verbatim per the design but vary the `id`/`progress`
+ * slightly so React keys stay unique and pagination copy reads naturally.
+ * Every row also carries `phase` — the status-pill bucket used by the filter
+ * pills ("All Active" | "Pre-production" | "Production" | "Post-production" |
+ * "Client Review" | "Archived"). Row click → /production-v2/project.
+ *
+ * Fields (all display strings, verbatim from the spec cell copy):
+ *   project        line-1 project name    ("Spring Lifestyle Collection")
+ *   subtitle       line-2 muted detail    ("Product Photography — 24 SKUs")
+ *   client         client name            ("Provision Furniture")
+ *   budget         formatted USD          ("$3,000.00")
+ *   deadline       formatted date         ("Jul 3, 2026")
+ *   location       location string        ("Los Angeles,CA" — no space after comma, per spec)
+ *   status         badge label / phase    ("Pre-production")
+ *   progress       0–100 → progress bar    (37.5 ≈ spec's 21/56px fill)
+ */
+export const ACTIVE_PROJECTS = [
+  {
+    id: "ap-1",
+    project: "Spring Lifestyle Collection",
+    subtitle: "Product Photography — 24 SKUs",
+    client: "Provision Furniture",
+    budget: "$3,000.00",
+    deadline: "Jul 3, 2026",
+    location: "Los Angeles,CA",
+    status: "Pre-production",
+    progress: 37.5,
+  },
+  {
+    id: "ap-2",
+    project: "Spring Lifestyle Collection",
+    subtitle: "Product Photography — 24 SKUs",
+    client: "Provision Furniture",
+    budget: "$3,000.00",
+    deadline: "Jul 3, 2026",
+    location: "Los Angeles,CA",
+    status: "Pre-production",
+    progress: 37.5,
+  },
+  {
+    id: "ap-3",
+    project: "Spring Lifestyle Collection",
+    subtitle: "Product Photography — 24 SKUs",
+    client: "Provision Furniture",
+    budget: "$3,000.00",
+    deadline: "Jul 3, 2026",
+    location: "Los Angeles,CA",
+    status: "Pre-production",
+    progress: 37.5,
+  },
+  {
+    id: "ap-4",
+    project: "Spring Lifestyle Collection",
+    subtitle: "Product Photography — 24 SKUs",
+    client: "Provision Furniture",
+    budget: "$3,000.00",
+    deadline: "Jul 3, 2026",
+    location: "Los Angeles,CA",
+    status: "Pre-production",
+    progress: 37.5,
+  },
+  {
+    id: "ap-5",
+    project: "Spring Lifestyle Collection",
+    subtitle: "Product Photography — 24 SKUs",
+    client: "Provision Furniture",
+    budget: "$3,000.00",
+    deadline: "Jul 3, 2026",
+    location: "Los Angeles,CA",
+    status: "Pre-production",
+    progress: 37.5,
+  },
+  {
+    id: "ap-6",
+    project: "Spring Lifestyle Collection",
+    subtitle: "Product Photography — 24 SKUs",
+    client: "Provision Furniture",
+    budget: "$3,000.00",
+    deadline: "Jul 3, 2026",
+    location: "Los Angeles,CA",
+    status: "Pre-production",
+    progress: 37.5,
+  },
+  {
+    id: "ap-7",
+    project: "Spring Lifestyle Collection",
+    subtitle: "Product Photography — 24 SKUs",
+    client: "Provision Furniture",
+    budget: "$3,000.00",
+    deadline: "Jul 3, 2026",
+    location: "Los Angeles,CA",
+    status: "Pre-production",
+    progress: 37.5,
+  },
+  {
+    id: "ap-8",
+    project: "Spring Lifestyle Collection",
+    subtitle: "Product Photography — 24 SKUs",
+    client: "Provision Furniture",
+    budget: "$3,000.00",
+    deadline: "Jul 3, 2026",
+    location: "Los Angeles,CA",
+    status: "Pre-production",
+    progress: 37.5,
+  },
+];
+
+/** Filter-pill labels for the Active Projects list (single-select). */
+export const ACTIVE_PROJECT_FILTERS = [
+  "All Active",
+  "Pre-production",
+  "Production",
+  "Post-production",
+  "Client Review",
+  "Archived",
+];
+
+/**
+ * Status-badge styling for the Active Projects list. Per the spec the badge is
+ * a filled-dot lime pill (bg #d9f99d/80). We give each phase a distinct tint
+ * (matching the Dashboard STATUS_STYLES family) so the filter pills read
+ * differently, but the spec's default "Pre-production" stays lime.
+ */
+export const ACTIVE_PROJECT_STATUS_STYLES = {
+  "Pre-production": { dot: "#5b6f00", badge: "border-transparent bg-[#d9f99d]/80 text-neutral-900" },
+  Production: { dot: "#b45309", badge: "border-transparent bg-amber-100 text-neutral-900" },
+  "Post-production": { dot: "#c2410c", badge: "border-transparent bg-orange-100 text-neutral-900" },
+  "Client Review": { dot: "#be123c", badge: "border-transparent bg-rose-100 text-neutral-900" },
+  Archived: { dot: "#52525b", badge: "border-transparent bg-neutral-200 text-neutral-900" },
+};
+
+/** Pagination copy for the Active Projects footer (verbatim from spec). */
+export const ACTIVE_PROJECTS_SHOWING = 11;
+export const ACTIVE_PROJECTS_TOTAL = 48;
+
+/**
+ * PROJECT_OVERVIEW — content for the restored "Overview" tab of the single
+ * project detail page (ProjectV2, Figma 7189:24086). Consumed by the SIBLING
+ * agent that owns ProjectV2.jsx. All copy verbatim from the overview spec
+ * (project = "E-Bike Launch Campaign"). The Overview tab renders six cards:
+ * Description, Approved Budget, Project Details (4-col field row), Talent
+ * Requirements (header + subLine + body), Crew Requirements (header + subLine
+ * + body), Internal Notes.
+ */
+export const PROJECT_OVERVIEW = {
+  title: "E-Bike Launch Campaign",
+  description:
+    "E-Bike Launch campaign covering social, e-commerce, and short-form video deliverables for E-bike 2026 seasonal launch.",
+  approvedBudget: "$46,000.00",
+  details: {
+    client: "Nike",
+    budget: "$46,000.00",
+    deadline: "May 29, 2026",
+    primaryLocation: "Los Angeles, CA",
+  },
+  talentRequirements: {
+    subLine: "Admin-entered casting description for this project.",
+    body: "Seeking confident lifestyle talent for an E-bike launch campaign, with a natural, approachable look and comfortable on-camera presence. Talent should feel authentic riding or posing with an E-bike in urban and outdoor lifestyle settings. Ideal profiles include active adults, commuters, students, and young professionals who can convey ease, movement, and everyday mobility. Must be comfortable with light riding direction, helmet styling, and candid interaction shots. LA-based talent preferred; availability required for fitting and full shoot day.",
+  },
+  crewRequirements: {
+    subLine: "Staffing needs for production day.",
+    body: "Required roles include photographer or DP, camera assistant, producer or production coordinator, production assistants, hair and makeup, wardrobe stylist, and location support. Crew should be comfortable working across multiple exterior locations, managing talent movement safely around E-bikes, and keeping the shoot efficient during natural-light windows. LA-based crew preferred; must be available for prep, shoot day, and wrap.",
+  },
+  internalNotes:
+    "Confirm final shortlist with client before call sheet creation. Keep talent availability, crew holds, and budget changes synced before sending production documents.",
+};
