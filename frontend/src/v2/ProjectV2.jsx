@@ -36,6 +36,7 @@ import V2Layout from "./V2Layout";
 import TalentCard from "./TalentCard";
 import TimeLogReview from "./TimeLogReview";
 import { Button } from "@/components/shadcn/button";
+import { Card } from "@/components/shadcn/card";
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import { Label } from "@/components/shadcn/label";
@@ -70,6 +71,7 @@ import {
 
 const PROJECT_TITLE = "E-Bike Launch Campaign";
 const TABS = [
+  "Overview",
   "Production Workflow",
   "Talents",
   "Crew",
@@ -77,6 +79,33 @@ const TABS = [
   "Call Sheet",
   "Time Log",
 ];
+
+/**
+ * Overview-tab content (Yina frame 7189:24086). Reintroduces the read-only
+ * "Overview" tab she removed on Jenni's request but deliberately brought back
+ * WITH content. Kept as a local fallback constant because mockData.js does not
+ * yet export a project-overview record (scaffold agent owns that file); import
+ * it from "./mockData" once PROJECT_OVERVIEW lands there.
+ */
+const PROJECT_OVERVIEW = {
+  description:
+    "E-Bike Launch campaign covering social, e-commerce, and short-form video deliverables for E-bike 2026 seasonal launch.",
+  approvedBudget: "$46,000.00",
+  client: "Nike",
+  budget: "$46,000.00",
+  deadline: "May 29, 2026",
+  primaryLocation: "Los Angeles, CA",
+  talentRequirements: {
+    subline: "Admin-entered casting description for this project.",
+    body: "Seeking confident lifestyle talent for an E-bike launch campaign, with a natural, approachable look and comfortable on-camera presence. Talent should feel authentic riding or posing with an E-bike in urban and outdoor lifestyle settings. Ideal profiles include active adults, commuters, students, and young professionals who can convey ease, movement, and everyday mobility. Must be comfortable with light riding direction, helmet styling, and candid interaction shots. LA-based talent preferred; availability required for fitting and full shoot day.",
+  },
+  crewRequirements: {
+    subline: "Staffing needs for production day.",
+    body: "Required roles include photographer or DP, camera assistant, producer or production coordinator, production assistants, hair and makeup, wardrobe stylist, and location support. Crew should be comfortable working across multiple exterior locations, managing talent movement safely around E-bikes, and keeping the shoot efficient during natural-light windows. LA-based crew preferred; must be available for prep, shoot day, and wrap.",
+  },
+  internalNotes:
+    "Confirm final shortlist with client before call sheet creation. Keep talent availability, crew holds, and budget changes synced before sending production documents.",
+};
 
 const TALENT_FILTERS = [
   { ph: "All types", opts: ["Actor", "Model", "Dancer", "Hand Model"] },
@@ -175,7 +204,7 @@ export default function ProjectV2() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [phases, setPhases] = useState(buildInitialPhases);
-  const [activeTab, setActiveTab] = useState("Production Workflow");
+  const [activeTab, setActiveTab] = useState("Overview");
   const [filter, setFilter] = useState("");
   const [addingTo, setAddingTo] = useState(null); // phaseId with an open add-task input
   const [addTaskText, setAddTaskText] = useState("");
@@ -370,7 +399,18 @@ export default function ProjectV2() {
                   </button>
                 ))}
               </div>
-              {activeTab === "Production Workflow" ? (
+              {activeTab === "Overview" ? (
+                <div className="flex shrink-0 items-center gap-3 pb-2">
+                  <Button
+                    onClick={() => toast.success("Share link copied")}
+                    variant="outline"
+                    className="h-8 bg-white shadow-none"
+                  >
+                    <Share2 className="size-4" />
+                    Share
+                  </Button>
+                </div>
+              ) : activeTab === "Production Workflow" ? (
                 <div className="flex shrink-0 items-center gap-3 pb-2">
                   <Input
                     value={filter}
@@ -404,7 +444,9 @@ export default function ProjectV2() {
           </div>
 
           {/* Body */}
-          {activeTab === "Talents" ? (
+          {activeTab === "Overview" ? (
+            <OverviewTab data={PROJECT_OVERVIEW} />
+          ) : activeTab === "Talents" ? (
             <TalentsTab
               step={talentStep}
               setStep={setTalentStep}
@@ -701,6 +743,108 @@ export default function ProjectV2() {
         </div>
       )}
     </V2Layout>
+  );
+}
+
+/* ── Overview tab (Yina frame 7189:24086) ───────────────────────────────── */
+
+function OverviewField({ label, value }) {
+  return (
+    <div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+        {label}
+      </div>
+      <div className="mt-1 text-base font-semibold text-neutral-900">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function OverviewTab({ data }) {
+  return (
+    <div className="flex-1 space-y-4 px-6 lg:px-8 py-6">
+      {/* Row A — Description (wide) + Approved Budget (narrow) */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="gap-3 border-neutral-200 py-5 lg:col-span-2">
+          <div className="px-6">
+            <h2 className="text-lg font-semibold text-neutral-900">
+              Description
+            </h2>
+            <p className="mt-2 text-base leading-relaxed text-neutral-500">
+              {data.description}
+            </p>
+          </div>
+        </Card>
+        <Card className="gap-3 border-neutral-200 bg-[#f8f9fa] py-5">
+          <div className="px-6">
+            <h2 className="text-lg font-semibold text-neutral-900">
+              Approved Budget
+            </h2>
+            <div className="mt-2 text-2xl font-semibold tracking-tight text-neutral-900">
+              {data.approvedBudget}
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Row B — Project Details (full width) */}
+      <Card className="gap-0 border-neutral-200 py-5">
+        <div className="border-b border-neutral-200 px-6 pb-4">
+          <h2 className="text-lg font-semibold text-neutral-900">
+            Project Details
+          </h2>
+        </div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-5 px-6 pt-4 md:grid-cols-4">
+          <OverviewField label="Client" value={data.client} />
+          <OverviewField label="Budget" value={data.budget} />
+          <OverviewField label="Deadline" value={data.deadline} />
+          <OverviewField label="Primary Location" value={data.primaryLocation} />
+        </div>
+      </Card>
+
+      {/* Row C — Talent Requirements + Crew Requirements (equal halves) */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="gap-2 border-neutral-200 py-5">
+          <div className="px-6">
+            <h2 className="text-lg font-semibold text-neutral-900">
+              Talent Requirements
+            </h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              {data.talentRequirements.subline}
+            </p>
+            <p className="mt-3 text-base leading-relaxed text-neutral-500">
+              {data.talentRequirements.body}
+            </p>
+          </div>
+        </Card>
+        <Card className="gap-2 border-neutral-200 py-5">
+          <div className="px-6">
+            <h2 className="text-lg font-semibold text-neutral-900">
+              Crew Requirements
+            </h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              {data.crewRequirements.subline}
+            </p>
+            <p className="mt-3 text-base leading-relaxed text-neutral-500">
+              {data.crewRequirements.body}
+            </p>
+          </div>
+        </Card>
+      </div>
+
+      {/* Row D — Internal Notes (full width, tinted) */}
+      <Card className="gap-3 border-neutral-200 bg-[#f8f9fa] py-5">
+        <div className="px-6">
+          <h2 className="text-lg font-semibold text-neutral-900">
+            Internal Notes
+          </h2>
+          <p className="mt-2 text-base leading-relaxed text-neutral-500">
+            {data.internalNotes}
+          </p>
+        </div>
+      </Card>
+    </div>
   );
 }
 

@@ -24,9 +24,9 @@ export default function TimeLogV2() {
           <h1 className="font-display text-4xl lg:text-5xl uppercase tracking-tight leading-none">
             Time Log Overview
           </h1>
-          <p className="mt-2 max-w-xl text-sm text-neutral-500">
-            Review submitted hours, resolve exceptions, and approve payroll-ready
-            time logs.
+          <p className="mt-2 max-w-2xl text-sm text-neutral-500">
+            Review submitted hours, invoice attachments, exceptions, and approve
+            payment-ready logs.
           </p>
         </div>
 
