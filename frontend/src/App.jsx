@@ -79,6 +79,13 @@ import InvoiceDetailV2 from './v2/InvoiceDetailV2';
 import InvoiceNewV2 from './v2/InvoiceNewV2';
 import InvoiceSendV2 from './v2/InvoiceSendV2';
 import ClientDetailV2 from './v2/ClientDetailV2';
+// v2 landing + talent portal
+import LandingV2 from './v2/LandingV2';
+import TalentV2Layout from './v2/TalentV2Layout';
+import TalentDashboardV2 from './v2/TalentDashboardV2';
+import TalentPortalProfileV2 from './v2/TalentPortalProfileV2';
+import TalentEditProfileV2 from './v2/TalentEditProfileV2';
+import TalentComingSoon from './v2/TalentComingSoon';
 
 export default function App() {
   const location = useLocation();
@@ -114,6 +121,17 @@ export default function App() {
       <Route path="/production-v2/invoices/:id" element={<InvoiceDetailV2 />} />
       <Route path="/production-v2/invoices/:id/send" element={<InvoiceSendV2 />} />
       <Route path="/production-v2/clients/:id" element={<ClientDetailV2 />} />
+
+      {/* v2 landing (four-portal selector) */}
+      <Route path="/v2" element={<LandingV2 />} />
+
+      {/* Talent Portal (wf4) — talent-facing model portal */}
+      <Route path="/talent-v2" element={<TalentDashboardV2 />} />
+      <Route path="/talent-v2/profile" element={<TalentPortalProfileV2 />} />
+      <Route path="/talent-v2/profile/edit" element={<TalentEditProfileV2 />} />
+      <Route path="/talent-v2/time-log" element={<SubmitTimeV2 layout={TalentV2Layout} />} />
+      <Route path="/talent-v2/invoices" element={<WorkerInvoiceV2 layout={TalentV2Layout} />} />
+      <Route path="/talent-v2/coming-soon" element={<TalentComingSoon />} />
 
       {/* Production Portal */}
       <Route path="/production/login" element={<LoginPage portal="production" />} />
