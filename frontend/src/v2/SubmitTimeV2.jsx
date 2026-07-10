@@ -122,7 +122,12 @@ function PrimaryButton({ children, onClick }) {
   );
 }
 
-export default function SubmitTimeV2() {
+/**
+ * `layout` lets the SAME page render inside either the production shell
+ * (V2Layout, default) or the talent shell (TalentV2Layout at /talent-v2/time-log)
+ * without duplicating the page. Content is unchanged.
+ */
+export default function SubmitTimeV2({ layout: Layout = V2Layout }) {
   // Invoice method is mutually exclusive; template builder pre-selected per spec.
   const [method, setMethod] = useState("template");
 
@@ -131,7 +136,7 @@ export default function SubmitTimeV2() {
   const estimatedTotalStr = `$${ESTIMATED_TOTAL.toFixed(2)}`; // "$612.50"
 
   return (
-    <V2Layout>
+    <Layout>
       <div className="min-h-screen bg-[#f2f2ec]">
         <div className="px-6 lg:px-8 py-6">
           {/* Header */}
@@ -388,7 +393,7 @@ export default function SubmitTimeV2() {
           </div>
         </div>
       </div>
-    </V2Layout>
+    </Layout>
   );
 }
 

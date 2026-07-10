@@ -123,7 +123,12 @@ function TotalRow({ label, value, bold = false }) {
   );
 }
 
-export default function WorkerInvoiceV2() {
+/**
+ * `layout` lets the SAME page render inside either the production shell
+ * (V2Layout, default) or the talent shell (TalentV2Layout at /talent-v2/invoices)
+ * without duplicating the page. Content is unchanged.
+ */
+export default function WorkerInvoiceV2({ layout: Layout = V2Layout }) {
   const navigate = useNavigate();
   const inv = INVOICE;
 
@@ -133,7 +138,7 @@ export default function WorkerInvoiceV2() {
   };
 
   return (
-    <V2Layout>
+    <Layout>
       <div className="min-h-screen bg-[#f7f7f2]">
         {/* ── Header row ─────────────────────────────────────────────── */}
         <div
@@ -439,6 +444,6 @@ export default function WorkerInvoiceV2() {
           </div>
         </div>
       </div>
-    </V2Layout>
+    </Layout>
   );
 }

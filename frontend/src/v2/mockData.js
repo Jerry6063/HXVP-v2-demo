@@ -1134,3 +1134,191 @@ export const PROJECT_OVERVIEW = {
   internalNotes:
     "Confirm final shortlist with client before call sheet creation. Keep talent availability, crew holds, and budget changes synced before sending production documents.",
 };
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * TALENT PORTAL (wf4) — Maya-facing model portal mock.
+ *
+ * Consumed by TalentV2Layout, TalentDashboardV2, TalentPortalProfileV2, and
+ * TalentEditProfileV2. All copy is verbatim from the wf4 dash/profile/edit specs
+ * (fileKey vuZ77RgLUVtzfJKAhb1EEX), EXCEPT design slips we never copy: Yina's
+ * frame reused Sofia Lin's card data on Maya's profile (email/IG/age/rate/
+ * ethnicity/location/languages) and had an "Uplaod" typo + "Finanace" group
+ * label — all corrected here to Maya's edit-form identity (flagged to Yina).
+ * ═════════════════════════════════════════════════════════════════════════ */
+
+/* User chip + shared identity for the talent sidebar. */
+export const TALENT_PROFILE = {
+  chipName: "Maya",
+  chipEmail: "m@example.com",
+  avatar: "https://i.pravatar.cc/100?img=45",
+  photo: "https://i.pravatar.cc/320?img=45",
+
+  // Profile Overview card (read view) — 4×3 field grid. Values aligned with
+  // the edit form's Maya identity (the frame showed Sofia Lin's data here).
+  name: "MAYA LEE",
+  overviewFields: [
+    { label: "Gender", value: "Female" },
+    { label: "Age", value: "24" },
+    { label: "Rate", value: "$85/hr" },
+    { label: "Height", value: "5'8\" (173 cm)" },
+    { label: "Ethnicity", value: "East Asian" },
+    { label: "Location", value: "Los Angeles, CA" },
+    { label: "Type", value: "Model" },
+    { label: "Email", value: "maya.lee@example.com" },
+    { label: "Phone", value: "+1 (310) 555-0184" },
+    { label: "Languages", value: "English, Mandarin" },
+    { label: "Skills", value: "Yoga, Valid Driver's License" },
+    { label: "Instagram", value: "@maya.lee" },
+  ],
+  experience: {
+    highlights:
+      "Lifestyle and commercial model with experience in activewear, wellness, e-commerce, and product demonstration shoots. Comfortable with natural movement, speaking moments, and light direction on set.",
+    campaigns:
+      "E-bike launch campaign, skincare product demo series, fitness lifestyle social ads, and e-commerce apparel shoots for direct-to-consumer brands.",
+  },
+
+  // Edit-profile form defaults (distinct sample values per the edit spec).
+  editForm: {
+    legalName: "Maya Lee",
+    gender: "Female",
+    age: "24",
+    hourlyRate: "$85/hr",
+    height: "5'8\" / 173 cm",
+    ethnicity: "East Asian",
+    location: "Los Angeles, CA",
+    typeOfModel: "Commercial / Lifestyle",
+    email: "maya.lee@example.com",
+    phone: "+1 (310) 555-0184",
+    languages: "English, Mandarin",
+    instagram: "@maya.lee",
+    skills:
+      "Cycling, fitness, hand modeling, product demo, light acting, speaking moments, natural lifestyle movement",
+    experienceHighlights:
+      "Lifestyle and commercial model with experience in activewear, wellness, e-commerce, and product demonstration shoots. Comfortable with natural movement, speaking moments, and light direction on set.",
+    notableCampaigns:
+      "E-bike launch campaign, skincare product demo series, fitness lifestyle social ads, and e-commerce apparel shoots for direct-to-consumer brands.",
+  },
+};
+
+/* Casting media tiles — three status variants (Uploaded / Missing / Needs
+ * update). Shared shape between the Profile read view and the Edit view. */
+export const TALENT_CASTING_MEDIA = [
+  {
+    title: "Headshot",
+    // profile-view desc
+    desc: "Front-facing image for roster and shortlist cards.",
+    // edit-view desc
+    editDesc: "Required. Square crop shown on your profile card.",
+    status: "Uploaded",
+    action: "Replace",
+  },
+  {
+    title: "Side view",
+    editTitle: "Side view shot",
+    desc: "Full-body side profile for fit and silhouette review.",
+    editDesc: "Required. Full body side profile, vertical preferred.",
+    status: "Missing",
+    action: "Upload",
+  },
+  {
+    title: "Portfolio PDF",
+    desc: "Commercial references, comp card, and past campaign samples.",
+    editDesc: "Optional but recommended for previous commercial work.",
+    status: "Needs update",
+    action: "Upload",
+  },
+];
+
+/* Media status-pill styling (shape: { bg, text } tailwind arbitrary classes). */
+export const TALENT_MEDIA_STATUS_STYLES = {
+  Uploaded: { bg: "bg-[#d8ff00]", text: "text-[#09090b]" },
+  Missing: { bg: "bg-[#f8f9fa]", text: "text-[#71717a]" },
+  "Needs update": { bg: "bg-[#f8f9fa]", text: "text-[#71717a]" },
+};
+
+/* ── Talent Dashboard — six-card grid content, verbatim from the dash spec ── */
+export const TALENT_DASHBOARD = {
+  welcome: "WELCOME BACK, MAYA",
+  subtitle: "Here is what needs your attention before your next booking.",
+
+  profileCompletion: {
+    title: "PROFILE COMPLETION",
+    description: "Complete your casting profile so admin can book you faster.",
+    percent: 72,
+    percentLabel: "Profile ready for review",
+    helper:
+      "Next: upload side view shot, commercial work PDF, and confirm measurements.",
+  },
+
+  nextBooking: {
+    title: "NEXT CONFIRMED BOOKING",
+    description: "Your nearest confirmed project and call details.",
+    project: "E-Bike Launch Campaign",
+    when: "Jul 18, 2026 - 9:00 AM call time - Los Angeles, CA",
+    roleRate: "Role: Lifestyle model  |  Rate: $70/hr",
+  },
+
+  pendingActions: {
+    title: "PENDING ACTIONS",
+    items: [
+      {
+        title: "Confirm booking availability",
+        sub: "E-Bike Launch Campaign - due today",
+        action: "Respond",
+      },
+      {
+        title: "Complete profile media",
+        sub: "Side view shot and commercial PDF requested",
+        action: "Upload",
+      },
+      {
+        title: "Review project agreement",
+        sub: "Signature needed before shoot day",
+        action: "View",
+      },
+    ],
+  },
+
+  bookingSchedule: {
+    title: "BOOKING SCHEDULE",
+    items: [
+      {
+        project: "E-Bike Launch Campaign",
+        detail: "Confirmed - Jul 18 - Los Angeles, CA",
+        badge: "Confirmed",
+      },
+      {
+        project: "Skincare Product Launch",
+        detail: "Hold requested- Jul 24 - Dallas, TX",
+        badge: "Hold",
+      },
+      {
+        project: "Fitness Apparel Campaign",
+        detail: "Hold requested - Aug 2 - Miami, FL",
+        badge: "Hold",
+      },
+    ],
+  },
+
+  earnings: {
+    title: "EARNINGS",
+    description: "Track submitted time logs, invoices, and expected payouts.",
+    amount: "$612.50",
+    footer: "E-Bike Launch Campaign - 8.75 hrs - invoice attached",
+  },
+
+  calendar: {
+    title: "CALENDAR",
+    description: "Keep availability updated so admin can book you accurately.",
+    emphasis: "Next open availability starts Jul 20",
+    helper:
+      "Add unavailable dates, travel holds, or recurring availability blocks.",
+  },
+};
+
+/* Booking-schedule badge styling: pale-green Confirmed / amber Hold, both with
+ * a leading dot. Shape: { bg, text, dot } tailwind arbitrary classes. */
+export const TALENT_BOOKING_BADGE_STYLES = {
+  Confirmed: { bg: "bg-[#d9f99d]", text: "text-[#09090b]", dot: "bg-[#65a30d]" },
+  Hold: { bg: "bg-[#e8c468]", text: "text-[#09090b]", dot: "bg-[#b45309]" },
+};
