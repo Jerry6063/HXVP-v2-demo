@@ -1736,7 +1736,7 @@ export const SUBMISSION_STATUS_STYLES = {
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * CREW PORTAL (crew-portal-draft) — data for the crew-facing portal.
+ * CREW PORTAL (Jerry draft — pending Yina refinement) — data for the crew-facing portal.
  *
  * Persona: Xinyi Zhang, Hair & Makeup crew (she already appears in TIME_LOGS
  * on the Provision Furniture shoot). This block answers PRD §B crew reqs:
