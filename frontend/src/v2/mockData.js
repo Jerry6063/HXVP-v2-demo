@@ -2002,3 +2002,128 @@ export const CREW_BOOKING_BADGE_STYLES = {
   Request: { bg: "bg-[#e8c468]", text: "text-[#09090b]", dot: "bg-[#b45309]" },
   Wrapped: { bg: "bg-[#f8f9fa]", text: "text-[#71717a]", dot: "bg-[#a1a1aa]" },
 };
+
+/**
+ * PROJECT_BUDGET — seed rows for Yina's editable "Project Budget" chart on the
+ * Overview tab (Figma frame budgetA / node 7331:19825). Values are verbatim from
+ * the design spec. Four sections; each row carries a free-text `qty` (e.g.
+ * "1 day", "2 people", "20%", "10 images", "1 package") and a currency `rate`.
+ *
+ * Row Total is COMPUTED (not stored): for a percentage qty ("20%", "10%") the
+ * total is that percent of the rate (the rate is the base figure — e.g. agency
+ * fee 20% of $7,000 = $1,400; contingency 10% of $12,100 = $1,210); for every
+ * other row the total is leadingNumber(qty) × rate. Section subtotals and the
+ * Project Total derive from these row totals live.
+ *
+ * NOTE — intentional mismatch, per spec: the four subtotals sum to a Project
+ * Total of $18,860.00, which does NOT equal the $46,000.00 "Approved Budget" /
+ * Project Details budget shown elsewhere on the Overview tab. The spec fixes the
+ * itemized total at $18,860.00, so we follow the spec (approved budget is the
+ * ceiling; this is the itemized breakdown to date) rather than reseeding to
+ * $46,000.
+ */
+export const PROJECT_BUDGET = {
+  sections: [
+    {
+      id: "talent",
+      label: "TALENT",
+      rows: [
+        {
+          id: "talent-lead-model",
+          description: "Lead model",
+          qty: "1 day",
+          rate: "$2,400.00",
+          notes: "Hero rider, usage included",
+        },
+        {
+          id: "talent-supporting-model",
+          description: "Supporting model",
+          qty: "1 day",
+          rate: "$1,800.00",
+          notes: "Lifestyle and product shots",
+        },
+        {
+          id: "talent-agency-fee",
+          description: "Talent agency fee",
+          qty: "20%",
+          rate: "$7,000.00",
+          notes: "Adjust based on final booking",
+        },
+      ],
+    },
+    {
+      id: "crew",
+      label: "CREW",
+      rows: [
+        {
+          id: "crew-photographer",
+          description: "Photographer",
+          qty: "1 day",
+          rate: "$3,200.00",
+          notes: "Full shoot day",
+        },
+        {
+          id: "crew-hmua",
+          description: "Hair and makeup artist",
+          qty: "1 day",
+          rate: "$1,250.00",
+          notes: "Talent prep and touch-ups",
+        },
+        {
+          id: "crew-production-assistant",
+          description: "Production assistant",
+          qty: "2 people",
+          rate: "$900.00",
+          notes: "Load-in, releases, logistics",
+        },
+      ],
+    },
+    {
+      id: "production-expenses",
+      label: "PRODUCTION EXPENSES",
+      rows: [
+        {
+          id: "expenses-studio-rental",
+          description: "Studio rental",
+          qty: "1 day",
+          rate: "$1,650.00",
+          notes: "Backup indoor setup",
+        },
+        {
+          id: "expenses-equipment-rental",
+          description: "Equipment rental",
+          qty: "1 package",
+          rate: "$1,250.00",
+          notes: "Lighting and grip",
+        },
+        {
+          id: "expenses-contingency",
+          description: "Contingency",
+          qty: "10%",
+          rate: "$12,100.00",
+          notes: "Can remove for smaller shoots",
+        },
+      ],
+    },
+    {
+      id: "post-production",
+      label: "POST-PRODUCTION",
+      rows: [
+        {
+          id: "post-editing",
+          description: "Editing",
+          qty: "1 package",
+          rate: "$1,800.00",
+          notes: "Campaign selects and cutdowns",
+        },
+        {
+          id: "post-retouching",
+          description: "Retouching",
+          qty: "10 images",
+          rate: "$110.00",
+          notes: "Final product and lifestyle images",
+        },
+      ],
+    },
+  ],
+};

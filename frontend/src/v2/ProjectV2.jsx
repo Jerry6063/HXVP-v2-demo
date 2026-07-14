@@ -35,6 +35,7 @@ import {
 import V2Layout from "./V2Layout";
 import TalentCard from "./TalentCard";
 import TimeLogReview from "./TimeLogReview";
+import ProjectBudgetChart from "./ProjectBudgetChart";
 import { Button } from "@/components/shadcn/button";
 import { Card } from "@/components/shadcn/card";
 import { Input } from "@/components/shadcn/input";
@@ -238,6 +239,14 @@ export default function ProjectV2() {
     return () => clearTimeout(t);
   }, []);
 
+  // Switch tabs and reset the shared filter, so a query typed on one tab
+  // (e.g. Production Workflow) doesn't silently hide rows on another
+  // (e.g. Overview's budget items) that reuse the same `filter` state.
+  const selectTab = (tab) => {
+    setActiveTab(tab);
+    setFilter("");
+  };
+
   const togglePhase = (phaseId) =>
     setPhases((prev) =>
       prev.map((p) => (p.id === phaseId ? { ...p, open: !p.open } : p))
@@ -388,7 +397,7 @@ export default function ProjectV2() {
                 {TABS.map((tab) => (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => selectTab(tab)}
                     className={`-mb-px whitespace-nowrap border-b-2 pb-3 text-sm transition-colors ${
                       activeTab === tab
                         ? "border-[#b5d400] font-medium text-neutral-900"
@@ -400,13 +409,18 @@ export default function ProjectV2() {
                 ))}
               </div>
               {activeTab === "Overview" ? (
-                <div className="flex shrink-0 items-center gap-3 pb-2">
+                <div className="flex shrink-0 items-center gap-2 pb-2">
+                  <Input
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    className="h-9 w-[250px] bg-white text-sm"
+                    placeholder="Filter budget items"
+                  />
                   <Button
                     onClick={() => toast.success("Share link copied")}
                     variant="outline"
-                    className="h-8 bg-white shadow-none"
+                    className="h-9 bg-white shadow-none"
                   >
-                    <Share2 className="size-4" />
                     Share
                   </Button>
                 </div>
@@ -445,7 +459,7 @@ export default function ProjectV2() {
 
           {/* Body */}
           {activeTab === "Overview" ? (
-            <OverviewTab data={PROJECT_OVERVIEW} />
+            <OverviewTab data={PROJECT_OVERVIEW} query={filter} />
           ) : activeTab === "Talents" ? (
             <TalentsTab
               step={talentStep}
@@ -761,7 +775,7 @@ function OverviewField({ label, value }) {
   );
 }
 
-function OverviewTab({ data }) {
+function OverviewTab({ data, query = "" }) {
   return (
     <div className="flex-1 space-y-4 px-6 lg:px-8 py-6">
       {/* Row A — Description (wide) + Approved Budget (narrow) */}
@@ -802,6 +816,17 @@ function OverviewTab({ data }) {
           <OverviewField label="Primary Location" value={data.primaryLocation} />
         </div>
       </Card>
+
+      {/* Row B2 — Project Budget (Yina's editable chart, budgetA frame) */}
+      <div>
+        <h2 className="text-lg font-semibold text-neutral-900">
+          Project Budget
+        </h2>
+        <p className="mb-3 mt-0.5 text-sm text-neutral-500">
+          Itemized production budget · Approved budget {data.approvedBudget}
+        </p>
+        <ProjectBudgetChart query={query} />
+      </div>
 
       {/* Row C — Talent Requirements + Crew Requirements (equal halves) */}
       <div className="grid gap-4 md:grid-cols-2">
