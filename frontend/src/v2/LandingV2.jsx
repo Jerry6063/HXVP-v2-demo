@@ -3,8 +3,8 @@
  *
  * No Figma frame exists for this; designed in-system in the LIGHT v2 style.
  * Centered HXVP wordmark + "Choose your portal" subline, then four portal cards
- * in a responsive grid. Two live portals (Production, Talent) link out and carry
- * a lime accent + hover ring; two (Client, Crew) are disabled with a
+ * in a responsive grid. Three live portals (Production, Talent, Crew) link out
+ * and carry a lime accent + hover ring; one (Client) is disabled with a
  * "Coming soon" badge. Wrapped in `.v2-root` on a warm off-white full-height bg,
  * NO sidebar.
  */
@@ -41,8 +41,9 @@ const PORTALS = [
   {
     name: "Crew Portal",
     desc: "Your bookings, call sheets and time logs",
+    to: "/crew-v2",
     icon: HardHat,
-    live: false,
+    live: true,
   },
 ];
 
