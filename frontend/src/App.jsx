@@ -86,6 +86,11 @@ import TalentDashboardV2 from './v2/TalentDashboardV2';
 import TalentPortalProfileV2 from './v2/TalentPortalProfileV2';
 import TalentEditProfileV2 from './v2/TalentEditProfileV2';
 import TalentComingSoon from './v2/TalentComingSoon';
+// ── Crew portal (Jerry draft — pending Yina refinement) ──
+import CrewV2Layout, { CrewComingSoon } from './v2/CrewV2Layout';
+import CrewDashboardV2 from './v2/CrewDashboardV2';
+import CrewBookingsV2 from './v2/CrewBookingsV2';
+import CrewCallSheetsV2 from './v2/CrewCallSheetsV2';
 
 export default function App() {
   const location = useLocation();
@@ -132,6 +137,14 @@ export default function App() {
       <Route path="/talent-v2/time-log" element={<SubmitTimeV2 layout={TalentV2Layout} />} />
       <Route path="/talent-v2/invoices" element={<WorkerInvoiceV2 layout={TalentV2Layout} />} />
       <Route path="/talent-v2/coming-soon" element={<TalentComingSoon />} />
+
+      {/* ── Crew portal (Jerry draft — pending Yina refinement) — crew-facing portal ── */}
+      <Route path="/crew-v2" element={<CrewDashboardV2 />} />
+      <Route path="/crew-v2/bookings" element={<CrewBookingsV2 />} />
+      <Route path="/crew-v2/call-sheets" element={<CrewCallSheetsV2 />} />
+      <Route path="/crew-v2/time-log" element={<SubmitTimeV2 layout={CrewV2Layout} />} />
+      <Route path="/crew-v2/invoices" element={<WorkerInvoiceV2 layout={CrewV2Layout} />} />
+      <Route path="/crew-v2/coming-soon" element={<CrewComingSoon />} />
 
       {/* Production Portal */}
       <Route path="/production/login" element={<LoginPage portal="production" />} />

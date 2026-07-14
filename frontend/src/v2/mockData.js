@@ -567,7 +567,7 @@ export const TIME_LOGS = [
   {
     id: "TL-2026-0702-014",
     name: "Xinyi Zhang",
-    role: "Model",
+    role: "Hair & Makeup",
     initials: "XZ",
     project: "Provision Furniture",
     date: "JUL 02",
@@ -1733,4 +1733,272 @@ export const TALENT_SUBMISSIONS = [
 export const SUBMISSION_STATUS_STYLES = {
   Review: "bg-[#d9f99d] text-[#09090b]",
   "Changes requested": "bg-[#fde68a] text-[#09090b]",
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * CREW PORTAL (Jerry draft — pending Yina refinement) — data for the crew-facing portal.
+ *
+ * Persona: Xinyi Zhang, Hair & Makeup crew (she already appears in TIME_LOGS
+ * on the Provision Furniture shoot). This block answers PRD §B crew reqs:
+ * Accept/Decline Booking, view Call Sheet (+confirm receipt), Time Log submit,
+ * Time Log Reminder. Strings stay consistent with existing v2 projects
+ * (E-Bike Launch Campaign, TART Commercial, Provision Furniture).
+ *
+ * Consumed by CrewV2Layout (user chip), CrewDashboardV2, CrewBookingsV2 and
+ * CrewCallSheetsV2. Day rate = $50/hr H&M rate × a 10h standard day = $500/day,
+ * consistent with Xinyi's $50/hr rate in her Provision Furniture TIME_LOGS entry
+ * ($575 = 10h × $50 + 1.5h OT × $50). Earnings mirror the TalentV2 dashboard
+ * "invoice attached" pattern.
+ * ═════════════════════════════════════════════════════════════════════════ */
+
+/* User-chip identity for the crew portal sidebar. img=25 is unused elsewhere in
+ * this mock (see pravatar seeds across the file). */
+export const CREW_PROFILE = {
+  chipName: "Xinyi",
+  chipEmail: "x@example.com",
+  fullName: "Xinyi Zhang",
+  role: "Hair & Makeup",
+  initials: "XZ",
+  avatar: "https://i.pravatar.cc/100?img=25",
+  photo: "https://i.pravatar.cc/320?img=25",
+};
+
+/* Booking REQUESTS — pending Accept/Decline decisions (PRD §B: Accept/Decline
+ * Booking). Each carries project, client, dates, role, day rate, location, note.
+ * `respondBy` drives the urgency line on the dashboard + bookings queue. */
+export const CREW_BOOKING_REQUESTS = [
+  {
+    id: "REQ-2026-0714-01",
+    project: "Smart Home Product Reveal",
+    client: "GE Consumer",
+    dates: "Jul 22, 2026",
+    dateRange: "Jul 22 – Jul 23, 2026",
+    role: "Hair & Makeup",
+    dayRate: "$500/day",
+    hourlyRate: "$50/hr",
+    location: "Siren Studios, Hollywood, CA",
+    callTime: "7:30 AM",
+    respondBy: "Respond by Jul 16",
+    urgent: true,
+    note: "Two-day studio commercial. Clean, camera-ready beauty looks for two on-camera presenters demoing smart-home devices; continuity across studio vignettes. Kit provided; bring your own brush set.",
+  },
+  {
+    id: "REQ-2026-0714-02",
+    project: "TART Commercial",
+    client: "TART Beverages",
+    dates: "Jul 24, 2026",
+    dateRange: "Jul 24, 2026",
+    role: "Hair & Makeup",
+    dayRate: "$500/day",
+    hourlyRate: "$50/hr",
+    location: "Stage 4, Quixote Studios, Los Angeles, CA",
+    callTime: "7:00 AM",
+    respondBy: "Respond by Jul 19",
+    urgent: false,
+    note: "Studio beauty commercial, glossy editorial look for two principal talent. Full glam plus continuity across six setups. HD-ready product close-ups.",
+  },
+  {
+    id: "REQ-2026-0714-03",
+    project: "Provision Furniture",
+    client: "Provision Home",
+    dates: "Aug 3, 2026",
+    dateRange: "Aug 3, 2026",
+    role: "Hair & Makeup",
+    dayRate: "$500/day",
+    hourlyRate: "$50/hr",
+    location: "Provision Loft, Downtown Los Angeles, CA",
+    callTime: "8:00 AM",
+    respondBy: "Respond by Jul 28",
+    urgent: false,
+    note: "Catalog lifestyle shoot. Clean, minimal everyday looks for three talent across living-room and kitchen sets. Light grooming for two male models.",
+  },
+];
+
+/* CONFIRMED bookings — accepted, on the calendar. `callSheetId` links to the
+ * matching call sheet where one exists. */
+export const CREW_CONFIRMED_BOOKINGS = [
+  {
+    id: "BKG-2026-0702-09",
+    project: "Provision Furniture",
+    client: "Provision Home",
+    dates: "Jul 2, 2026",
+    dateRange: "Jul 2, 2026",
+    role: "Hair & Makeup",
+    dayRate: "$500/day",
+    hourlyRate: "$50/hr",
+    location: "Provision Loft, Downtown Los Angeles, CA",
+    callTime: "8:00 AM",
+    status: "Wrapped",
+    callSheetId: "CS-2026-0702",
+    note: "Shoot complete. Time log submitted — invoice attached and awaiting admin review.",
+  },
+  {
+    id: "BKG-2026-0710-11",
+    project: "E-Bike Launch Campaign",
+    client: "HXVP Marketing Group",
+    dates: "Jul 18, 2026",
+    dateRange: "Jul 18 – Jul 19, 2026",
+    role: "Hair & Makeup",
+    dayRate: "$500/day",
+    hourlyRate: "$50/hr",
+    location: "Griffith Park, Los Angeles, CA",
+    callTime: "6:30 AM",
+    status: "Confirmed",
+    callSheetId: "CS-2026-0718",
+    note: "Nearest confirmed booking. Call sheet issued — please confirm receipt before shoot day.",
+  },
+];
+
+/* CALL SHEETS — upcoming (one unconfirmed, one confirmed) + archived (2). PRD
+ * §B: view Call Sheet + confirm receipt. `status` ∈ "Unconfirmed" | "Confirmed"
+ * | "Archived" drives the pill + the "Confirm receipt" affordance. */
+export const CREW_CALL_SHEETS = [
+  {
+    id: "CS-2026-0718",
+    title: "E-Bike Launch Campaign — Day 1",
+    project: "E-Bike Launch Campaign",
+    date: "Jul 18, 2026",
+    callTime: "6:30 AM",
+    location: "Griffith Park, Los Angeles, CA",
+    status: "Unconfirmed",
+    group: "upcoming",
+    note: "Crew call 6:30 AM at the Fern Dell lot. Sunrise beauty looks; touch-up station under the east canopy.",
+  },
+  {
+    id: "CS-2026-0724",
+    title: "TART Commercial — Studio Day",
+    project: "TART Commercial",
+    date: "Jul 24, 2026",
+    callTime: "7:00 AM",
+    location: "Stage 4, Quixote Studios, Los Angeles, CA",
+    status: "Confirmed",
+    group: "upcoming",
+    note: "Glam call 7:00 AM in the upstairs H&M room. Two principals, full editorial glam before first setup at 9:00 AM.",
+  },
+  {
+    id: "CS-2026-0702",
+    title: "Provision Furniture — Loft Shoot",
+    project: "Provision Furniture",
+    date: "Jul 2, 2026",
+    callTime: "8:00 AM",
+    location: "Provision Loft, Downtown Los Angeles, CA",
+    status: "Archived",
+    group: "archived",
+    note: "Wrapped. Clean lifestyle looks across living-room and kitchen sets.",
+  },
+  {
+    id: "CS-2026-0620",
+    title: "Skincare Product Demo — Studio",
+    project: "Skincare Product Launch",
+    date: "Jun 20, 2026",
+    callTime: "7:30 AM",
+    location: "Loft 5, Smashbox Studios, Culver City, CA",
+    status: "Archived",
+    group: "archived",
+    note: "Wrapped. Dewy no-makeup looks for close-up product application.",
+  },
+];
+
+/* Call-sheet status-pill styling. Shape: { bg, text, dot } tailwind classes,
+ * mirroring TALENT_BOOKING_BADGE_STYLES. */
+export const CREW_CALL_SHEET_STATUS_STYLES = {
+  Unconfirmed: { bg: "bg-[#e8c468]", text: "text-[#09090b]", dot: "bg-[#b45309]" },
+  Confirmed: { bg: "bg-[#d9f99d]", text: "text-[#09090b]", dot: "bg-[#65a30d]" },
+  Archived: { bg: "bg-[#f8f9fa]", text: "text-[#71717a]", dot: "bg-[#a1a1aa]" },
+};
+
+/* Booking status-pill styling (confirmed-bookings list). */
+export const CREW_BOOKING_STATUS_STYLES = {
+  Confirmed: { bg: "bg-[#d9f99d]", text: "text-[#09090b]", dot: "bg-[#65a30d]" },
+  Wrapped: { bg: "bg-[#f8f9fa]", text: "text-[#71717a]", dot: "bg-[#a1a1aa]" },
+};
+
+/* CREW DASHBOARD — six-card grid content, mirroring TALENT_DASHBOARD's shape so
+ * CrewDashboardV2 can reuse the TalentDashboardV2 grid patterns. Pending actions
+ * lead with the booking-response + the "Submit time log" reminder (PRD §B: Time
+ * Log Reminder). Earnings derive from Xinyi's Provision Furniture TIME_LOGS
+ * entry ($575.00, 11.5 hrs). Schedule badges reuse CREW_BOOKING_BADGE_STYLES. */
+export const CREW_DASHBOARD = {
+  welcome: "WELCOME BACK, XINYI",
+  subtitle: "Here is what needs your attention before your next call time.",
+
+  nextBooking: {
+    title: "NEXT CONFIRMED BOOKING",
+    description: "Your nearest confirmed shoot and call details.",
+    project: "E-Bike Launch Campaign",
+    when: "Jul 18, 2026 - 6:30 AM call time - Griffith Park, Los Angeles, CA",
+    roleRate: "Role: Hair & Makeup  |  Rate: $500/day",
+  },
+
+  pendingActions: {
+    title: "PENDING ACTIONS",
+    items: [
+      {
+        title: "Respond to booking request",
+        sub: "Smart Home Product Reveal - respond by Jul 16",
+        action: "Respond",
+      },
+      {
+        title: "Submit time log",
+        sub: "Provision Furniture - Jul 2 shoot awaiting your hours",
+        action: "Submit",
+      },
+      {
+        title: "Confirm call sheet receipt",
+        sub: "E-Bike Launch Campaign - Day 1 call sheet issued",
+        action: "Confirm",
+      },
+    ],
+  },
+
+  bookingSchedule: {
+    title: "BOOKING SCHEDULE",
+    items: [
+      {
+        project: "E-Bike Launch Campaign",
+        detail: "Confirmed - Jul 18 - Griffith Park, LA",
+        badge: "Confirmed",
+      },
+      {
+        project: "Smart Home Product Reveal",
+        detail: "Request pending - Jul 22 - Siren Studios, LA",
+        badge: "Request",
+      },
+      {
+        project: "TART Commercial",
+        detail: "Request pending - Jul 24 - Quixote Studios, LA",
+        badge: "Request",
+      },
+    ],
+  },
+
+  earnings: {
+    title: "EARNINGS",
+    description: "Track submitted time logs, invoices, and expected payouts.",
+    amount: "$575.00",
+    footer: "Provision Furniture - 11.5 hrs - invoice attached",
+  },
+
+  callSheet: {
+    title: "NEXT CALL SHEET",
+    description: "Confirm receipt so production knows you are set for the day.",
+    emphasis: "E-Bike Launch Campaign — Day 1",
+    helper: "Jul 18 - 6:30 AM call - Griffith Park. Receipt not yet confirmed.",
+  },
+
+  timeLogReminder: {
+    title: "TIME LOG REMINDER",
+    description: "One shoot is waiting on your submitted hours.",
+    emphasis: "Provision Furniture - Jul 2",
+    helper:
+      "Submit your work hours and attach an invoice so admin can approve payment.",
+  },
+};
+
+/* Dashboard booking-schedule badge styling. Confirmed = pale green;
+ * Request = amber (pending Accept/Decline); Wrapped = neutral. */
+export const CREW_BOOKING_BADGE_STYLES = {
+  Confirmed: { bg: "bg-[#d9f99d]", text: "text-[#09090b]", dot: "bg-[#65a30d]" },
+  Request: { bg: "bg-[#e8c468]", text: "text-[#09090b]", dot: "bg-[#b45309]" },
+  Wrapped: { bg: "bg-[#f8f9fa]", text: "text-[#71717a]", dot: "bg-[#a1a1aa]" },
 };
