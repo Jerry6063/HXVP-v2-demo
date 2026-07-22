@@ -78,8 +78,12 @@ function CardFace({ n, title, desc }) {
         style={{ background: LIME }}
         aria-hidden="true"
       />
-      {/* white parallelogram surface */}
-      <div className="pointer-events-none absolute inset-0 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.12)]" />
+      {/* white parallelogram surface. Drop shadow matches the frame's surface
+          bleed geometry (offset 0/18px, ~26px blur) at the 25% opacity Yina
+          specced (TWEAK 2). On hover the surface flips white → bright green
+          #d8ff00 with a deeper shadow (TWEAK 5) — gated on `group` so only the
+          enterable Link (not the inert CLIENT button) turns green. */}
+      <div className="pointer-events-none absolute inset-0 bg-white shadow-[0_18px_26px_rgba(0,0,0,0.25)] transition duration-200 group-hover:bg-[#d8ff00] group-hover:shadow-[0_30px_50px_rgba(0,0,0,0.30)]" />
       {/* content, counter-skewed back to upright */}
       <div className="pointer-events-none absolute inset-0 [transform:skewX(6deg)]">
         <div className="flex h-full flex-col px-12 pb-8 pt-[76px] sm:px-14">
@@ -139,7 +143,7 @@ function PortalCard({ n, title, desc, to }) {
       <Link
         to={to}
         aria-label={`Enter ${title} portal`}
-        className="relative block h-[416px] w-full outline-none [transform:skewX(-6deg)] transition-transform duration-200 hover:[transform:skewX(-6deg)_translateY(-8px)] focus-visible:ring-2 focus-visible:ring-[#111827]/40"
+        className="group relative block h-[416px] w-full outline-none [transform:skewX(-6deg)] transition-transform duration-200 hover:[transform:skewX(-6deg)_translateY(-12px)] focus-visible:ring-2 focus-visible:ring-[#111827]/40"
       >
         {face}
       </Link>
@@ -207,7 +211,7 @@ export default function LandingV2() {
       </div>
 
       {/* ── Full-bleed lime accent bar ─────────────────────────────────── */}
-      <div className="mt-7 h-4 w-full" style={{ background: LIME }} aria-hidden="true" />
+      <div className="mt-7 h-4 w-full opacity-50" style={{ background: LIME }} aria-hidden="true" />
 
       {/* ── Description ────────────────────────────────────────────────── */}
       <div className="mx-auto w-full max-w-[1600px] px-6 pt-6 lg:px-10">
@@ -218,7 +222,7 @@ export default function LandingV2() {
 
       {/* ── Portal cards ───────────────────────────────────────────────── */}
       <div className="mx-auto w-full max-w-[1600px] px-6 pt-14 lg:px-10">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-4 xl:gap-3">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 xl:grid-cols-4 xl:gap-4">
           {CARDS.map((c) => (
             <PortalCard key={c.n} {...c} />
           ))}
@@ -295,6 +299,19 @@ export default function LandingV2() {
  *   (never copy a slip verbatim), the code says "Project management…"; flag the
  *   frame to Yina so the source gets fixed too.
  *
- * NOTE 6 — Hover lift on enterable cards is an added affordance (the static frame
- *   specifies no hover/pressed states).
+ * NOTE 6 — Hover states on enterable cards. The Portal Card component in Figma
+ *   ships only a `property1="Default"` variant — no hover/pressed variant exists —
+ *   so these are added affordances built to Yina's written direction: the card
+ *   lifts higher on hover (translateY -12px, up from -8px) and the white surface
+ *   flips to bright green #d8ff00 (button-primary-green token) with a deeper
+ *   shadow, all on a 200ms transition. Applied only to the enterable Link (gated
+ *   on the `group` class), never the inert CLIENT button.
+ *
+ * NOTE 7 — Values reconciled to the frame in Yina's spacing/shadow/divider pass:
+ *   • Card grid gap = 16px (spacing/300 token) — the frame's white surfaces (388px)
+ *     sit 404px apart origin-to-origin = 16px surface-to-surface (was 12px).
+ *   • Surface drop shadow = 0/18px offset, ~26px blur, black @ 25% opacity — offset
+ *     and blur derived from the surface's rendered shadow bleed; 25% per Yina.
+ *   • Top lime divider = #d8ff00 @ 50% opacity — pixel-confirmed against the frame
+ *     render (composited RGB 231,251,121 over the #f7f7f2 page bg).
  */
