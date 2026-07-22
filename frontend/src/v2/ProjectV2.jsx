@@ -29,6 +29,7 @@ import {
   Calendar as CalendarIcon,
   PanelRight,
   MessageSquare,
+  Pencil,
   X,
 } from "lucide-react";
 
@@ -212,6 +213,16 @@ export default function ProjectV2() {
   const [addTaskText, setAddTaskText] = useState("");
   const [addingSection, setAddingSection] = useState(false);
   const [sectionText, setSectionText] = useState("");
+
+  // Editable-in-place requirements bodies (Jun/Jenni request). Seeded from the
+  // static PROJECT_OVERVIEW; lifted here so edits persist across tab switches
+  // while ProjectV2 stays mounted.
+  const [talentReqBody, setTalentReqBody] = useState(
+    PROJECT_OVERVIEW.talentRequirements.body,
+  );
+  const [crewReqBody, setCrewReqBody] = useState(
+    PROJECT_OVERVIEW.crewRequirements.body,
+  );
 
   // selected task detail: { phaseId, taskId } | null, plus full-page flag
   const [openTask, setOpenTask] = useState(null);
@@ -460,7 +471,21 @@ export default function ProjectV2() {
 
           {/* Body */}
           {activeTab === "Overview" ? (
-            <OverviewTab data={PROJECT_OVERVIEW} />
+            <OverviewTab
+              data={{
+                ...PROJECT_OVERVIEW,
+                talentRequirements: {
+                  ...PROJECT_OVERVIEW.talentRequirements,
+                  body: talentReqBody,
+                },
+                crewRequirements: {
+                  ...PROJECT_OVERVIEW.crewRequirements,
+                  body: crewReqBody,
+                },
+              }}
+              onSaveTalent={setTalentReqBody}
+              onSaveCrew={setCrewReqBody}
+            />
           ) : activeTab === "Talents" ? (
             <TalentsTab
               step={talentStep}
@@ -780,7 +805,7 @@ function OverviewField({ label, value }) {
   );
 }
 
-function OverviewTab({ data }) {
+function OverviewTab({ data, onSaveTalent, onSaveCrew }) {
   return (
     <div className="flex-1 space-y-4 px-6 lg:px-8 py-6">
       {/* Row A — Description (wide) + Approved Budget (narrow) */}
@@ -822,34 +847,22 @@ function OverviewTab({ data }) {
         </div>
       </Card>
 
-      {/* Row C — Talent Requirements + Crew Requirements (equal halves) */}
+      {/* Row C — Talent Requirements + Crew Requirements (equal halves, editable) */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="gap-2 border-neutral-200 py-5">
-          <div className="px-6">
-            <h2 className="text-lg font-semibold text-neutral-900">
-              Talent Requirements
-            </h2>
-            <p className="mt-1 text-sm text-neutral-500">
-              {data.talentRequirements.subline}
-            </p>
-            <p className="mt-3 text-base leading-relaxed text-neutral-500">
-              {data.talentRequirements.body}
-            </p>
-          </div>
-        </Card>
-        <Card className="gap-2 border-neutral-200 py-5">
-          <div className="px-6">
-            <h2 className="text-lg font-semibold text-neutral-900">
-              Crew Requirements
-            </h2>
-            <p className="mt-1 text-sm text-neutral-500">
-              {data.crewRequirements.subline}
-            </p>
-            <p className="mt-3 text-base leading-relaxed text-neutral-500">
-              {data.crewRequirements.body}
-            </p>
-          </div>
-        </Card>
+        <RequirementsCard
+          title="Talent Requirements"
+          subline={data.talentRequirements.subline}
+          body={data.talentRequirements.body}
+          onSave={onSaveTalent}
+          toastMessage="Talent requirements updated"
+        />
+        <RequirementsCard
+          title="Crew Requirements"
+          subline={data.crewRequirements.subline}
+          body={data.crewRequirements.body}
+          onSave={onSaveCrew}
+          toastMessage="Crew requirements updated"
+        />
       </div>
 
       {/* Row D — Internal Notes (full width, tinted) */}
@@ -864,6 +877,82 @@ function OverviewTab({ data }) {
         </div>
       </Card>
     </div>
+  );
+}
+
+/**
+ * A single requirements card (Talent / Crew) that edits its body in place.
+ * Read view shows the body text with a subtle "Edit" affordance; editing swaps
+ * the body for a Textarea + Cancel/Save. Save lifts the new text to the parent
+ * (persisted in ProjectV2 state) and fires a success toast; Cancel/Escape
+ * discards. Draft state is local so the two cards edit independently.
+ */
+function RequirementsCard({ title, subline, body, onSave, toastMessage }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(body);
+
+  function startEdit() {
+    setDraft(body);
+    setEditing(true);
+  }
+  function cancel() {
+    setDraft(body);
+    setEditing(false);
+  }
+  function save() {
+    onSave(draft);
+    setEditing(false);
+    toast.success(toastMessage);
+  }
+
+  return (
+    <Card className="gap-2 border-neutral-200 py-5">
+      <div className="px-6">
+        <div className="flex items-start justify-between gap-2">
+          <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
+          {!editing && (
+            <button
+              onClick={startEdit}
+              className="inline-flex items-center gap-1 text-xs font-medium text-lime-600 hover:underline"
+            >
+              <Pencil className="size-3" />
+              Edit
+            </button>
+          )}
+        </div>
+        <p className="mt-1 text-sm text-neutral-500">{subline}</p>
+        {editing ? (
+          <div className="mt-3 space-y-2">
+            <Textarea
+              className="bg-white"
+              rows={6}
+              value={draft}
+              autoFocus
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") cancel();
+              }}
+            />
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={cancel}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={save}
+                className="bg-[#D8FF00] text-neutral-900 hover:bg-[#c2e600] shadow-none"
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-base leading-relaxed text-neutral-500">
+            {body}
+          </p>
+        )}
+      </div>
+    </Card>
   );
 }
 
