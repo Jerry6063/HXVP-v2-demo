@@ -6,10 +6,12 @@
  * Zhang, Hair & Makeup). Rendered inside CrewV2Layout. Route: /crew-v2.
  *
  * Answers PRD §B crew reqs at a glance (six-card 2×3 grid):
- *   1. NEW BOOKING REQUESTS — count + first pending request; inline
- *      Accept/Decline (in-memory) + "Review requests" → /crew-v2/bookings.
- *   2. NEXT CONFIRMED BOOKING — project/date/call-time/location + View Call
- *      Sheet → /crew-v2/call-sheets.
+ *   1. NEW BOOKING REQUESTS — count + first pending request as a chip-row
+ *      panel (amber status bar); inline Accept/Decline (in-memory) +
+ *      "View details" → /crew-v2/bookings.
+ *   2. NEXT CONFIRMED BOOKING — chip-row panel (lime status bar; date/call-
+ *      time/location/rate) + "View Booking" → /crew-v2/bookings + "Open Call
+ *      Sheet" → /crew-v2/call-sheets.
  *   3. PENDING ACTIONS — three rows (respond to booking / submit time log /
  *      confirm call-sheet receipt). Each row's button navigates to the page that
  *      completes it; the time-log row is the PRD "Time Log Reminder".
@@ -24,12 +26,13 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowRight, Check, X, Clock3, MapPin } from "lucide-react";
+import { ArrowRight, Check, X } from "lucide-react";
 
 import CrewV2Layout from "./CrewV2Layout";
 import {
   CREW_DASHBOARD,
   CREW_BOOKING_REQUESTS,
+  CREW_CONFIRMED_BOOKINGS,
   CREW_BOOKING_BADGE_STYLES,
 } from "./mockData";
 
@@ -96,6 +99,49 @@ function CardTitle({ children }) {
   );
 }
 
+/* ── booking panel (Yina's refined chip-row) ───────────────────────────────── */
+
+/* A single detail pill (date · call time · location · rate). */
+function Chip({ children }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-[#e4e4e7] bg-white px-2.5 py-1 text-xs font-medium text-[#09090b]">
+      {children}
+    </span>
+  );
+}
+
+/* Inset booking panel: a colored 8px rounded status-marker bar on the left
+ * (amber = pending request, lime = confirmed) + project/client header + an
+ * optional right-aligned note + a wrap row of detail chips. Replaces the old
+ * icon-prefixed text lines with the chip layout from Yina's refined dashboard. */
+function BookingPanel({ barClass, project, client, trailing, chips }) {
+  return (
+    <div className="mt-4 rounded-lg border border-[#e4e4e7] bg-neutral-50 p-4">
+      <div className="flex gap-3">
+        <span className={`w-2 shrink-0 self-stretch rounded-full ${barClass}`} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="truncate text-base font-semibold text-[#09090b]">
+                {project}
+              </div>
+              <div className="mt-0.5 text-sm text-[#71717a]">{client}</div>
+            </div>
+            {trailing ? (
+              <div className="shrink-0 text-xs text-[#71717a]">{trailing}</div>
+            ) : null}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {chips.map((c, i) => (
+              <Chip key={i}>{c}</Chip>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* "View all" link → routes to the given page (falls back to a toast). */
 function ViewAll({ to }) {
   if (to) {
@@ -138,6 +184,12 @@ export default function CrewDashboardV2() {
   // first pending request; the full queue lives on /crew-v2/bookings.
   const [requests, setRequests] = useState(CREW_BOOKING_REQUESTS);
   const nextRequest = requests[0] ?? null;
+
+  // Nearest confirmed booking — drives the chip-row on CARD 2. Sourced from the
+  // authoritative confirmed-bookings record so date/time/location/rate stay in
+  // sync (its own discrete fields; d.nextBooking only carries display copy).
+  const confirmed =
+    CREW_CONFIRMED_BOOKINGS.find((b) => b.status === "Confirmed") ?? null;
 
   const acceptRequest = (req) => {
     setRequests((prev) => prev.filter((r) => r.id !== req.id));
@@ -186,13 +238,15 @@ export default function CrewDashboardV2() {
 
         {/* 2 × 3 grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* CARD 1 — New Booking Requests (Accept/Decline) */}
+          {/* CARD 1 — New Booking Requests (chip-row panel + Accept/Decline) */}
           <Card>
             <div className="flex items-center justify-between">
               <CardTitle>New Booking Requests</CardTitle>
-              <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-[#eaffae] px-2 py-0.5 text-xs font-bold text-[#09090b]">
-                {requests.length}
-              </span>
+              {requests.length > 0 && (
+                <span className="inline-flex items-center rounded-full bg-[#fde68a] px-2.5 py-1 text-xs font-semibold text-[#09090b]">
+                  {requests.length} pending
+                </span>
+              )}
             </div>
 
             {nextRequest ? (
@@ -202,62 +256,42 @@ export default function CrewDashboardV2() {
                     ? "One request is waiting on your response."
                     : `${requests.length} requests are waiting on your response.`}
                 </p>
-                <div className="mt-4 rounded-lg border border-[#e4e4e7] bg-neutral-50 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-base font-semibold text-[#09090b]">
-                        {nextRequest.project}
-                      </div>
-                      <div className="mt-0.5 text-sm text-[#71717a]">
-                        {nextRequest.client}
-                      </div>
-                    </div>
-                    {nextRequest.urgent && (
-                      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#e8c468] px-2.5 py-1 text-xs font-semibold text-[#09090b]">
-                        <span className="size-1.5 rounded-full bg-[#b45309]" />
-                        Urgent
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-3 space-y-1 text-sm text-[#71717a]">
-                    <div className="flex items-center gap-1.5">
-                      <Clock3 className="size-3.5 shrink-0" />
-                      {nextRequest.dateRange} · {nextRequest.callTime} call
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="size-3.5 shrink-0" />
-                      {nextRequest.location}
-                    </div>
-                    <div>
-                      {nextRequest.role} · {nextRequest.dayRate} ·{" "}
-                      <span className="text-[#b45309]">
-                        {nextRequest.respondBy}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <BookingPanel
+                  barClass="bg-[#f59e0b]"
+                  project={nextRequest.project}
+                  client={nextRequest.client}
+                  trailing={nextRequest.respondBy}
+                  chips={[
+                    nextRequest.dates,
+                    `${nextRequest.callTime} call`,
+                    nextRequest.location,
+                    nextRequest.dayRate,
+                  ]}
+                />
                 <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={() => acceptRequest(nextRequest)}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#d8ff00] px-4 text-sm font-medium text-[#09090b] transition-colors hover:bg-[#c2e600]"
-                  >
-                    <Check className="size-4" />
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => declineRequest(nextRequest)}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#e4e4e7] bg-white px-4 text-sm font-medium text-[#09090b] transition-colors hover:bg-neutral-50"
-                  >
-                    <X className="size-4" />
-                    Decline
-                  </button>
                   <Link
                     to="/crew-v2/bookings"
-                    className="ml-auto inline-flex items-center gap-1 text-sm text-[#71717a] hover:text-[#09090b]"
+                    className="inline-flex items-center gap-1 text-sm text-[#71717a] hover:text-[#09090b]"
                   >
-                    Review requests
+                    View details
                     <ArrowRight className="size-4" />
                   </Link>
+                  <div className="ml-auto flex items-center gap-3">
+                    <button
+                      onClick={() => acceptRequest(nextRequest)}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#d8ff00] px-4 text-sm font-medium text-[#09090b] transition-colors hover:bg-[#c2e600]"
+                    >
+                      <Check className="size-4" />
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => declineRequest(nextRequest)}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#e4e4e7] bg-white px-4 text-sm font-medium text-[#09090b] transition-colors hover:bg-neutral-50"
+                    >
+                      <X className="size-4" />
+                      Decline
+                    </button>
+                  </div>
                 </div>
               </>
             ) : (
@@ -275,25 +309,51 @@ export default function CrewDashboardV2() {
             )}
           </Card>
 
-          {/* CARD 2 — Next Confirmed Booking */}
+          {/* CARD 2 — Next Confirmed Booking (chip-row panel) */}
           <Card>
             <CardTitle>{d.nextBooking.title}</CardTitle>
             <p className="mt-1 text-sm text-[#71717a]">
               {d.nextBooking.description}
             </p>
-            <div className="mt-4 text-base font-semibold text-[#09090b]">
-              {d.nextBooking.project}
-            </div>
-            <p className="mt-1 text-sm text-[#71717a]">{d.nextBooking.when}</p>
-            <p className="mt-1 text-sm text-[#71717a]">
-              {d.nextBooking.roleRate}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <OutlineLink to="/crew-v2/bookings">View Booking</OutlineLink>
-              <PrimaryLink to="/crew-v2/call-sheets">
-                View Call Sheet
-              </PrimaryLink>
-            </div>
+            {confirmed ? (
+              <>
+                <BookingPanel
+                  barClass="bg-[#d8ff00]"
+                  project={confirmed.project}
+                  client={confirmed.client}
+                  chips={[
+                    confirmed.dates,
+                    `${confirmed.callTime} call`,
+                    confirmed.location,
+                    confirmed.dayRate,
+                  ]}
+                />
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <Link
+                    to="/crew-v2/bookings"
+                    className="inline-flex items-center gap-1 text-sm text-[#71717a] hover:text-[#09090b]"
+                  >
+                    View details
+                    <ArrowRight className="size-4" />
+                  </Link>
+                  <div className="ml-auto flex items-center gap-3">
+                    <PrimaryLink to="/crew-v2/bookings">
+                      View Booking
+                    </PrimaryLink>
+                    <OutlineLink to="/crew-v2/call-sheets">
+                      Open Call Sheet
+                    </OutlineLink>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="mt-4 flex flex-wrap gap-3">
+                <PrimaryLink to="/crew-v2/bookings">View Booking</PrimaryLink>
+                <OutlineLink to="/crew-v2/call-sheets">
+                  Open Call Sheet
+                </OutlineLink>
+              </div>
+            )}
           </Card>
 
           {/* CARD 3 — Pending Actions (each row routes to its completion page) */}

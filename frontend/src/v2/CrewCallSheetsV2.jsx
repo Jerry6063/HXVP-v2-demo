@@ -22,7 +22,7 @@
  */
 import { useState } from "react";
 import { toast } from "sonner";
-import { Calendar, Clock, MapPin, FileText, Check } from "lucide-react";
+import { Calendar, Clock, MapPin, FileText, Check, MoreHorizontal } from "lucide-react";
 
 import CrewV2Layout from "./CrewV2Layout";
 import {
@@ -60,9 +60,12 @@ function StatusPill({ status }) {
   const s = CREW_CALL_SHEET_STATUS_STYLES[status];
   if (!s) return null;
   const label = status === "Unconfirmed" ? "Receipt not confirmed" : status;
+  // Yina's refined frame uses the lighter tag-yellow (#fde68a) for the
+  // not-confirmed pill; keep the darker amber dot for legible contrast.
+  const bg = status === "Unconfirmed" ? "bg-[#fde68a]" : s.bg;
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${s.bg} ${s.text}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${bg} ${s.text}`}
     >
       <span className={`size-1.5 rounded-full ${s.dot}`} />
       {label}
@@ -86,16 +89,13 @@ function Meta({ icon: Icon, children }) {
 function UpcomingCard({ cs, status, onConfirm }) {
   const confirmed = status === "Confirmed";
   return (
-    <div className="rounded-xl border border-[#e4e4e7] bg-white p-6">
+    <div className="rounded-xl border border-[#e5e7eb] bg-white p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <FileText className="size-4 shrink-0 text-[#a1a1aa]" />
-            <span className="text-xs font-medium uppercase tracking-wide text-[#a1a1aa]">
-              {cs.project}
-            </span>
+          <div className="text-xs font-semibold uppercase tracking-wide text-[#71717a]">
+            {cs.project}
           </div>
-          <h3 className="mt-2 text-base font-semibold text-[#09090b]">
+          <h3 className="mt-1.5 text-xl font-semibold text-[#111827]">
             {cs.title}
           </h3>
         </div>
@@ -110,23 +110,23 @@ function UpcomingCard({ cs, status, onConfirm }) {
       </div>
 
       {cs.note ? (
-        <p className="mt-4 rounded-lg bg-[#f7f7f2] px-4 py-3 text-sm text-[#52525b]">
+        <p className="mt-4 rounded-lg border border-[#e5e7eb] bg-[#f8fafc] px-4 py-3 text-sm text-[#111827]">
           {cs.note}
         </p>
       ) : null}
 
-      {/* Actions */}
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      {/* Actions (right-aligned per Yina's refined card) */}
+      <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
         {confirmed ? (
           <>
-            <OutlineBtn onClick={() => toast.info("Opening call sheet")}>
-              <FileText className="size-4" />
-              View call sheet
-            </OutlineBtn>
             <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[#65a30d]">
               <Check className="size-4" />
               Receipt confirmed
             </span>
+            <OutlineBtn onClick={() => toast.info("Opening call sheet")}>
+              <FileText className="size-4" />
+              View call sheet
+            </OutlineBtn>
           </>
         ) : (
           <>
@@ -148,21 +148,30 @@ function UpcomingCard({ cs, status, onConfirm }) {
 /* ── Archived compact row ──────────────────────────────────────────────────── */
 function ArchivedRow({ cs }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-t border-[#e4e4e7] px-6 py-4 first:border-t-0">
+    <div className="flex items-center justify-between gap-4 border-t border-[#e0e0e0] px-6 py-5 first:border-t-0">
       <div className="min-w-0">
-        <div className="truncate text-sm font-semibold text-[#09090b]">
+        <div className="truncate text-lg font-medium text-[#09090b]">
           {cs.title}
         </div>
-        <div className="mt-0.5 truncate text-xs text-[#71717a]">
+        <div className="mt-0.5 truncate text-sm text-[#71717a]">
           {cs.date} · {cs.callTime} call · {cs.location}
         </div>
       </div>
-      <button
-        onClick={() => toast.info("Opening call sheet")}
-        className="shrink-0 text-sm font-medium text-[#71717a] transition-colors hover:text-[#09090b]"
-      >
-        View call sheet
-      </button>
+      <div className="flex shrink-0 items-center gap-3">
+        <button
+          onClick={() => toast.info("Opening call sheet")}
+          className="text-sm font-medium text-[#71717a] transition-colors hover:text-[#09090b]"
+        >
+          View call sheet
+        </button>
+        <button
+          onClick={() => toast.info("More options")}
+          aria-label="More options"
+          className="flex size-9 items-center justify-center rounded-md text-[#71717a] transition-colors hover:bg-neutral-100 hover:text-[#09090b]"
+        >
+          <MoreHorizontal className="size-5" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -205,12 +214,12 @@ export default function CrewCallSheetsV2() {
 
         {/* Upcoming */}
         <section className="mb-10">
-          <div className="mb-3 flex items-center gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[#71717a]">
-              Upcoming
+          <div className="mb-4 flex items-center gap-3">
+            <h2 className="text-lg font-medium text-[#09090b]">
+              Upcoming Call Sheets
             </h2>
             {pendingCount > 0 ? (
-              <span className="inline-flex items-center rounded-full bg-[#e8c468] px-2 py-0.5 text-xs font-semibold text-[#09090b]">
+              <span className="inline-flex items-center rounded-full bg-[#fde68a] px-2 py-0.5 text-xs font-semibold text-[#09090b]">
                 {pendingCount} awaiting confirmation
               </span>
             ) : (
@@ -234,8 +243,8 @@ export default function CrewCallSheetsV2() {
 
         {/* Archived */}
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#71717a]">
-            Archived ({archived.length})
+          <h2 className="mb-4 text-lg font-medium text-[#09090b]">
+            Archived Call Sheets
           </h2>
           <div className="overflow-hidden rounded-xl border border-[#e4e4e7] bg-white">
             {archived.map((cs) => (
