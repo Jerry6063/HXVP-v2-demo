@@ -1,35 +1,34 @@
 /**
- * ProjectBudgetChart — Yina's editable "Project Budget" chart for the Overview
- * tab (Figma frame budgetA / node 7331:19825). Rendered 1:1 from the spec:
+ * ProjectBudgetChart — Yina's editable production budget table. Now the whole
+ * surface of the project's dedicated "Budget" tab (Figma frame
+ * "Project  Production Budget" / node 7331:19825), no longer embedded on
+ * Overview. Rendered from the spec:
  *
- *  - white rounded panel, 1px #e0e0e0 border; every row 52px tall with full-width
- *    #e0e0e0 horizontal dividers.
- *  - header row (#d1dfb4): Description | Qty | Rate | Total | Notes (+ unlabelled
- *    actions column).
- *  - four section groups; each = one section-header row (#edf3dc, UPPERCASE label
- *    + "+ Add line item" + right-aligned "Section subtotal" + bold amount), then N
- *    editable data rows (white, bold Total cell, trailing "…" row menu).
- *  - a final Project Total row (#edf3dc, 16px semibold, amount right-aligned).
+ *  - column-header row (#d1dfb4): Title (sortable, ⇅) | Qty | Rate | Total |
+ *    Notes | trailing "+" (add-column affordance).
+ *  - four collapsible section groups. Each = a section-header row (#f2f6e1,
+ *    ▼ caret + Title-case label + right-aligned "Section Subtotal: $X"), then N
+ *    editable data rows (white, leading checkbox, computed bold Total), then a
+ *    muted "Add Item…" row.
+ *  - a "+ Add section" row, then THREE project-level total rows (#f2f6e1):
+ *    PROJECT TOTAL ESTIMATED BUDGET · PROJECT TOTAL ACTUAL COST · VARIANCE.
  *
- * Editable = inline inputs styled to read as plain static text at rest
- * (borderless, transparent), with a light focus affordance. Editing Qty or Rate
- * recomputes that row's Total, its section Subtotal, and the Project Total live.
- * "+ Add line item" appends a blank editable row to the section. The row "…" menu
- * (duplicate / copy link / delete) mutates the row and fires a toast. Description
- * and Notes are editable text.
+ * Live math: each row's estimated Total is COMPUTED (percentage qty → that
+ * percent of rate; else leadingNumber(qty) × rate). Estimated total = Σ row
+ * totals; actual cost = Σ row `actual`; variance = actual − estimated. Editing a
+ * Qty/Rate recomputes that row's Total, its section subtotal, the estimated
+ * total AND the variance live (actual is a stored per-line figure; add / blank
+ * rows shift it too). Seed = "no variance yet": actual == estimated, variance $0.
  *
- * Row Total is computed, never stored: percentage qty ("20%","10%") → that
- * percent of the rate (rate is the base); otherwise leadingNumber(qty) × rate.
+ * Editable cells read as plain static text at rest (borderless/transparent) with
+ * a light focus affordance. A filter (`query`) hides non-matching rows view-only
+ * (subtotals/totals always reflect ALL rows); the row that owns focus stays
+ * mounted so typing under a live filter can never unmount the input mid-edit.
  */
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { MoreHorizontal, Copy, Link2, Trash2 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/shadcn/dropdown-menu";
+import { ChevronDown, ChevronRight, ChevronsUpDown, Plus } from "lucide-react";
+import { Checkbox } from "@/components/shadcn/checkbox";
 import { PROJECT_BUDGET } from "./mockData";
 
 /* ── number / currency helpers ─────────────────────────────────────────── */
@@ -56,21 +55,33 @@ const rowTotal = (qty, rate) => {
   return q.includes("%") ? (n / 100) * r : n * r;
 };
 
+/** Signed, colour-coded variance (actual − estimated). Over budget reads red. */
+const fmtVariance = (n) => {
+  const body = Math.abs(n).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  if (Math.abs(n) < 0.005) return { text: "$0.00", cls: "text-[#09090b]" };
+  if (n > 0) return { text: `+$${body}`, cls: "text-[#b91c1c]" }; // over budget
+  return { text: `−$${body}`, cls: "text-[#5b6f00]" }; // under budget
+};
+
 let addSeq = 0;
 const nextRowId = () => `budget-added-${++addSeq}`;
+const nextSectionId = () => `budget-section-${++addSeq}`;
 
 /* ── editable cell ─────────────────────────────────────────────────────── */
 
-function CellInput({ value, onChange, align = "left", bold = false, placeholder }) {
+function CellInput({ value, onChange, bold = false, placeholder }) {
   return (
     <input
       type="text"
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
-      className={`w-full rounded-sm bg-transparent px-1 py-0.5 text-sm text-[#09090b] outline-none placeholder:text-[#71717a] focus:bg-[#f7f7f2] focus:ring-1 focus:ring-[#b5d400] ${
-        align === "right" ? "text-right" : "text-left"
-      } ${bold ? "font-semibold" : "font-normal"}`}
+      className={`w-full rounded-sm bg-transparent px-1 py-0.5 text-left text-sm text-[#09090b] outline-none placeholder:text-[#71717a] focus:bg-[#f7f7f2] focus:ring-1 focus:ring-[#b5d400] ${
+        bold ? "font-semibold" : "font-normal"
+      }`}
     />
   );
 }
@@ -81,6 +92,7 @@ export default function ProjectBudgetChart({ query = "" }) {
   const [sections, setSections] = useState(() =>
     PROJECT_BUDGET.sections.map((s) => ({
       ...s,
+      open: true,
       rows: s.rows.map((r) => ({ ...r })),
     }))
   );
@@ -88,9 +100,13 @@ export default function ProjectBudgetChart({ query = "" }) {
   const q = query.trim().toLowerCase();
 
   // Row that currently owns keyboard focus (any of its cells). Kept visible
-  // even if its description stops matching the query, so typing under an
-  // active filter can never unmount the focused input mid-edit.
+  // even if its description stops matching the query, so typing under an active
+  // filter can never unmount the focused input mid-edit.
   const [editingRowId, setEditingRowId] = useState(null);
+  // Bulk-select checkboxes (design affordance; view-state only).
+  const [selected, setSelected] = useState(() => new Set());
+  // Title sort: null → asc → desc → null. View-only (never mutates stored order).
+  const [sortDir, setSortDir] = useState(null);
 
   const updateRow = (sectionId, rowId, patch) =>
     setSections((prev) =>
@@ -111,6 +127,7 @@ export default function ProjectBudgetChart({ query = "" }) {
           ? s
           : {
               ...s,
+              open: true,
               rows: [
                 ...s.rows,
                 {
@@ -118,6 +135,7 @@ export default function ProjectBudgetChart({ query = "" }) {
                   description: "",
                   qty: "",
                   rate: "",
+                  actual: "",
                   notes: "",
                 },
               ],
@@ -125,38 +143,36 @@ export default function ProjectBudgetChart({ query = "" }) {
       )
     );
 
-  const duplicateRow = (sectionId, rowId) => {
-    setSections((prev) =>
-      prev.map((s) => {
-        if (s.id !== sectionId) return s;
-        const idx = s.rows.findIndex((r) => r.id === rowId);
-        if (idx === -1) return s;
-        const clone = { ...s.rows[idx], id: nextRowId() };
-        const rows = [...s.rows];
-        rows.splice(idx + 1, 0, clone);
-        return { ...s, rows };
-      })
-    );
-    toast.success("Line item duplicated");
+  const addSection = () => {
+    setSections((prev) => [
+      ...prev,
+      { id: nextSectionId(), label: "New section", open: true, rows: [] },
+    ]);
+    toast.success("Section added");
   };
 
-  const deleteRow = (sectionId, rowId) => {
+  const toggleSection = (sectionId) =>
     setSections((prev) =>
-      prev.map((s) =>
-        s.id !== sectionId
-          ? s
-          : { ...s, rows: s.rows.filter((r) => r.id !== rowId) }
-      )
+      prev.map((s) => (s.id === sectionId ? { ...s, open: !s.open } : s))
     );
-    toast.success("Line item removed");
-  };
+
+  const toggleSelect = (rowId) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(rowId) ? next.delete(rowId) : next.add(rowId);
+      return next;
+    });
+
+  const cycleSort = () =>
+    setSortDir((d) => (d === null ? "asc" : d === "asc" ? "desc" : null));
 
   const reformatRate = (sectionId, rowId, raw) => {
     if (!String(raw).trim()) return; // leave blank cells blank
     updateRow(sectionId, rowId, { rate: fmtMoney(parseMoney(raw)) });
   };
 
-  // Subtotals + project total derive from ALL rows (filtering is view-only).
+  // Subtotals + the three project totals derive from ALL rows (filtering and
+  // sorting are view-only).
   const subtotals = useMemo(
     () =>
       Object.fromEntries(
@@ -167,54 +183,86 @@ export default function ProjectBudgetChart({ query = "" }) {
       ),
     [sections]
   );
-  const projectTotal = useMemo(
+  const estimatedTotal = useMemo(
     () => Object.values(subtotals).reduce((a, b) => a + b, 0),
     [subtotals]
   );
+  const actualTotal = useMemo(
+    () =>
+      sections.reduce(
+        (sum, s) => sum + s.rows.reduce((a, r) => a + parseMoney(r.actual), 0),
+        0
+      ),
+    [sections]
+  );
+  const variance = actualTotal - estimatedTotal;
+  const varianceFmt = fmtVariance(variance);
+
+  const sortRows = (rows) => {
+    if (!sortDir) return rows;
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...rows].sort(
+      (a, b) => a.description.localeCompare(b.description) * dir
+    );
+  };
 
   return (
     <div className="overflow-x-auto">
       {q && (
         <p className="mb-2 text-xs text-neutral-500">
-          Filtered view — subtotals and project total reflect all items.
+          Filtered view — subtotals and project totals reflect all items.
         </p>
       )}
-      <div className="min-w-[860px] overflow-hidden rounded-md border border-[#e0e0e0] bg-white">
+      <div className="min-w-[900px] overflow-hidden rounded-md border border-[#e4e4e7] bg-white">
         <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
           <colgroup>
-            <col style={{ width: "34%" }} />
-            <col style={{ width: "9%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "10%" }} />
+            <col style={{ width: "28%" }} />
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "12%" }} />
             <col style={{ width: "31%" }} />
             <col style={{ width: "6%" }} />
           </colgroup>
 
-          {/* Header row (#d1dfb4) */}
+          {/* Column-header row (#d1dfb4) */}
           <thead>
             <tr className="h-[52px] bg-[#d1dfb4] [&>th]:px-4">
-              <th className="text-left text-xs font-semibold text-[#09090b]">
-                Description
+              <th className="text-left">
+                <button
+                  type="button"
+                  onClick={cycleSort}
+                  className="inline-flex items-center gap-1 text-sm font-medium text-[#3f3f46]"
+                  title="Sort by title"
+                >
+                  Title
+                  <ChevronsUpDown
+                    className={`size-3.5 ${
+                      sortDir ? "text-[#5b6f00]" : "text-[#71717a]"
+                    }`}
+                  />
+                </button>
               </th>
-              <th className="text-right text-xs font-semibold text-[#09090b]">
-                Qty
+              <th className="text-left text-sm font-medium text-[#3f3f46]">Qty</th>
+              <th className="text-left text-sm font-medium text-[#3f3f46]">Rate</th>
+              <th className="text-left text-sm font-medium text-[#3f3f46]">Total</th>
+              <th className="text-left text-sm font-medium text-[#3f3f46]">Notes</th>
+              <th className="text-right">
+                <button
+                  type="button"
+                  onClick={() => toast("Custom columns are coming soon")}
+                  aria-label="Add column"
+                  title="Add column"
+                  className="inline-flex size-6 items-center justify-center rounded-sm text-[#3f3f46] hover:bg-[#c3d3a3]"
+                >
+                  <Plus className="size-4" />
+                </button>
               </th>
-              <th className="text-right text-xs font-semibold text-[#09090b]">
-                Rate
-              </th>
-              <th className="text-right text-xs font-semibold text-[#09090b]">
-                Total
-              </th>
-              <th className="text-left text-xs font-semibold text-[#09090b]">
-                Notes
-              </th>
-              <th aria-hidden="true" />
             </tr>
           </thead>
 
           <tbody>
             {sections.map((section) => {
-              const visibleRows = q
+              const filtered = q
                 ? section.rows.filter(
                     (r) =>
                       r.id === editingRowId ||
@@ -224,7 +272,8 @@ export default function ProjectBudgetChart({ query = "" }) {
               // When filtering, hide sections with no matching rows — but a
               // section holding the editing row keeps at least that row above,
               // so it (and the in-progress edit) stays mounted.
-              if (q && visibleRows.length === 0) return null;
+              if (q && filtered.length === 0) return null;
+              const visibleRows = sortRows(filtered);
 
               return (
                 <SectionGroup
@@ -232,32 +281,37 @@ export default function ProjectBudgetChart({ query = "" }) {
                   section={section}
                   visibleRows={visibleRows}
                   subtotal={subtotals[section.id]}
+                  selected={selected}
+                  onToggleSelect={toggleSelect}
+                  onToggleSection={() => toggleSection(section.id)}
                   onEditingRowChange={setEditingRowId}
                   onAddLine={() => addLineItem(section.id)}
-                  onEdit={(rowId, patch) =>
-                    updateRow(section.id, rowId, patch)
-                  }
+                  onEdit={(rowId, patch) => updateRow(section.id, rowId, patch)}
                   onRateBlur={(rowId, raw) =>
                     reformatRate(section.id, rowId, raw)
                   }
-                  onDuplicate={(rowId) => duplicateRow(section.id, rowId)}
-                  onDelete={(rowId) => deleteRow(section.id, rowId)}
                 />
               );
             })}
 
-            {/* Project Total row (#edf3dc) */}
-            <tr className="h-[52px] bg-[#edf3dc]">
-              <td className="px-4 text-base font-semibold text-[#09090b]">
-                PROJECT TOTAL
-              </td>
-              <td
-                colSpan={5}
-                className="px-6 text-right text-base font-semibold text-[#09090b]"
-              >
-                {fmtMoney(projectTotal)}
+            {/* + Add section */}
+            <tr className="h-[52px] bg-white [&>td]:border-b [&>td]:border-[#e4e4e7]">
+              <td colSpan={6} className="px-4">
+                <button
+                  type="button"
+                  onClick={addSection}
+                  className="inline-flex items-center gap-2 text-sm text-[#71717a] hover:text-[#09090b]"
+                >
+                  <Plus className="size-4" />
+                  Add section
+                </button>
               </td>
             </tr>
+
+            {/* Project-level totals (#f2f6e1) — estimated / actual / variance */}
+            <TotalRow label="PROJECT TOTAL ESTIMATED BUDGET" value={fmtMoney(estimatedTotal)} />
+            <TotalRow label="PROJECT TOTAL ACTUAL COST" value={fmtMoney(actualTotal)} />
+            <TotalRow label="VARIANCE" value={varianceFmt.text} valueClass={varianceFmt.cls} />
           </tbody>
         </table>
       </div>
@@ -265,135 +319,139 @@ export default function ProjectBudgetChart({ query = "" }) {
   );
 }
 
-/* ── section group: header row + data rows ─────────────────────────────── */
+/* ── project total row ─────────────────────────────────────────────────── */
+
+function TotalRow({ label, value, valueClass = "text-[#09090b]" }) {
+  return (
+    <tr className="h-[52px] bg-[#f2f6e1] [&>td]:border-b [&>td]:border-[#e4e4e7]">
+      <td colSpan={3} className="px-4 text-base font-semibold text-[#09090b]">
+        {label}
+      </td>
+      <td className={`px-4 text-left text-base font-semibold ${valueClass}`}>
+        {value}
+      </td>
+      <td colSpan={2} />
+    </tr>
+  );
+}
+
+/* ── section group: header row + data rows + add-item row ───────────────── */
 
 function SectionGroup({
   section,
   visibleRows,
   subtotal,
+  selected,
+  onToggleSelect,
+  onToggleSection,
   onEditingRowChange,
   onAddLine,
   onEdit,
   onRateBlur,
-  onDuplicate,
-  onDelete,
 }) {
   return (
     <>
-      {/* Section header row (#edf3dc) */}
-      <tr className="h-[52px] bg-[#edf3dc] [&>td]:border-b [&>td]:border-[#e0e0e0]">
+      {/* Section-header row (#f2f6e1) — caret + label · Section Subtotal */}
+      <tr className="h-[52px] bg-[#f2f6e1] [&>td]:border-b [&>td]:border-[#e4e4e7]">
         <td className="px-4">
-          <div className="flex items-center">
-            <span className="text-xs font-semibold uppercase text-[#09090b]">
-              {section.label}
-            </span>
+          <button
+            type="button"
+            onClick={onToggleSection}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#09090b]"
+          >
+            {section.open ? (
+              <ChevronDown className="size-4 text-[#3f3f46]" />
+            ) : (
+              <ChevronRight className="size-4 text-[#3f3f46]" />
+            )}
+            {section.label}
+          </button>
+        </td>
+        <td colSpan={3} className="whitespace-nowrap px-4 text-right text-sm text-[#09090b]">
+          Section Subtotal:{" "}
+          <span className="font-semibold">{fmtMoney(subtotal)}</span>
+        </td>
+        <td colSpan={2} />
+      </tr>
+
+      {/* Data rows (white, grid dividers) */}
+      {section.open &&
+        visibleRows.map((row) => (
+          <tr
+            key={row.id}
+            onFocus={() => onEditingRowChange(row.id)}
+            onBlur={(e) => {
+              // Keep the edit "active" while focus hops between cells of the
+              // same row; only release when focus leaves the row entirely.
+              if (!e.currentTarget.contains(e.relatedTarget)) {
+                onEditingRowChange((current) =>
+                  current === row.id ? null : current
+                );
+              }
+            }}
+            className="h-[52px] bg-white [&>td]:border-b [&>td]:border-[#e4e4e7]"
+          >
+            <td className="border-r px-4">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={selected.has(row.id)}
+                  onCheckedChange={() => onToggleSelect(row.id)}
+                  className="size-4 shrink-0 border-[#a1a1aa]"
+                  aria-label="Select line item"
+                />
+                <CellInput
+                  value={row.description}
+                  placeholder="Title"
+                  onChange={(v) => onEdit(row.id, { description: v })}
+                />
+              </div>
+            </td>
+            <td className="border-r px-3">
+              <CellInput
+                value={row.qty}
+                placeholder="Qty"
+                onChange={(v) => onEdit(row.id, { qty: v })}
+              />
+            </td>
+            <td className="border-r px-3">
+              <input
+                type="text"
+                value={row.rate}
+                placeholder="Rate"
+                onChange={(e) => onEdit(row.id, { rate: e.target.value })}
+                onBlur={(e) => onRateBlur(row.id, e.target.value)}
+                className="w-full rounded-sm bg-transparent px-1 py-0.5 text-left text-sm font-normal text-[#09090b] outline-none placeholder:text-[#71717a] focus:bg-[#f7f7f2] focus:ring-1 focus:ring-[#b5d400]"
+              />
+            </td>
+            {/* Total — computed, read-only, bold */}
+            <td className="border-r px-4 text-left text-sm font-semibold text-[#09090b]">
+              {fmtMoney(rowTotal(row.qty, row.rate))}
+            </td>
+            <td className="border-r px-3">
+              <CellInput
+                value={row.notes}
+                placeholder="Notes"
+                onChange={(v) => onEdit(row.id, { notes: v })}
+              />
+            </td>
+            <td />
+          </tr>
+        ))}
+
+      {/* Add Item… row (muted) */}
+      {section.open && (
+        <tr className="h-[52px] bg-white [&>td]:border-b [&>td]:border-[#e4e4e7]">
+          <td colSpan={6} className="px-4">
             <button
               type="button"
               onClick={onAddLine}
-              className="ml-auto mr-2 whitespace-nowrap text-sm font-medium text-[#09090b] hover:underline"
+              className="text-sm text-[#71717a] hover:text-[#09090b]"
             >
-              + Add line item
+              Add Item…
             </button>
-          </div>
-        </td>
-        <td />
-        <td />
-        <td className="whitespace-nowrap px-4 text-right align-middle text-xs font-normal text-[#09090b]">
-          Section subtotal
-        </td>
-        <td className="px-4 text-left align-middle text-sm font-semibold text-[#09090b]">
-          {fmtMoney(subtotal)}
-        </td>
-        <td />
-      </tr>
-
-      {/* Data rows (white) */}
-      {visibleRows.map((row) => (
-        <tr
-          key={row.id}
-          onFocus={() => onEditingRowChange(row.id)}
-          onBlur={(e) => {
-            // Keep the edit "active" while focus hops between cells of the
-            // same row; only release when focus leaves the row entirely.
-            if (!e.currentTarget.contains(e.relatedTarget)) {
-              onEditingRowChange((current) =>
-                current === row.id ? null : current
-              );
-            }
-          }}
-          className="h-[52px] bg-white [&>td]:border-b [&>td]:border-[#e0e0e0]"
-        >
-          <td className="px-3">
-            <CellInput
-              value={row.description}
-              placeholder="Description"
-              onChange={(v) => onEdit(row.id, { description: v })}
-            />
-          </td>
-          <td className="px-3">
-            <CellInput
-              value={row.qty}
-              align="right"
-              placeholder="Qty"
-              onChange={(v) => onEdit(row.id, { qty: v })}
-            />
-          </td>
-          <td className="px-3">
-            <input
-              type="text"
-              value={row.rate}
-              placeholder="Rate"
-              onChange={(e) => onEdit(row.id, { rate: e.target.value })}
-              onBlur={(e) => onRateBlur(row.id, e.target.value)}
-              className="w-full rounded-sm bg-transparent px-1 py-0.5 text-right text-sm font-normal text-[#09090b] outline-none placeholder:text-[#71717a] focus:bg-[#f7f7f2] focus:ring-1 focus:ring-[#b5d400]"
-            />
-          </td>
-          {/* Total — computed, read-only, bold (only bold cell in a data row) */}
-          <td className="px-4 text-right text-sm font-semibold text-[#09090b]">
-            {fmtMoney(rowTotal(row.qty, row.rate))}
-          </td>
-          <td className="px-3">
-            <CellInput
-              value={row.notes}
-              placeholder="Notes"
-              onChange={(v) => onEdit(row.id, { notes: v })}
-            />
-          </td>
-          {/* Actions — "…" row menu (data rows only) */}
-          <td className="text-center">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Row actions"
-                  className="inline-flex size-7 items-center justify-center rounded-sm text-[#09090b] hover:bg-[#f2f2ec]"
-                >
-                  <MoreHorizontal className="size-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuItem onClick={() => onDuplicate(row.id)}>
-                  <Copy className="size-4" />
-                  Duplicate
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => toast.success("Line item link copied")}
-                >
-                  <Link2 className="size-4" />
-                  Copy link
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => onDelete(row.id)}
-                  className="text-red-600 focus:text-red-600"
-                >
-                  <Trash2 className="size-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </td>
         </tr>
-      ))}
+      )}
     </>
   );
 }

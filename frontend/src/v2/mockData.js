@@ -1926,8 +1926,6 @@ export const CREW_DASHBOARD = {
     title: "NEXT CONFIRMED BOOKING",
     description: "Your nearest confirmed shoot and call details.",
     project: "E-Bike Launch Campaign",
-    when: "Jul 18, 2026 - 6:30 AM call time - Griffith Park, Los Angeles, CA",
-    roleRate: "Role: Hair & Makeup  |  Rate: $500/day",
   },
 
   pendingActions: {
@@ -2004,35 +2002,56 @@ export const CREW_BOOKING_BADGE_STYLES = {
 };
 
 /**
- * PROJECT_BUDGET — seed rows for Yina's editable "Project Budget" chart on the
- * Overview tab (Figma frame budgetA / node 7331:19825). Values are verbatim from
- * the design spec. Four sections; each row carries a free-text `qty` (e.g.
- * "1 day", "2 people", "20%", "10 images", "1 package") and a currency `rate`.
+ * PROJECT_BUDGET — seed rows for Yina's editable Project Budget table, now its
+ * own dedicated "Budget" project tab (Figma frame "Project  Production Budget" /
+ * node 7331:19825). Four sections; each row carries a free-text `qty` (e.g.
+ * "1 day", "2 people", "20%", "10 images", "1 package"), a currency `rate`, and
+ * an `actual` currency figure (what was actually spent on that line).
  *
- * Row Total is COMPUTED (not stored): for a percentage qty ("20%", "10%") the
- * total is that percent of the rate (the rate is the base figure — e.g. agency
- * fee 20% of $7,000 = $1,400; contingency 10% of $12,100 = $1,210); for every
- * other row the total is leadingNumber(qty) × rate. Section subtotals and the
- * Project Total derive from these row totals live.
+ * Row estimated Total is COMPUTED (not stored): for a percentage qty ("20%",
+ * "10%") it is that percent of the rate (rate is the base — agency fee 20% of
+ * $7,000 = $1,400; contingency 10% of $12,100 = $1,210); otherwise it is
+ * leadingNumber(qty) × rate. Section subtotals + the three project-level totals
+ * derive live from the rows:
+ *   PROJECT TOTAL ESTIMATED BUDGET = Σ row estimated totals
+ *   PROJECT TOTAL ACTUAL COST      = Σ row `actual`
+ *   VARIANCE                       = actual − estimated
  *
- * NOTE — intentional mismatch, per spec: the four subtotals sum to a Project
- * Total of $18,860.00, which does NOT equal the $46,000.00 "Approved Budget" /
- * Project Details budget shown elsewhere on the Overview tab. The spec fixes the
- * itemized total at $18,860.00, so we follow the spec (approved budget is the
- * ceiling; this is the itemized breakdown to date) rather than reseeding to
- * $46,000.
+ * Seed is the design's "no variance yet" state: each row's `actual` equals its
+ * estimated total, so estimated = actual = $18,860.00 and variance = $0.00 —
+ * matching the three total figures printed in the frame. Editing any Qty/Rate
+ * recomputes estimated + variance live.
+ *
+ * ── DATA SLIPS FLAGGED (kept faithful/correct here; confirm with Yina) ────────
+ * The frame's printed section subtotals + $18,860 grand total do NOT reconcile
+ * with the rows it draws, so we compute everything live instead of hard-coding:
+ *   • The frame's Talent section shows only 2 rows (Model, Talent agency fee)
+ *     yet prints "Section Subtotal: $5,600.00" — which is the OLD 3-row total.
+ *     We KEEP all three rows (Lead model + Supporting model + agency fee), so the
+ *     live subtotal is a correct $5,600.00 AND the grand estimated total lands on
+ *     the frame's headline $18,860.00. (Dropping the row would make both wrong.)
+ *   • The frame's Post-production shows only Editing yet prints "$4,110.00"
+ *     (a copy of the Production-expenses subtotal). We keep Editing + Retouching;
+ *     the live subtotal is a correct $2,900.00. The printed $4,110 is a slip.
+ * Per project convention we do NOT copy the stale/mismatched printed figures —
+ * we keep the richer, self-consistent data and let the table compute totals.
+ *
+ * NOTE: the $18,860.00 estimated total still does NOT equal the $46,000.00
+ * "Approved Budget" shown on the Overview tab — that is intended (approved budget
+ * is the ceiling; this is the itemized breakdown to date).
  */
 export const PROJECT_BUDGET = {
   sections: [
     {
       id: "talent",
-      label: "TALENT",
+      label: "Talent",
       rows: [
         {
           id: "talent-lead-model",
           description: "Lead model",
           qty: "1 day",
           rate: "$2,400.00",
+          actual: "$2,400.00",
           notes: "Hero rider, usage included",
         },
         {
@@ -2040,6 +2059,7 @@ export const PROJECT_BUDGET = {
           description: "Supporting model",
           qty: "1 day",
           rate: "$1,800.00",
+          actual: "$1,800.00",
           notes: "Lifestyle and product shots",
         },
         {
@@ -2047,19 +2067,21 @@ export const PROJECT_BUDGET = {
           description: "Talent agency fee",
           qty: "20%",
           rate: "$7,000.00",
+          actual: "$1,400.00",
           notes: "Adjust based on final booking",
         },
       ],
     },
     {
       id: "crew",
-      label: "CREW",
+      label: "Crew",
       rows: [
         {
           id: "crew-photographer",
           description: "Photographer",
           qty: "1 day",
           rate: "$3,200.00",
+          actual: "$3,200.00",
           notes: "Full shoot day",
         },
         {
@@ -2067,6 +2089,7 @@ export const PROJECT_BUDGET = {
           description: "Hair and makeup artist",
           qty: "1 day",
           rate: "$1,250.00",
+          actual: "$1,250.00",
           notes: "Talent prep and touch-ups",
         },
         {
@@ -2074,19 +2097,21 @@ export const PROJECT_BUDGET = {
           description: "Production assistant",
           qty: "2 people",
           rate: "$900.00",
+          actual: "$1,800.00",
           notes: "Load-in, releases, logistics",
         },
       ],
     },
     {
       id: "production-expenses",
-      label: "PRODUCTION EXPENSES",
+      label: "Production expenses",
       rows: [
         {
           id: "expenses-studio-rental",
           description: "Studio rental",
           qty: "1 day",
           rate: "$1,650.00",
+          actual: "$1,650.00",
           notes: "Backup indoor setup",
         },
         {
@@ -2094,6 +2119,7 @@ export const PROJECT_BUDGET = {
           description: "Equipment rental",
           qty: "1 package",
           rate: "$1,250.00",
+          actual: "$1,250.00",
           notes: "Lighting and grip",
         },
         {
@@ -2101,19 +2127,21 @@ export const PROJECT_BUDGET = {
           description: "Contingency",
           qty: "10%",
           rate: "$12,100.00",
+          actual: "$1,210.00",
           notes: "Can remove for smaller shoots",
         },
       ],
     },
     {
       id: "post-production",
-      label: "POST-PRODUCTION",
+      label: "Post-production expenses",
       rows: [
         {
           id: "post-editing",
           description: "Editing",
           qty: "1 package",
           rate: "$1,800.00",
+          actual: "$1,800.00",
           notes: "Campaign selects and cutdowns",
         },
         {
@@ -2121,6 +2149,7 @@ export const PROJECT_BUDGET = {
           description: "Retouching",
           qty: "10 images",
           rate: "$110.00",
+          actual: "$1,100.00",
           notes: "Final product and lifestyle images",
         },
       ],

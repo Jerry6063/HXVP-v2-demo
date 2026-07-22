@@ -79,6 +79,7 @@ const TABS = [
   "Contract",
   "Call Sheet",
   "Time Log",
+  "Budget",
 ];
 
 /**
@@ -241,7 +242,7 @@ export default function ProjectV2() {
 
   // Switch tabs and reset the shared filter, so a query typed on one tab
   // (e.g. Production Workflow) doesn't silently hide rows on another
-  // (e.g. Overview's budget items) that reuse the same `filter` state.
+  // (e.g. the Budget tab's line items) that reuse the same `filter` state.
   const selectTab = (tab) => {
     setActiveTab(tab);
     setFilter("");
@@ -393,14 +394,14 @@ export default function ProjectV2() {
               {PROJECT_TITLE}
             </h1>
             <div className="mt-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-6 overflow-x-auto">
+              <div className="flex items-center gap-1 overflow-x-auto">
                 {TABS.map((tab) => (
                   <button
                     key={tab}
                     onClick={() => selectTab(tab)}
-                    className={`-mb-px whitespace-nowrap border-b-2 pb-3 text-sm transition-colors ${
+                    className={`-mb-px whitespace-nowrap rounded-t-md border-b-2 px-2.5 pb-2.5 pt-1.5 text-sm transition-colors ${
                       activeTab === tab
-                        ? "border-[#b5d400] font-medium text-neutral-900"
+                        ? "border-[#5b6f00] bg-[#eaffae] font-semibold text-[#09090b]"
                         : "border-transparent text-neutral-500 hover:text-neutral-800"
                     }`}
                   >
@@ -408,12 +409,12 @@ export default function ProjectV2() {
                   </button>
                 ))}
               </div>
-              {activeTab === "Overview" ? (
+              {activeTab === "Budget" ? (
                 <div className="flex shrink-0 items-center gap-2 pb-2">
                   <Input
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
-                    className="h-9 w-[250px] bg-white text-sm"
+                    className="h-9 w-44 bg-white text-sm"
                     placeholder="Filter budget items"
                   />
                   <Button
@@ -459,7 +460,7 @@ export default function ProjectV2() {
 
           {/* Body */}
           {activeTab === "Overview" ? (
-            <OverviewTab data={PROJECT_OVERVIEW} query={filter} />
+            <OverviewTab data={PROJECT_OVERVIEW} />
           ) : activeTab === "Talents" ? (
             <TalentsTab
               step={talentStep}
@@ -486,6 +487,10 @@ export default function ProjectV2() {
                 scopedProject="E-Bike Launch"
                 externalQuery={filter}
               />
+            </div>
+          ) : activeTab === "Budget" ? (
+            <div className="flex-1 px-6 lg:px-8 py-6">
+              <ProjectBudgetChart query={filter} />
             </div>
           ) : activeTab !== "Production Workflow" ? (
             <div className="flex flex-1 items-center justify-center px-6 py-20 text-sm text-neutral-400">
@@ -775,7 +780,7 @@ function OverviewField({ label, value }) {
   );
 }
 
-function OverviewTab({ data, query = "" }) {
+function OverviewTab({ data }) {
   return (
     <div className="flex-1 space-y-4 px-6 lg:px-8 py-6">
       {/* Row A — Description (wide) + Approved Budget (narrow) */}
@@ -816,17 +821,6 @@ function OverviewTab({ data, query = "" }) {
           <OverviewField label="Primary Location" value={data.primaryLocation} />
         </div>
       </Card>
-
-      {/* Row B2 — Project Budget (Yina's editable chart, budgetA frame) */}
-      <div>
-        <h2 className="text-lg font-semibold text-neutral-900">
-          Project Budget
-        </h2>
-        <p className="mb-3 mt-0.5 text-sm text-neutral-500">
-          Itemized production budget · Approved budget {data.approvedBudget}
-        </p>
-        <ProjectBudgetChart query={query} />
-      </div>
 
       {/* Row C — Talent Requirements + Crew Requirements (equal halves) */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -875,6 +869,26 @@ function OverviewTab({ data, query = "" }) {
 
 /* ── Task detail (shared by drawer + full-page) ─────────────────────────── */
 
+// Stable, module-level wrappers so TaskDetail can switch presentation without
+// remounting its subtree. Defining these inside render (as a `const Wrapper`)
+// would mint a new component identity every render, unmounting the children and
+// wiping their state (comment draft, focus) on each keystroke.
+function FullPageWrapper({ children }) {
+  return <div className="flex min-h-screen flex-col">{children}</div>;
+}
+
+function PanelWrapper({ onClose, children }) {
+  return (
+    <>
+      {/* light backdrop — keeps the list visible, click to close */}
+      <div className="fixed inset-0 z-30 bg-black/10" onClick={onClose} />
+      <aside className="fixed inset-y-0 right-0 z-40 flex w-[700px] max-w-full flex-col overflow-y-auto border-l border-neutral-200 bg-white shadow-2xl">
+        {children}
+      </aside>
+    </>
+  );
+}
+
 function TaskDetail({
   task,
   fullPage,
@@ -910,22 +924,10 @@ function TaskDetail({
     toast.success("Comment added");
   };
 
-  const Wrapper = fullPage
-    ? ({ children }) => (
-        <div className="flex min-h-screen flex-col">{children}</div>
-      )
-    : ({ children }) => (
-        <>
-          {/* light backdrop — keeps the list visible, click to close */}
-          <div className="fixed inset-0 z-30 bg-black/10" onClick={onClose} />
-          <aside className="fixed inset-y-0 right-0 z-40 flex w-[700px] max-w-full flex-col overflow-y-auto border-l border-neutral-200 bg-white shadow-2xl">
-            {children}
-          </aside>
-        </>
-      );
+  const Wrapper = fullPage ? FullPageWrapper : PanelWrapper;
 
   return (
-    <Wrapper>
+    <Wrapper onClose={onClose}>
       {/* Top bar */}
       <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-3">
         <Button variant="outline" size="sm" onClick={onMarkComplete}>
