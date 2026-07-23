@@ -25,6 +25,18 @@ import {
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/shadcn/avatar";
 import { Toaster } from "@/components/shadcn/sonner";
+import {
+  sbAsideStyle,
+  sbWordmarkStyle,
+  sbNavStyle,
+  sbGroupsStyle,
+  sbLabelStyle,
+  sbItemsStyle,
+  sbNavItemStyle,
+  sbIconStyle,
+  sbChipWrapStyle,
+  sbChipBtnStyle,
+} from "./sidebarSizing";
 
 const LIME = "#D8FF00";
 
@@ -77,16 +89,17 @@ const NAV_GROUPS = [
 function NavItem({ to, label, icon: Icon, end }) {
   const isStub = to === "#";
   const base =
-    "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors";
+    "flex items-center gap-2.5 rounded-md px-3 font-medium transition-colors";
   if (isStub) {
     return (
       <a
         href="#"
         onClick={(e) => e.preventDefault()}
+        style={sbNavItemStyle}
         className={`${base} text-neutral-600 hover:bg-neutral-100`}
       >
-        <Icon className="size-4 shrink-0" />
-        {label}
+        <Icon style={sbIconStyle} className="shrink-0" />
+        <span className="min-w-0 flex-1 truncate whitespace-nowrap">{label}</span>
       </a>
     );
   }
@@ -94,6 +107,7 @@ function NavItem({ to, label, icon: Icon, end }) {
     <NavLink
       to={to}
       end={end}
+      style={sbNavItemStyle}
       className={({ isActive }) =>
         `${base} ${
           isActive
@@ -102,8 +116,8 @@ function NavItem({ to, label, icon: Icon, end }) {
         }`
       }
     >
-      <Icon className="size-4 shrink-0" />
-      {label}
+      <Icon style={sbIconStyle} className="shrink-0" />
+      <span className="min-w-0 flex-1 truncate whitespace-nowrap">{label}</span>
     </NavLink>
   );
 }
@@ -113,33 +127,48 @@ export default function V2Layout({ children }) {
   return (
     <div className="v2-root flex min-h-screen bg-neutral-50 text-neutral-900">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-neutral-200 bg-white">
+      <aside
+        style={sbAsideStyle}
+        className="hidden md:flex shrink-0 self-start sticky top-0 h-svh flex-col border-r border-neutral-200 bg-white"
+      >
         <Link
           to="/v2"
           aria-label="Back to portal selector"
-          className="block px-5 pt-6 pb-4 transition-opacity hover:opacity-70"
+          style={sbWordmarkStyle}
+          className="block shrink-0 px-5 transition-opacity hover:opacity-70"
         >
           <div className="font-display text-2xl tracking-tight leading-none">
             HXVP
           </div>
           <div className="text-xs text-neutral-500 mt-1">Production Portal</div>
         </Link>
-        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-5">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.label}>
-              <div className="px-3 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-                {group.label}
+        <nav
+          style={sbNavStyle}
+          className="flex-1 min-h-0 overflow-y-auto px-3"
+        >
+          <div style={sbGroupsStyle}>
+            {NAV_GROUPS.map((group) => (
+              <div key={group.label}>
+                <div
+                  style={sbLabelStyle}
+                  className="px-3 font-medium uppercase tracking-wide text-neutral-400"
+                >
+                  {group.label}
+                </div>
+                <div style={sbItemsStyle}>
+                  {group.items.map((item) => (
+                    <NavItem key={item.label} {...item} />
+                  ))}
+                </div>
               </div>
-              <div className="space-y-0.5">
-                {group.items.map((item) => (
-                  <NavItem key={item.label} {...item} />
-                ))}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </nav>
-        <div className="border-t border-neutral-200 p-3">
-          <button className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left hover:bg-neutral-100">
+        <div style={sbChipWrapStyle} className="shrink-0 border-t border-neutral-200">
+          <button
+            style={sbChipBtnStyle}
+            className="flex w-full items-center gap-3 rounded-md px-2 text-left hover:bg-neutral-100"
+          >
             <Avatar className="size-9 rounded-md">
               <AvatarImage src="https://i.pravatar.cc/100?img=68" alt="Shadcn" />
               <AvatarFallback className="rounded-md">SC</AvatarFallback>
