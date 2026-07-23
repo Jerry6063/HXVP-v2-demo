@@ -8,18 +8,22 @@
  * each with a lime #d8ff00 offset shadow, and a footer (status dot + links).
  *
  * ── Geometry & scaling (see NOTE 7 / NOTE 8) ────────────────────────────────
- * The frame is a FIXED 1920×1080 canvas — margins 160, container 1600, card
- * surface 388×408 with 16px gaps, title/number 48px, description 14px. A fixed
- * px port of that overflows real laptop viewports (which are ~790–860px tall at
- * 100%). So the whole page is now FLUID:
- *   • One shared container width `--content = min(1600px, 84.17vw)` feeds header,
- *     hero, description, cards and footer, so every section shares the frame's
- *     left/right edges and the layout scales with viewport width. At 1920 it is
- *     exactly the frame (1600 container / 160 margins / 388 cards); at 1440 it is
- *     the frame ×0.75 (1212 container / 291 cards).
- *   • Cards fill the container 4-across with 16px gaps and take their height from
- *     `aspect-ratio: 388/408`, so they stay square-ish like the frame instead of
- *     the old fixed 416px tower.
+ * The frame is a FIXED 1920×1080 canvas. All exterior card geometry below is
+ * PIXEL-MEASURED from a 1920-wide render of Yina's frame (node metadata was wrong
+ * twice — it claimed 388px surfaces / 16px gaps / margin 160; the pixels say
+ * otherwise). A fixed-px port also overflows real laptops (~790–860px tall at
+ * 100%), so the whole page is FLUID:
+ *   • TWO measured containers, both centred, because the frame does NOT share one
+ *     edge for everything: the text sections (header, hero, lime-bar span,
+ *     description, footer) start at design x≈160 → `--content = min(1600px,
+ *     84.17vw)` (margin 160); the CARD ROW is a narrower, separately-measured
+ *     column — white surfaces span design x 182→1737 → `--cardw = min(1554px,
+ *     80.94vw)` (margin 183), i.e. the cards sit ~23px inside the text margin.
+ *   • Cards fill --cardw 4-across with a proportional gap (62px at 1920 → the
+ *     frame's 404px pitch) and take their height from `aspect-ratio: 342/407`
+ *     (measured 342px wide × 407px tall, aspect 0.841 — noticeably more portrait
+ *     than the metadata's near-square 388×408). Height is unchanged (~407) so the
+ *     vertical rhythm carries over untouched; only width/gap/margin move.
  *   • Card typography/padding scale with each card's OWN width via container-query
  *     units (cqw), so "same content scale" holds at any card size (48px title =
  *     12.371cqw = 48/388, etc.).
@@ -55,20 +59,49 @@ const FONT_INTER = '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif';
 const FONT_DISPLAY = '"League Gothic", "Bebas Neue", "Arial Narrow", sans-serif';
 
 const INK = "#111827";
-const LIME = "#d8ff00"; // button-primary-green — offset shadow + accent bar + dot
-const TILE = "#eaffae"; // button-secondary-green — CTA arrow tile (NOTE 4)
-const GHOST = "#e0e0e0"; // line-default — ghost numbers + rules
+const LIME = "#d8ff00"; // button-primary-green — accent bar + footer dot + HOVER surface
+const TILE = "#eaffae"; // button-secondary-green — CTA arrow tile (component fill, confirmed)
+// Card offset backdrop / sliver. READ FROM THE COMPONENT (node "Lime Offset Shape /
+// button-primary-green"): its true paint is button-primary-green #d8ff00 at 25% opacity —
+// NOT the opaque pale #f1fbb9 the code sampled off the render. That earlier sample
+// (~(232,242,176) top / ~(224,234,172) mid) was this same paint ALREADY darkened by the
+// white surface's drop-shadow: #d8ff00@25% over the page (#f7f7f2) → (239,249,182), then
+// the surface shadow (rgba(15,20,31,0.16)) over it → the (203–239, 212–249, 158–182)
+// gradient the pixels showed. So we now render the component's TRUE fill and let our
+// (now component-matched) surface shadow darken the visible sliver. See NOTE 7 / TWEAK 6.
+const SHADOW_LIME = "rgba(216, 255, 0, 0.25)"; // #d8ff00 @ 25% — component fill
+const GHOST = "#e0e0e0"; // line-default — ghost "01" numbers
+const RULE = "#e5e7eb"; // gray-200 — footer divider + card surface stroke (component uses #E5E7EB, NOT line-default)
 
-// Shared container width. Reproduces the frame's 1600-in-1920 proportion but
-// tuned so a 1440-wide viewport yields a 1212px container → 291px cards, i.e. the
-// frame's 388px card ×0.75 (matches the DOM-assert target within ±2px). Capped at
-// the frame's native 1600 for ≥1900px-wide screens.
+// Text/section container width (header, hero, lime bar span, description, footer).
+// Pixel-measured from Yina's render: the wordmark / eyebrow / title / footer all
+// start at design x≈160 at 1920 → a 1600 container (margin 160). Capped at 1600 for
+// ≥1900px screens; below that it scales at 84.17vw (1440 → 1212).
 const CONTENT = "min(1600px, 84.17vw)";
 
+// Card-row container width — MEASURED SEPARATELY from the text container. Scanline
+// pixel measurement of the frame (do NOT trust node metadata: it claimed 388px
+// surfaces / 16px gaps / margin 160, all wrong) gives the white card surfaces at
+// design x 182→1737 at 1920: four 342px surfaces on a 404px pitch → 62px gaps, a
+// 1554px card span centred in 1920 (margin 183). So the cards sit ~23px INSIDE the
+// text margin and get their own, narrower centred container. 1554/1920 = 80.94vw,
+// capped at the frame's native 1554 for wide screens.
+const CARDW = "min(1554px, 80.94vw)";
+// Card grid gap as a fraction of CARDW so it tracks the container: 62/1554 = 0.0397.
+// With 4 columns this yields card = (CARDW − 3·gap)/4 = 0.2202·CARDW = 342 at 1920.
+const CARD_GAP = "calc(var(--cardw) * 0.03970)";
+
 // container-query typography for the card interior, expressed as % of the card's
-// own width (cqw) against the frame's 388px card so the content scale is exact:
-//   48/388 = 12.371 · 14/388 = 3.608 · 12/388 = 3.093 · 16/388 = 4.124
-// Small text keeps a px floor via clamp() so it stays legible on narrow laptops.
+// own width (cqw). REBASED 388→342 (×388/342 = 1.1345): a pixel comparison of card 1
+// against the frame at 1920 showed the frame keeps the interior at its ORIGINAL
+// ABSOLUTE px on the real 342-wide surface, so the earlier /388 denominators had
+// shrunk everything ~12% (title 42px vs the frame's 48). Denominators are now /342 so
+// each interior px lands at the frame value at 1920: title/01 48/342 = 14.035cqw;
+// desc 14/342 = 4.093cqw; ENTER 12/342 = 3.509cqw; arrow 16/342 = 4.679cqw; tile
+// 45/342 = 13.302cqw × 38/342 = 11.111cqw; offset backdrop 12/342 = 3.509cqw. Small
+// text keeps a px floor via clamp() for narrow laptops. Vertical rhythm also rebased,
+// with the 01→title gap opened a touch beyond the pure rebase (title marginTop 8.8cqw)
+// to match the frame's measured 48px cap-to-cap gap (mismatch b).
 const CARDS = [
   {
     n: "01",
@@ -106,24 +139,29 @@ function CardFace({ n, title, desc }) {
           the skewed <a>/<button>, i.e. the parallelogram itself. Without this the
           counter-skewed (upright) content layer would form a rectangle at the grid
           cell that overlaps the neighbour's slanted tip and steals its clicks. */}
-      {/* lime #d8ff00 offset shadow, 12px(388-scale) down-right, behind the surface */}
+      {/* lime offset backdrop, ~12px down-right, behind the white surface. Only a thin
+          sliver shows past the surface's right/bottom edges (frame: 13px right / 12px
+          bottom). Color is the COMPONENT'S true fill — #d8ff00 @ 25% (SHADOW_LIME); the
+          surface's drop-shadow darkens the visible sliver onto the frame's gradient
+          (see TWEAK 6). Offset 3.509cqw = 12px at the measured 342px card. */}
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: LIME, transform: "translate(3.093cqw, 3.093cqw)" }}
+        style={{ background: SHADOW_LIME, transform: "translate(3.509cqw, 3.509cqw)" }}
         aria-hidden="true"
       />
-      {/* white parallelogram surface. Drop shadow matches the frame's surface
-          bleed geometry (offset 0/18px, ~26px blur) at the 25% opacity Yina
-          specced (TWEAK 2). On hover the surface flips white → bright green
-          #d8ff00 with a deeper shadow (TWEAK 5) — gated on `group` so only the
+      {/* white parallelogram surface. Fill #fff + 1px stroke #e5e7eb, plus a drop shadow
+          READ FROM THE COMPONENT: 0/18px offset, 40px blur, −14px spread,
+          rgba(15,20,31,0.16) (Figma feDropShadow — the earlier "black @ 25% / 26px blur"
+          was a misread). On hover the surface flips white → bright green #d8ff00 with a
+          deeper lift shadow (added affordance, NOTE 6) — gated on `group` so only the
           enterable Link (not the inert CLIENT button) turns green. */}
-      <div className="pointer-events-none absolute inset-0 bg-white shadow-[0_18px_26px_rgba(0,0,0,0.25)] transition duration-200 group-hover:bg-[#d8ff00] group-hover:shadow-[0_30px_50px_rgba(0,0,0,0.30)]" />
+      <div className="pointer-events-none absolute inset-0 box-border border border-[#e5e7eb] bg-white shadow-[0_18px_40px_-14px_rgba(15,20,31,0.16)] transition duration-200 group-hover:bg-[#d8ff00] group-hover:shadow-[0_30px_50px_rgba(0,0,0,0.30)]" />
       {/* content, counter-skewed back to upright. All sizes are cqw (share of the
           card's own width) so they scale 1:1 with the card at any viewport. */}
       <div className="pointer-events-none absolute inset-0 [transform:skewX(6deg)]">
         <div
           className="flex h-full flex-col"
-          style={{ padding: "14.4cqw 13.4cqw 8cqw" }}
+          style={{ padding: "16.9cqw 7.31cqw 2.34cqw" }}
         >
           <span
             style={{
@@ -131,7 +169,7 @@ function CardFace({ n, title, desc }) {
               fontStyle: "italic",
               fontWeight: 600,
               color: GHOST,
-              fontSize: "12.371cqw",
+              fontSize: "14.035cqw",
               lineHeight: 1.05,
             }}
           >
@@ -143,9 +181,9 @@ function CardFace({ n, title, desc }) {
               fontStyle: "italic",
               fontWeight: 700,
               color: INK,
-              fontSize: "12.371cqw",
+              fontSize: "14.035cqw",
               lineHeight: 1.05,
-              marginTop: "6.2cqw",
+              marginTop: "8.8cqw",
             }}
           >
             {title}
@@ -155,10 +193,10 @@ function CardFace({ n, title, desc }) {
               fontFamily: FONT_INTER,
               fontStyle: "italic",
               color: INK,
-              fontSize: "clamp(9px, 3.608cqw, 14px)",
+              fontSize: "clamp(9px, 4.093cqw, 14px)",
               lineHeight: 1.571,
-              marginTop: "4.8cqw",
-              maxWidth: "69.07cqw",
+              marginTop: "5.446cqw",
+              maxWidth: "78.35cqw",
             }}
           >
             {desc}
@@ -170,23 +208,32 @@ function CardFace({ n, title, desc }) {
                 fontStyle: "italic",
                 fontWeight: 600,
                 color: INK,
-                fontSize: "clamp(9px, 3.093cqw, 12px)",
+                fontSize: "clamp(9px, 3.509cqw, 12px)",
                 letterSpacing: "0.12em",
               }}
             >
               ENTER
             </span>
+            {/* CTA arrow tile — a PARALLELOGRAM leaning left like the card, per the
+                component (node "CTA Arrow Tile", path M5 0H45.5L41 38H0L5 0Z → corners
+                TL(5,0) TR(45.5,0) BR(41,38) BL(0,38): bottom edge shifted left, same lean
+                as the card). The tile's own path measures ~-7deg (a touch steeper than the
+                card's -6.1deg), so we use the COMPONENT's actual value skewX(-7deg). Width
+                12cqw≈41px so the skewed horizontal extent lands on the component's 45.5px
+                box; the arrow glyph is counter-skewed skewX(7deg) to read upright.
+                Non-interactive (the parent Link/button owns the click) — hit/click unchanged. */}
             <span
               className="flex items-center justify-center"
-              style={{ background: TILE, width: "11.727cqw", height: "9.794cqw" }}
+              style={{ background: TILE, width: "12cqw", height: "11.111cqw", transform: "skewX(-7deg)" }}
             >
               <span
                 style={{
                   fontFamily: FONT_INTER,
                   fontWeight: 600,
                   color: INK,
-                  fontSize: "clamp(11px, 4.124cqw, 16px)",
+                  fontSize: "clamp(11px, 4.679cqw, 16px)",
                   lineHeight: 1,
+                  transform: "skewX(7deg)",
                 }}
               >
                 &rarr;
@@ -212,7 +259,11 @@ function PortalCard({ n, title, desc, to }) {
   // hover.
   const shared = {
     containerType: "inline-size",
-    aspectRatio: "388 / 408",
+    // MEASURED card shape: 342px wide × 407px tall at 1920 (aspect 0.841) — much
+    // more portrait than the metadata's 388×408 (0.951). Height is essentially
+    // unchanged (408→407) so the vertical rhythm is preserved; only the width and
+    // therefore the aspect narrow.
+    aspectRatio: "342 / 407",
   };
 
   if (enterable) {
@@ -246,7 +297,7 @@ export default function LandingV2() {
   return (
     <div
       className="v2-root flex w-full flex-col overflow-x-hidden text-[#111827]"
-      style={{ background: "#f7f7f2", minHeight: "100svh", "--content": CONTENT }}
+      style={{ background: "#f7f7f2", minHeight: "100svh", "--content": CONTENT, "--cardw": CARDW }}
     >
       {/* ── Header ─────────────────────────────────────────────────────── */}
       {/* Frame's header ROW is 64px tall (y 32→96) with the wordmark vertically
@@ -372,9 +423,16 @@ export default function LandingV2() {
           (card block stays balanced, no dead band hugging the footer). */}
       <div aria-hidden="true" style={{ flex: "75 0 0" }} />
 
-      {/* ── Portal cards ───────────────────────────────────────────────── */}
-      <div className="mx-auto w-full" style={{ width: "var(--content)" }}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* ── Portal cards ───────────────────────────────────────────────────
+          Own container (--cardw = 1554 at 1920, margin 183) — NARROWER than the
+          text container (--content), matching the measured card span. Gap is a
+          fraction of --cardw (62px at 1920) so the four 342px surfaces reproduce
+          the frame's 404px pitch. */}
+      <div className="mx-auto w-full" style={{ width: "var(--cardw)" }}>
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4"
+          style={{ gap: CARD_GAP }}
+        >
           {CARDS.map((c) => (
             <PortalCard key={c.n} {...c} />
           ))}
@@ -398,7 +456,7 @@ export default function LandingV2() {
         <div
           className="flex flex-col gap-4 border-t sm:flex-row sm:items-center sm:justify-between"
           style={{
-            borderColor: GHOST,
+            borderColor: RULE,
             paddingTop: "clamp(22px, calc(var(--content) * 0.0234), 37.5px)",
           }}
         >
@@ -464,11 +522,19 @@ export default function LandingV2() {
  *   targets, so they're inert link-styled text. "Need access? Contact admin" is a
  *   non-link prompt, per the frame.
  *
- * NOTE 4 — Colors read from the render, not tokenized. The full-bleed accent bar's
- *   fill is not in get_variable_defs; the rendered PNG sits between #d8ff00 and
- *   #eaffae. Used #d8ff00 (brand token, matches card shadows + footer dot) — confirm
- *   with Yina. The CTA arrow tile uses #eaffae (button-secondary-green, "likely" per
- *   spec, not visually confirmed).
+ * NOTE 4 — Colors now READ FROM THE COMPONENT fills (not the render). Every colored
+ *   element was checked against Yina's component SVG paths / node fills:
+ *     • page bg #f7f7f2 (bg-lime-50) · wordmark/nav/eyebrow/title/subtitle/card
+ *       title/desc/ENTER/arrow/footer texts all #111827 · "01" ghost #e0e0e0
+ *       (line-default) — all already matched, unchanged.
+ *     • accent bar: Vector 1 stroke #d8ff00 @ 0.5 opacity — confirmed, unchanged.
+ *     • CTA arrow tile: #eaffae (button-secondary-green) — CONFIRMED by the tile's
+ *       own SVG fill, unchanged.
+ *     • footer dot #d8ff00 — confirmed, unchanged.
+ *     • CHANGED to match the component: lime offset sliver #d8ff00 @ 25% (was opaque
+ *       #f1fbb9 — see TWEAK 6); footer divider + card surface stroke #e5e7eb (was
+ *       #e0e0e0 — the component uses gray-200 for rules, NOT the line-default token);
+ *       surface drop shadow rgba(15,20,31,0.16) 0/18/40/−14 (was black @ 25% / 26px).
  *
  * NOTE 5 — Copy slip corrected. Yina's frame reads "Projects management, call
  *   sheets, and contracts." — a typo for "Project management." Per our convention
@@ -483,18 +549,37 @@ export default function LandingV2() {
  *   transition. Applied only to the enterable Link (gated on the `group` class),
  *   never the inert CLIENT button.
  *
- * NOTE 7 — Card geometry reconciled to the frame's Portal Card component
- *   (node 7344:19940): white surface 388×408, lime offset shape +12/+12, four
- *   instances on a 404px pitch → 16px surface-to-surface gap. Interior at 388-scale:
- *   number/title Roboto Condensed Italic 48px, description Inter Italic 14px/22px,
- *   ENTER 12px, CTA arrow tile 45.5×38, arrow 16px. These are the source of the cqw
- *   ratios above. Surface drop shadow 0/18px offset, ~26px blur, black @ 25%; top
- *   lime divider #d8ff00 @ 50% opacity — both pixel-confirmed against the render.
+ * NOTE 7 — Card geometry is PIXEL-MEASURED from a 1920 render, NOT node metadata
+ *   (the component reported 388×408 / 16px gap / margin 160 — all wrong, and it had
+ *   misled the team twice). A horizontal scanline at the card mid-height (skew ≈ 0
+ *   there) classifying white-surface / lime / background runs, plus a white-count
+ *   row profile for the top/bottom edges, gives at the 1920 design reference:
+ *     white surface 342 × 407 (aspect 0.841) · surface-to-surface gap 62 · pitch
+ *     404 · card row design x 182→1737, span 1554, centred → margin 183 · card row
+ *     top y ≈ 440, bottom y ≈ 847. (Text sections measure at margin 160 separately.)
+ *   Interior type/padding are ALSO pixel-measured now (see the CARDS comment + TWEAK 6):
+ *   the frame keeps the interior at its original absolute px on the real 342 surface, so
+ *   the cqw denominators are /342 (title/01 48px, desc 14px, ENTER 12px, arrow 16px,
+ *   tile 45×38px, side padding ~25px, offset backdrop 12px), reproducing the frame's
+ *   card-1 interior to ≤3px at 1920. Surface drop shadow is now the COMPONENT'S own
+ *   Figma effect — 0/18px offset, 40px blur, −14px spread, rgba(15,20,31,0.16) — plus a
+ *   1px #e5e7eb stroke; top lime divider #d8ff00 @ 50% opacity — preserved.
+ *
+ * TWEAK 6 — Card offset sliver IS #d8ff00, at 25% opacity (CORRECTED from the component).
+ *   The component node "Lime Offset Shape / button-primary-green" has fill #d8ff00 with
+ *   fill-opacity 0.25 — the saturated brand tone IS the sliver's paint, just at low alpha.
+ *   The earlier reading (opaque pale #f1fbb9) mistook the SHADOWED render for the paint:
+ *   the pixel sample (~(232,242,176) top / ~(224,234,172) mid) is #d8ff00@25% composited
+ *   over the page (#f7f7f2 → (239,249,182)) and then darkened by the surface's drop-shadow.
+ *   We now set SHADOW_LIME = rgba(216,255,0,0.25) (the true fill) and let the (also
+ *   component-matched) surface shadow reproduce that gradient over the visible sliver.
+ *   The ENTER tile stays the paler #eaffae (button-secondary-green) — a different token.
  *
  * NOTE 8 — Single-viewport fit. The frame is a fixed 1920×1080 artboard; ported at
  *   fixed px it overflowed real laptops (~790–860px tall at 100%). The page is now
- *   fluid (see the header comment): one `--content` container drives every section,
- *   cards derive height from aspect-ratio 388/408, interior type scales via cqw, and
+ *   fluid (see the header comment): a `--content` container drives the text sections
+ *   and a separate narrower `--cardw` drives the card row; cards derive height from
+ *   aspect-ratio 342/407 (measured), interior type scales via cqw, and
  *   vertical rhythm reproduces the frame's y-list via `--content`-scaled top-block
  *   gaps plus the 75 : 148.5 flex-grow spacers around the card row (footer rides the
  *   lower spacer to the viewport bottom). Result is a faithful scaling of Yina's
