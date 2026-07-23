@@ -23,8 +23,14 @@
  *   • Card typography/padding scale with each card's OWN width via container-query
  *     units (cqw), so "same content scale" holds at any card size (48px title =
  *     12.371cqw = 48/388, etc.).
- *   • Vertical rhythm scales with `--content` too, and the footer is pushed down
- *     with mt-auto, so the column fits inside one viewport with no scroll.
+ *   • Vertical rhythm reproduces the frame's 1920×1080 section y-positions: the
+ *     top block (header row 64 / eyebrow / title / lime / subtitle) uses fixed
+ *     `--content`-scaled gaps that hit the frame's y-list at 1920, then TWO
+ *     flex-grow spacers (ratio 75 : 148.5 = subtitle→cards : cards→footer, the
+ *     frame's own distribution) sit above and below the card row. So at 1920 the
+ *     cards land at the frame's y=440 and taller viewports spread the extra
+ *     height in that ratio (card block stays balanced) instead of dumping it all
+ *     below the cards; the footer rides the lower spacer to the viewport bottom.
  *
  * Parallelogram = CSS skewX(-6deg) on the interactive element (the measured
  * lime-shadow right edge slopes -6.1deg), with the content counter-skewed
@@ -243,11 +249,15 @@ export default function LandingV2() {
       style={{ background: "#f7f7f2", minHeight: "100svh", "--content": CONTENT }}
     >
       {/* ── Header ─────────────────────────────────────────────────────── */}
+      {/* Frame's header ROW is 64px tall (y 32→96) with the wordmark vertically
+          centred — reserve that row (height) so downstream section tops line up
+          with the frame, and offset it 32 from the page top with marginTop. */}
       <header
         className="mx-auto flex w-full items-center justify-between"
         style={{
           width: "var(--content)",
-          paddingTop: "clamp(18px, calc(var(--content) * 0.02), 32px)",
+          marginTop: "clamp(16px, calc(var(--content) * 0.02), 32px)",
+          height: "clamp(40px, calc(var(--content) * 0.04), 64px)",
         }}
       >
         <span
@@ -311,7 +321,8 @@ export default function LandingV2() {
             fontSize: "clamp(40px, calc(var(--content) * 0.06), 96px)",
             lineHeight: 0.92,
             maxWidth: "calc(var(--content) * 0.66)",
-            marginTop: "clamp(12px, calc(var(--content) * 0.015), 24px)",
+            // eyebrow→title gap: frame 46 (eyebrow box bottom 174 → title top 220)
+            marginTop: "clamp(22px, calc(var(--content) * 0.02875), 46px)",
           }}
         >
           Choose Your HXVP Workspace
@@ -324,7 +335,8 @@ export default function LandingV2() {
         style={{
           background: LIME,
           height: "clamp(9px, calc(var(--content) * 0.01), 16px)",
-          marginTop: "clamp(12px, calc(var(--content) * 0.015), 24px)",
+          // title→lime gap: frame 8 (title box bottom 308 → lime top 316)
+          marginTop: "clamp(5px, calc(var(--content) * 0.005), 8px)",
         }}
         aria-hidden="true"
       />
@@ -334,7 +346,8 @@ export default function LandingV2() {
         className="mx-auto w-full"
         style={{
           width: "var(--content)",
-          paddingTop: "clamp(8px, calc(var(--content) * 0.0106), 17px)",
+          // lime→subtitle gap: frame 9 (lime bottom 332 → subtitle top 341)
+          paddingTop: "clamp(6px, calc(var(--content) * 0.005625), 9px)",
         }}
       >
         <p
@@ -349,14 +362,18 @@ export default function LandingV2() {
         </p>
       </div>
 
+      {/* ── Spacer A (subtitle → cards) ────────────────────────────────────
+          The frame does NOT center the card block in the leftover height — it
+          sits high-of-center: 75px above the cards vs 148.5px below (surface
+          bottom 848 → footer divider 996.5). Instead of one mt-auto that dumps
+          ALL slack below the cards, TWO flex-grow spacers split the free space
+          in the frame's 75 : 148.5 ratio, so at 1920×1080 the cards land at the
+          frame's y=440 and taller viewports distribute the extra proportionally
+          (card block stays balanced, no dead band hugging the footer). */}
+      <div aria-hidden="true" style={{ flex: "75 0 0" }} />
+
       {/* ── Portal cards ───────────────────────────────────────────────── */}
-      <div
-        className="mx-auto w-full"
-        style={{
-          width: "var(--content)",
-          paddingTop: "clamp(28px, calc(var(--content) * 0.0469), 75px)",
-        }}
-      >
+      <div className="mx-auto w-full" style={{ width: "var(--content)" }}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {CARDS.map((c) => (
             <PortalCard key={c.n} {...c} />
@@ -364,18 +381,26 @@ export default function LandingV2() {
         </div>
       </div>
 
+      {/* ── Spacer B (cards → footer) — frame ratio 148.5 (see Spacer A) ─── */}
+      <div aria-hidden="true" style={{ flex: "148.5 0 0" }} />
+
       {/* ── Footer ─────────────────────────────────────────────────────── */}
+      {/* No mt-auto: Spacer B above already pins the footer to the bottom. The
+          footer block occupies the frame's 83.5px (divider y 996.5 → page bottom
+          1080): divider→content 37.5 + content + 24 bottom margin. */}
       <footer
-        className="mx-auto mt-auto w-full"
+        className="mx-auto w-full"
         style={{
           width: "var(--content)",
-          paddingTop: "clamp(28px, calc(var(--content) * 0.04), 64px)",
           paddingBottom: "clamp(16px, calc(var(--content) * 0.015), 24px)",
         }}
       >
         <div
-          className="flex flex-col gap-4 border-t pt-5 sm:flex-row sm:items-center sm:justify-between"
-          style={{ borderColor: GHOST }}
+          className="flex flex-col gap-4 border-t sm:flex-row sm:items-center sm:justify-between"
+          style={{
+            borderColor: GHOST,
+            paddingTop: "clamp(22px, calc(var(--content) * 0.0234), 37.5px)",
+          }}
         >
           <span className="flex items-center gap-3">
             <span
@@ -470,9 +495,12 @@ export default function LandingV2() {
  *   fixed px it overflowed real laptops (~790–860px tall at 100%). The page is now
  *   fluid (see the header comment): one `--content` container drives every section,
  *   cards derive height from aspect-ratio 388/408, interior type scales via cqw, and
- *   vertical rhythm scales with `--content` with the footer pinned by mt-auto. Result
- *   is a faithful scaling of Yina's frame — same proportions, no redesign — that
- *   fits 1440×790 / 1512×860 / 1280×700 without vertical scroll and renders at the
- *   frame's full reference scale on taller (≥900px) viewports. Confirm the fluid
- *   behaviour with Yina; the frame itself remains the fixed-canvas source of truth.
+ *   vertical rhythm reproduces the frame's y-list via `--content`-scaled top-block
+ *   gaps plus the 75 : 148.5 flex-grow spacers around the card row (footer rides the
+ *   lower spacer to the viewport bottom). Result is a faithful scaling of Yina's
+ *   frame — same proportions AND the same vertical distribution, no redesign — that
+ *   fits 1440×790 / 1512×860 / 1280×700 without vertical scroll, pixel-matches the
+ *   frame's section y-positions at 1920×1080, and spreads extra height on taller
+ *   viewports in the frame's ratio. Confirm the fluid behaviour with Yina; the frame
+ *   itself remains the fixed-canvas source of truth.
  */
