@@ -161,8 +161,17 @@ function CardFace({ n, title, desc }) {
       <div className="pointer-events-none absolute inset-0 [transform:skewX(6deg)]">
         <div
           className="flex h-full flex-col"
-          style={{ padding: "16.9cqw 7.31cqw 2.34cqw" }}
+          // Asymmetric padding: left 11.1cqw (≈38px) — the frame insets 01/title/desc
+          // ~34px from the surface's left edge, NOT the 7.31cqw (~25px) the symmetric
+          // padding gave (measured frame PRODUCTION design-x 221 vs our old 208). Right
+          // stays 7.31cqw so the right-aligned ENTER/tile keep matching (frame tile-left
+          // 457 ≈ ours). Top 16.9cqw pins "01" centre at design y≈524.
+          style={{ padding: "16.9cqw 7.31cqw 2.34cqw 11.1cqw" }}
         >
+          {/* The frame staggers the three left edges (component left: 01=66, title=59,
+              desc=50 → measured design-x 01≈228, title 221, desc 212): each higher
+              element sits ~7-9px further right, echoing the italic lean. Base padding
+              places the title; 01 nudges right +7px (2.05cqw), desc left −9px below. */}
           <span
             style={{
               fontFamily: FONT_COND,
@@ -171,6 +180,7 @@ function CardFace({ n, title, desc }) {
               color: GHOST,
               fontSize: "14.035cqw",
               lineHeight: 1.05,
+              marginLeft: "2.05cqw",
             }}
           >
             {n}
@@ -197,11 +207,15 @@ function CardFace({ n, title, desc }) {
               lineHeight: 1.571,
               marginTop: "5.446cqw",
               maxWidth: "78.35cqw",
+              marginLeft: "-2.63cqw",
             }}
           >
             {desc}
           </p>
           <span className="mt-auto flex items-center justify-end gap-2">
+            {/* ENTER — Inter SemiBold Italic 12px, NO letter-spacing (frame run 38px,
+                not the tracked 46px). The italic face (1,600) now ships from index.html;
+                before, italic-600 was being synthesised from the 1,400 italic. */}
             <span
               style={{
                 fontFamily: FONT_INTER,
@@ -209,7 +223,6 @@ function CardFace({ n, title, desc }) {
                 fontWeight: 600,
                 color: INK,
                 fontSize: "clamp(9px, 3.509cqw, 12px)",
-                letterSpacing: "0.12em",
               }}
             >
               ENTER
@@ -321,24 +334,31 @@ export default function LandingV2() {
         >
           HXVP / STUDIO
         </span>
-        <nav className="flex items-center gap-6 sm:gap-10">
+        {/* Nav — Figma has NO letter-spacing on either item (text-sm styles,
+            letterSpacing 0). The frame separates them by ~137px at 1920 (MAIN SITE
+            right edge design 1498 → INTERNAL PORTAL left 1635), a product of Yina's
+            fixed 156/260 right-aligned boxes; reproduced here as a --content-scaled
+            gap (137/1600 = 0.0856) with INTERNAL PORTAL riding the content right edge. */}
+        <nav className="flex items-center" style={{ gap: "calc(var(--content) * 0.0856)" }}>
           <Link
             to="/"
-            className="tracking-[0.04em] text-[#111827] transition-opacity hover:opacity-60"
+            className="text-[#111827] transition-opacity hover:opacity-60"
             style={{
               fontFamily: FONT_INTER,
               fontWeight: 500,
               fontSize: "clamp(11px, calc(var(--content) * 0.00875), 14px)",
+              lineHeight: 1.43,
             }}
           >
             &larr; MAIN SITE
           </Link>
           <span
-            className="tracking-[0.04em] text-[#111827]"
+            className="text-[#111827]"
             style={{
               fontFamily: FONT_INTER,
               fontWeight: 600,
               fontSize: "clamp(11px, calc(var(--content) * 0.00875), 14px)",
+              lineHeight: 1.43,
             }}
           >
             INTERNAL PORTAL
@@ -351,16 +371,23 @@ export default function LandingV2() {
         className="mx-auto w-full"
         style={{
           width: "var(--content)",
-          paddingTop: "clamp(26px, calc(var(--content) * 0.0375), 60px)",
+          // paddingTop opened 60→73 so the eyebrow lands where Yina centres it inside
+          // its 40px box (glyph centre design y≈176) instead of ~10px high. The title
+          // marginTop closes and the lime marginTop opens by the matching amounts
+          // (below), so the whole header→lime-bar block spans the same total height —
+          // nothing below the lime bar shifts (laptop-fit preserved).
+          paddingTop: "clamp(31px, calc(var(--content) * 0.045625), 73px)",
         }}
       >
+        {/* Eyebrow — Inter SemiBold 12/16, NO letter-spacing (text-xs/semibold,
+            letterSpacing 0; measured frame run width 261px, not the tracked 318px). */}
         <p
-          className="tracking-[0.12em]"
           style={{
             fontFamily: FONT_INTER,
             fontWeight: 600,
             color: INK,
             fontSize: "clamp(10px, calc(var(--content) * 0.0075), 12px)",
+            lineHeight: 1.3333,
           }}
         >
           STUDIO OPERATIONS &middot; ROLE-BASED ACCESS
@@ -370,10 +397,15 @@ export default function LandingV2() {
             fontFamily: FONT_DISPLAY,
             color: INK,
             fontSize: "clamp(40px, calc(var(--content) * 0.06), 96px)",
+            // lineHeight 0.92 is deliberate: Figma's 64px leading is trimmed
+            // (text-box-trim) to cap height, and 0.92 reproduces the frame's cap-top
+            // (design y≈225) / baseline (≈295) on a single line — pixel-verified.
             lineHeight: 0.92,
             maxWidth: "calc(var(--content) * 0.66)",
-            // eyebrow→title gap: frame 46 (eyebrow box bottom 174 → title top 220)
-            marginTop: "clamp(22px, calc(var(--content) * 0.02875), 46px)",
+            // eyebrow→title gap. Sized so the title CAP lands at the frame's design
+            // y≈225 (element top 216, cap sits +9 inside the 0.92 line box): 96 header
+            // + 73 pad + 16 eyebrow + 31 = 216. Pixel-verified cap-top/baseline.
+            marginTop: "clamp(15px, calc(var(--content) * 0.019375), 31px)",
           }}
         >
           Choose Your HXVP Workspace
@@ -386,8 +418,9 @@ export default function LandingV2() {
         style={{
           background: LIME,
           height: "clamp(9px, calc(var(--content) * 0.01), 16px)",
-          // title→lime gap: frame 8 (title box bottom 308 → lime top 316)
-          marginTop: "clamp(5px, calc(var(--content) * 0.005), 8px)",
+          // title→lime gap opened to keep the lime bar pinned at frame y=316 after the
+          // title moved up 4px above (title bottom 304 + 12 = 316).
+          marginTop: "clamp(7px, calc(var(--content) * 0.0075), 12px)",
         }}
         aria-hidden="true"
       />
@@ -466,24 +499,29 @@ export default function LandingV2() {
               style={{ background: LIME }}
               aria-hidden="true"
             />
+            {/* SECURE — Inter SemiBold 12/16, NO letter-spacing (frame run 176px,
+                not the tracked 201px). */}
             <span
-              className="tracking-[0.08em]"
               style={{
                 fontFamily: FONT_INTER,
                 fontWeight: 600,
                 color: INK,
                 fontSize: "clamp(10px, calc(var(--content) * 0.0075), 12px)",
+                lineHeight: 1.3333,
               }}
             >
               SECURE ROLE-BASED PORTAL
             </span>
           </span>
           <span
-            className="flex items-center gap-6"
+            className="flex items-center"
             style={{
               fontFamily: FONT_INTER,
               color: INK,
               fontSize: "clamp(11px, calc(var(--content) * 0.00875), 14px)",
+              // frame separates the three segments by ~22px (Yina's 5-space runs),
+              // not gap-6's 24px; scaled off --content (22/1600 = 0.01375).
+              gap: "calc(var(--content) * 0.01375)",
             }}
           >
             <span>Need access? Contact admin</span>
