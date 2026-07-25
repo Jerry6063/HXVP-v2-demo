@@ -79,8 +79,9 @@ import InvoiceDetailV2 from './v2/InvoiceDetailV2';
 import InvoiceNewV2 from './v2/InvoiceNewV2';
 import InvoiceSendV2 from './v2/InvoiceSendV2';
 import ClientDetailV2 from './v2/ClientDetailV2';
-// v2 landing + talent portal
+// v2 landing + auth flow + talent portal
 import LandingV2 from './v2/LandingV2';
+import { LoginV2, CreateAccountV2, CheckEmailV2, VerifiedV2 } from './v2/AuthV2';
 import TalentV2Layout from './v2/TalentV2Layout';
 import TalentDashboardV2 from './v2/TalentDashboardV2';
 import TalentPortalProfileV2 from './v2/TalentPortalProfileV2';
@@ -129,6 +130,12 @@ export default function App() {
 
       {/* v2 landing (four-portal selector) */}
       <Route path="/v2" element={<LandingV2 />} />
+
+      {/* v2 auth flow (4 frames — read ?portal=, default production) */}
+      <Route path="/v2/login" element={<LoginV2 />} />
+      <Route path="/v2/create-account" element={<CreateAccountV2 />} />
+      <Route path="/v2/check-email" element={<CheckEmailV2 />} />
+      <Route path="/v2/verified" element={<VerifiedV2 />} />
 
       {/* Talent Portal (wf4) — talent-facing model portal */}
       <Route path="/talent-v2" element={<TalentDashboardV2 />} />

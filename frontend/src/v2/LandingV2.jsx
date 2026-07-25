@@ -55,11 +55,13 @@ import { Toaster } from "@/components/shadcn/sonner";
 // keep the demo legible if the Google Fonts request is blocked: Arial Narrow is
 // a widely-present condensed face standing in for Roboto Condensed.
 const FONT_COND = '"Roboto Condensed", "Arial Narrow", "Helvetica Neue", sans-serif';
-const FONT_INTER = '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif';
-const FONT_DISPLAY = '"League Gothic", "Bebas Neue", "Arial Narrow", sans-serif';
+// Exported so the auth flow (AuthV2.jsx) reuses the exact same shell chrome
+// constants — one source of truth for the gateway + auth pages.
+export const FONT_INTER = '"Inter", "Helvetica Neue", Helvetica, Arial, sans-serif';
+export const FONT_DISPLAY = '"League Gothic", "Bebas Neue", "Arial Narrow", sans-serif';
 
-const INK = "#111827";
-const LIME = "#d8ff00"; // button-primary-green — accent bar + footer dot + HOVER surface
+export const INK = "#111827";
+export const LIME = "#d8ff00"; // button-primary-green — accent bar + footer dot + HOVER surface
 const TILE = "#eaffae"; // button-secondary-green — CTA arrow tile (component fill, confirmed)
 // Card offset backdrop / sliver. READ FROM THE COMPONENT (node "Lime Offset Shape /
 // button-primary-green"): its true paint is button-primary-green #d8ff00 at 25% opacity —
@@ -69,15 +71,15 @@ const TILE = "#eaffae"; // button-secondary-green — CTA arrow tile (component 
 // the surface shadow (rgba(15,20,31,0.16)) over it → the (203–239, 212–249, 158–182)
 // gradient the pixels showed. So we now render the component's TRUE fill and let our
 // (now component-matched) surface shadow darken the visible sliver. See NOTE 7 / TWEAK 6.
-const SHADOW_LIME = "rgba(216, 255, 0, 0.25)"; // #d8ff00 @ 25% — component fill
+export const SHADOW_LIME = "rgba(216, 255, 0, 0.25)"; // #d8ff00 @ 25% — component fill
 const GHOST = "#e0e0e0"; // line-default — ghost "01" numbers
-const RULE = "#e5e7eb"; // gray-200 — footer divider + card surface stroke (component uses #E5E7EB, NOT line-default)
+export const RULE = "#e5e7eb"; // gray-200 — footer divider + card surface stroke (component uses #E5E7EB, NOT line-default)
 
 // Text/section container width (header, hero, lime bar span, description, footer).
 // Pixel-measured from Yina's render: the wordmark / eyebrow / title / footer all
 // start at design x≈160 at 1920 → a 1600 container (margin 160). Capped at 1600 for
 // ≥1900px screens; below that it scales at 84.17vw (1440 → 1212).
-const CONTENT = "min(1600px, 84.17vw)";
+export const CONTENT = "min(1600px, 84.17vw)";
 
 // Card-row container width — MEASURED SEPARATELY from the text container. Scanline
 // pixel measurement of the frame (do NOT trust node metadata: it claimed 388px
@@ -107,7 +109,9 @@ const CARDS = [
     n: "01",
     title: "PRODUCTION",
     desc: "Project management, call sheets, and contracts.",
-    to: "/production-v2",
+    // Gateway → LOGIN (carries the selected portal); login's ENTER PORTAL then
+    // routes on to /production-v2. (Was a direct /production-v2 link.)
+    to: "/v2/login?portal=production",
   },
   {
     n: "02",
@@ -122,13 +126,13 @@ const CARDS = [
     n: "03",
     title: "TALENT",
     desc: "Profile, portfolio, bookings, calendar, contracts, time logs, and invoices.",
-    to: "/talent-v2",
+    to: "/v2/login?portal=talent",
   },
   {
     n: "04",
     title: "CREW",
     desc: "Bookings, call sheets, tasks, documents, time logs, invoices, and payment status.",
-    to: "/crew-v2",
+    to: "/v2/login?portal=crew",
   },
 ];
 
