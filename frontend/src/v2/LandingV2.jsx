@@ -516,6 +516,21 @@ export default function LandingV2() {
             >
               SECURE ROLE-BASED PORTAL
             </span>
+            {/* Demo disclosure — NOT in Yina's frame (repo-level note, flagged
+                to her): clarifies this site is the mock prototype, production
+                runs privately on Render. Muted so it defers to her design. */}
+            <span
+              style={{
+                fontFamily: FONT_INTER,
+                fontStyle: "italic",
+                color: "#71717a",
+                fontSize: "clamp(9px, calc(var(--content) * 0.00688), 11px)",
+                lineHeight: 1.3333,
+                marginLeft: "calc(var(--content) * 0.01)",
+              }}
+            >
+              Interactive demo with mock data — production runs privately on Render
+            </span>
           </span>
           <span
             className="flex items-center"
