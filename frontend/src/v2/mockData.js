@@ -453,15 +453,28 @@ export const GENERIC_DESCRIPTION =
   "Coordinate and complete this task with the assigned team members, and confirm all details before the production day.";
 
 /**
- * Saved talent shortlists for the Talents-tab LIST VIEW (/tmp/sl_listview.png).
- * status ∈ "Confirmed" | "Pending Approval" | "Needs Revision".
+ * Saved talent shortlists for the Talents-tab LIST VIEW (Figma 7457:20858 —
+ * that frame IS this tab, tab strip and all).
+ *
+ * status: the frame draws exactly TWO values — "Pending Approval" (row 1,
+ * 06/22) and "Needs Revision" (rows 2 and 3). There is no third value anywhere
+ * in the design, so the enum is those two until Yina draws more; "Confirmed"
+ * was ours and is gone. The pill styles live in SavedShortlistV2's
+ * LIST_STATUS_STYLES (composited 80%-opacity fills); the outline map that used
+ * to sit below (SHORTLIST_STATUS_STYLES) had zero importers and was removed.
+ *
+ * ── FLAGGED FOR YINA ─────────────────────────────────────────────────────────
+ *  • Row 2 (06/01) is seeded "Pending Approval" but the frame draws "Needs
+ *    Revision" on BOTH row 2 and row 3. Left as-is so the seed still samples
+ *    both drawn values on separate rows — confirm whether the demo should
+ *    mirror the frame exactly (two identical badges) instead.
  */
 export const SAVED_SHORTLISTS = [
   {
     id: "sl-0622",
     name: "E-Bike Launch Campaign Photoshoot Talent Shortlist 06/22/2026",
     date: "June 22,2026",
-    status: "Confirmed",
+    status: "Pending Approval",
   },
   {
     id: "sl-0601",
@@ -477,11 +490,299 @@ export const SAVED_SHORTLISTS = [
   },
 ];
 
-/** Badge styles for the saved-shortlist status pills. */
-export const SHORTLIST_STATUS_STYLES = {
-  Confirmed: "border-emerald-300 text-emerald-700 bg-emerald-50",
-  "Pending Approval": "border-amber-300 text-amber-700 bg-amber-50",
-  "Needs Revision": "border-rose-300 text-rose-700 bg-rose-50",
+/* ═══════════════════════════════════════════════════════════════════════════
+ * SHORTLIST DETAIL — the role-grouped "Talent Shortlist" page (Figma
+ * 7537:20115 filled / 7516:20178 / 7505:20030). Roles are FIRST-CLASS: a
+ * shortlist creates roles first, then candidates are added under each role.
+ * Left rail lists the roles, right board renders one card per role with a
+ * candidate table (Candidate / Rate / Client Review / Talent Request / Status
+ * / Actions).
+ *
+ * SHAPE
+ *   SHORTLIST_DETAIL = { id, name, roles: [ Role ] }
+ *   Role      = { id, projectRoleId, name, railLabel, description, needed,
+ *                 candidates: [ Candidate ] }
+ *   Candidate = { id, name, initials, gender, height, specialty, rate,
+ *                 clientReview, talentRequest, status }
+ *   `projectRoleId` is the FOREIGN KEY into PROJECT_ROLE_REQUIREMENTS.talent.rows
+ *   — the Overview requirement this role fills. It is the join, NOT the name:
+ *   Yina wrote different copy on the two surfaces on purpose ("Male Urban
+ *   Commuter" on Overview vs "Male Commuter" here, "Supporting Riders" vs
+ *   "Lifestyle Friend"), so both display strings stay verbatim and only the id
+ *   links them. Resolve with shortlistRoleForProjectRole(). A role created in
+ *   the app has no projectRoleId (it fills no Overview row) → null/undefined.
+ *   `railLabel` is the SHORT left-rail card line ("Main commercial hero") and
+ *   `description` the LONG right group-header line ("Lead rider for opening and
+ *   product close-up scenes."). Frame 7537:20115 draws two different strings in
+ *   those two places; they were previously collapsed into one field.
+ *   `needed` is a number → rail + group-header pill both read `${needed} needed`
+ *   (ONE source: the frame contradicts itself, see flags). Candidate count pill
+ *   = `${candidates.length} candidates`. Meta subline is composed as
+ *   `${gender} · ${height} · ${specialty}` (U+00B7 padded by single spaces).
+ *   `rate` is display-ready ("$95/hr"), like PROJECT_BUDGET's currency strings.
+ *   `initials` are first-initial + last-initial.
+ *
+ * AUTHORITATIVE DECISIONS BAKED IN (these override the frames)
+ *  • Row actions are "Remind" and "Remove" ONLY — there is no Edit. Replacing a
+ *    talent = Remove, then add a new one. (Every action layer in the frames is
+ *    NAMED "Button / Edit" while its text reads "Remind"; trust the text.)
+ *  • "Remind" renders on EVERY candidate row, as all nine rows of 7537:20115
+ *    draw it (166px Actions cell = 72 Remind + 8 + 86 Remove). This REVERSES the
+ *    Thursday 18:29 "Pending only" rule — Yina re-confirmed the frames on 8/5
+ *    ("Remind button has been added back") and the frame is now the newer
+ *    source, so the talentRequest gate and its REMIND_WHEN_TALENT_REQUEST
+ *    constant are gone.
+ *  • Client Review has THREE valid values, in SENTENCE case as the frames draw
+ *    them: "Move forward" / "Keep for review" / "Pass for now". The frames
+ *    sample the first and third; "Keep for review" follows their pattern.
+ *    Sentence case is Client Review ONLY — Talent Request ("Not Started") and
+ *    Status stay Title Case, which is what the same rows render.
+ *  • The outer shortlist list's "..." has exactly two actions ("Create a copy" /
+ *    "Delete"); send-to-talent / send-to-client live INSIDE a shortlist, so the
+ *    header "..." on this page is a different menu (contents undrawn).
+ *
+ * ── FLAGGED FOR YINA ─────────────────────────────────────────────────────────
+ *  • "Keep for review" has NO drawn pill, so its colors are unknown. We use the
+ *    neutral pair (#f4f4f5 / #71717a) as a PLACEHOLDER — needs her call. Its
+ *    casing is likewise extrapolated from its two drawn siblings.
+ *  • "Declined" (Talent Request) is likewise undrawn; we propose the red pair
+ *    (#fef2f2 / #ef2b2e), matching "Pass for now".
+ *  • "Not Sent" is the pre-send Client Review value, drawn in Title Case by the
+ *    older base frames and absent from 7537:20115 — so it is the one Client
+ *    Review key left in Title Case, next to three sentence-case siblings. Needs
+ *    her call before we touch it.
+ *  • "Male Commuter" needed: the frame's rail badge says "1 needed" while that
+ *    same role's board header says "2 needed". One source only — we keep 1,
+ *    which agrees with the rail AND with the Overview table's Male Urban
+ *    Commuter qty 1.
+ *  • "Ari Chen" renders initials "AR" in the frame (first two letters of the
+ *    first name) while everyone else is first+last initial; treated as a
+ *    content typo → "AC".
+ *  • Role group 3 ("Lifestyle Friend") has an AUTHORED header — title, "Support
+ *    group scene", "2 needed", "3 candidates" all read from 7537:20289 — but
+ *    its three candidate rows are an unedited copy-paste of Male Commuter's
+ *    (Daniel Wu / Jordan Tan / Evan Cruz; the group layer is still named "Role
+ *    Group / Male Commuter") and are clipped by the workspace besides. So the
+ *    three candidates below are OUR seed at the frame's count of 3, chosen to
+ *    exercise the undrawn "Keep for review" / "Declined" values. Yina needs to
+ *    cast this role for real.
+ *  • Group 3's header title is 14px in the frame while groups 1-2 are 16px —
+ *    a slip in the copy-pasted group; we render all three at 16px.
+ *  • ZERO interaction states are drawn anywhere (no hover / focus / pressed /
+ *    disabled / loading), no role-card selected state, and no empty state for a
+ *    shortlist with no roles or a role with no candidates.
+ * ═════════════════════════════════════════════════════════════════════════ */
+
+/** Selectable values per candidate column (drives the row dropdowns). */
+export const SHORTLIST_CANDIDATE_OPTIONS = {
+  clientReview: ["Move forward", "Keep for review", "Pass for now"],
+  talentRequest: ["Not Started", "Pending", "Accepted", "Declined"],
+  status: ["Draft", "Pending", "Confirmed"],
+};
+
+/** Detail for SAVED_SHORTLISTS[0]; the demo opens every saved row onto this. */
+export const SHORTLIST_DETAIL = {
+  id: "sl-0622",
+  name: "E-Bike Launch Campaign Photoshoot Talent Shortlist 06/22/2026",
+  roles: [
+    {
+      id: "role-hero-female-rider",
+      projectRoleId: "treq-hero-female-rider",
+      name: "Hero Female Rider",
+      railLabel: "Main commercial hero",
+      description: "Lead rider for opening and product close-up scenes.",
+      needed: 1,
+      candidates: [
+        {
+          id: "cand-xinyi-zhang",
+          name: "Xinyi Zhang",
+          initials: "XZ",
+          gender: "Female",
+          height: "5'8\"",
+          specialty: "Sport / lifestyle",
+          rate: "$95/hr",
+          clientReview: "Move forward",
+          talentRequest: "Accepted",
+          status: "Confirmed",
+        },
+        {
+          id: "cand-mia-lee",
+          name: "Mia Lee",
+          initials: "ML",
+          gender: "Female",
+          height: "5'6\"",
+          specialty: "Lifestyle commercial",
+          rate: "$88/hr",
+          clientReview: "Pass for now",
+          talentRequest: "Not Started",
+          status: "Draft",
+        },
+        {
+          id: "cand-ari-chen",
+          name: "Ari Chen",
+          initials: "AC",
+          gender: "Female",
+          height: "5'7\"",
+          specialty: "Athletic model",
+          rate: "$92/hr",
+          clientReview: "Pass for now",
+          talentRequest: "Not Started",
+          status: "Draft",
+        },
+      ],
+    },
+    {
+      id: "role-male-commuter",
+      projectRoleId: "treq-male-urban-commuter",
+      name: "Male Commuter",
+      railLabel: "Urban e-bike commuter",
+      description: "Secondary rider for city commute and lifestyle transition shots.",
+      needed: 1,
+      candidates: [
+        {
+          id: "cand-daniel-wu",
+          name: "Daniel Wu",
+          initials: "DW",
+          gender: "Male",
+          height: "6'1\"",
+          specialty: "Urban lifestyle",
+          rate: "$90/hr",
+          clientReview: "Pass for now",
+          talentRequest: "Not Started",
+          status: "Draft",
+        },
+        {
+          id: "cand-jordan-tan",
+          name: "Jordan Tan",
+          initials: "JT",
+          gender: "Male",
+          height: "5'11\"",
+          specialty: "Product lifestyle",
+          rate: "$85/hr",
+          clientReview: "Move forward",
+          talentRequest: "Pending",
+          status: "Pending",
+        },
+        {
+          id: "cand-evan-cruz",
+          name: "Evan Cruz",
+          initials: "EC",
+          gender: "Male",
+          height: "6'0\"",
+          specialty: "Commercial model",
+          rate: "$98/hr",
+          clientReview: "Move forward",
+          talentRequest: "Accepted",
+          status: "Confirmed",
+        },
+      ],
+    },
+    {
+      id: "role-lifestyle-friend",
+      projectRoleId: "treq-supporting-riders",
+      name: "Lifestyle Friend",
+      railLabel: "Support group scene",
+      // The ONLY role whose two strings are identical: frame 7537:20115 draws
+      // "Support group scene" in the rail card (I7537:20140;7512:21444) AND in
+      // the group header (7537:20292). The other two roles get a long sentence
+      // in the header — this one never got written, so it is copied, not
+      // invented. Flagged for Yina.
+      description: "Support group scene",
+      needed: 2,
+      candidates: [
+        {
+          id: "cand-nora-alvarez",
+          name: "Nora Alvarez",
+          initials: "NA",
+          gender: "Female",
+          height: "5'7\"",
+          specialty: "Lifestyle commercial",
+          rate: "$86/hr",
+          clientReview: "Keep for review",
+          talentRequest: "Pending",
+          status: "Pending",
+        },
+        {
+          id: "cand-theo-park",
+          name: "Theo Park",
+          initials: "TP",
+          gender: "Male",
+          height: "5'10\"",
+          specialty: "Urban lifestyle",
+          rate: "$84/hr",
+          clientReview: "Keep for review",
+          talentRequest: "Declined",
+          status: "Draft",
+        },
+        // Third seat so the derived pill reads "3 candidates", which is what
+        // the frame draws on this group's header (7537:20296/20297) — the same
+        // count as its three drawn rows. Those rows are an unedited copy-paste
+        // of Male Commuter's (Daniel Wu / Jordan Tan / Evan Cruz, layer name
+        // still "Role Group / Male Commuter"), so no Lifestyle Friend roster
+        // was ever authored and all three below are OUR seed, kept on the
+        // same neutral Not Started / Draft pair as the other two.
+        {
+          id: "cand-priya-nair",
+          name: "Priya Nair",
+          initials: "PN",
+          gender: "Female",
+          height: "5'5\"",
+          specialty: "Urban lifestyle",
+          rate: "$87/hr",
+          clientReview: "Keep for review",
+          talentRequest: "Not Started",
+          status: "Draft",
+        },
+      ],
+    },
+  ],
+};
+
+/**
+ * Project role → the shortlist role that fills it, over the projectRoleId
+ * foreign key. Replaces ProjectV2's hand-written ROLE_TO_SHORTLIST_ROLE name
+ * map. `projectRoleId` is a PROJECT_ROLE_REQUIREMENTS.talent.rows[].id
+ * ("treq-…"); returns null when that requirement has no shortlist role yet
+ * (including for roles created in-app, which carry no projectRoleId).
+ */
+export function shortlistRoleForProjectRole(
+  projectRoleId,
+  shortlist = SHORTLIST_DETAIL,
+) {
+  if (!projectRoleId) return null;
+  return (
+    shortlist.roles.find((role) => role.projectRoleId === projectRoleId) ?? null
+  );
+}
+
+/**
+ * Badge styles for the three candidate pills. All three columns share one box:
+ * 160×24, radius 999, 12/16 Semi Bold, centered. Client Review keys are in the
+ * frames' SENTENCE case. "Not Sent" is the pre-send state the base frames draw
+ * before a shortlist goes to the client — kept here so a freshly added
+ * candidate has a pill, and kept in Title Case because that is how those frames
+ * draw it (7537:20115 never samples it); flagged for Yina.
+ */
+export const SHORTLIST_CLIENT_REVIEW_STYLES = {
+  "Move forward": "bg-[#eaffae] text-[#5b6f00]",
+  "Keep for review": "bg-[#f4f4f5] text-[#71717a]", // placeholder — undrawn
+  "Pass for now": "bg-[#fef2f2] text-[#ef2b2e]",
+  "Not Sent": "bg-[#f4f4f5] text-[#71717a]",
+};
+
+export const SHORTLIST_TALENT_REQUEST_STYLES = {
+  "Not Started": "bg-[#f4f4f5] text-[#71717a]",
+  Pending: "bg-[#fde68a] text-[#713f12]",
+  Accepted: "bg-[#eaffae] text-[#5b6f00]",
+  Declined: "bg-[#fef2f2] text-[#ef2b2e]", // proposed — undrawn
+  // Talent Request is Title Case in the frames ("Not Started" with a capital
+  // S); only Client Review is sentence case. Do not "fix" these to match.
+};
+
+export const SHORTLIST_CANDIDATE_STATUS_STYLES = {
+  Draft: "bg-[#f4f4f5] text-[#71717a]",
+  Pending: "bg-[#fde68a] text-[#713f12]",
+  Confirmed: "bg-[#eaffae] text-[#5b6f00]",
 };
 
 /**
@@ -1133,6 +1434,95 @@ export const PROJECT_OVERVIEW = {
   },
   internalNotes:
     "Confirm final shortlist with client before call sheet creation. Keep talent availability, crew holds, and budget changes synced before sending production documents.",
+};
+
+/**
+ * PROJECT_ROLE_REQUIREMENTS — Yina's restructured Talent / Crew Requirements
+ * cards on the Overview tab (Figma 7540:20646 + 7542:20853). She replaced the
+ * old free-text body with a structured ROLE TABLE: lime "N roles" chip,
+ * "+ Add Role" button, 4 columns (Role / Qty / Type / Specialty / unlabelled
+ * action column), then a trailing full-width "general direction" textarea.
+ * The two cards are geometrically identical — only the copy differs.
+ *
+ * Shape (per side): { addLabel, chipNoun, directionLabel, direction, rows: [
+ *   { id, role, qty, type } ] }. `qty` is a number (rendered as plain
+ * left-aligned text — no stepper). The header chip is `${rows.length}
+ * ${chipNoun}`: the COUNT comes from the rows on screen (the frame's crew badge
+ * says "4" over 3 rows), the NOUN from the frame — "roles" on the talent card,
+ * "crews" on the crew card. Yina ruled for "crews": 7542:20859 is NAMED
+ * "Chip / 3 roles" but renders "3 crews", exactly like the button next to it
+ * (named "+ Add Role", renders "+ Add Crew"). Never read the layer name.
+ *
+ * Roles here are the project-level REQUIREMENT (name / qty / type). They are a
+ * different object from a shortlist CANDIDATE row, so this table keeps its
+ * per-row "Edit" button — the group's "row actions are only Remind and Remove,
+ * there is no Edit" decision governs SHORTLIST_DETAIL candidates, not these.
+ *
+ * ── FLAGGED FOR YINA (not copied verbatim) ───────────────────────────────────
+ *  • The Crew card's textarea label literally reads "General casting direction"
+ *    in the frame — an un-updated copy-paste (the chip and button WERE updated
+ *    to "3 crews" / "+ Add Crew"). We ship "General crew notes"; confirm.
+ *  • No delete/remove affordance exists for a role row (Add but no Remove), and
+ *    "Edit" has no spec for what it opens (inline / modal / drawer).
+ *  • Empty state (0 roles) is undrawn; the chip would read "0 roles".
+ * PROJECT_OVERVIEW.talentRequirements/.crewRequirements stay exported unchanged
+ * for the older card layout — this is additive.
+ */
+export const PROJECT_ROLE_REQUIREMENTS = {
+  talent: {
+    addLabel: "+ Add Role",
+    chipNoun: "roles",
+    directionLabel: "General casting direction",
+    direction:
+      "Modern, energetic talent with confident movement on bikes. Prior commercial or lifestyle campaign experience preferred.",
+    rows: [
+      {
+        id: "treq-hero-female-rider",
+        role: "Hero Female Rider",
+        qty: 1,
+        type: "High fashion / lifestyle model",
+      },
+      {
+        id: "treq-male-urban-commuter",
+        role: "Male Urban Commuter",
+        qty: 1,
+        type: "Commercial model",
+      },
+      {
+        id: "treq-supporting-riders",
+        role: "Supporting Riders",
+        qty: 2,
+        type: "Lifestyle extras",
+      },
+    ],
+  },
+  crew: {
+    addLabel: "+ Add Crew",
+    chipNoun: "crews",
+    directionLabel: "General crew notes",
+    direction:
+      "Small agile crew comfortable with outdoor lifestyle shoots, product detail coverage, and fast location moves.",
+    rows: [
+      {
+        id: "creq-photographer",
+        role: "Photographer",
+        qty: 1,
+        type: "E-commerce / lifestyle",
+      },
+      {
+        id: "creq-dp-videographer",
+        role: "DP / Videographer",
+        qty: 1,
+        type: "Motion + product details",
+      },
+      {
+        id: "creq-makeup-artist",
+        role: "Makeup Artist",
+        qty: 1,
+        type: "Natural clean beauty",
+      },
+    ],
+  },
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════
